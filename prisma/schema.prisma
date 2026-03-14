@@ -1,0 +1,154 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+// ─── Entités métier principales ───────────────────────────────────────────────
+
+model Contact {
+  id            String   @id @default(cuid())
+  nom           String
+  role          String
+  categorie     String   // urgence | astreinte | encadrement | externe
+  telephone     String
+  telephoneAlt  String?
+  note          String?
+  disponibilite String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  fiches FicheContact[]
+}
+
+model Secteur {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  nom         String
+  ligne       String
+  trajet      String
+  description String
+  pointsAcces String   // JSON: PointAcces[]
+  procedures  String   // JSON: Procedure[]
+  pn          String?  // JSON: PassageNiveau[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  fiches FicheSecteur[]
+  postes Poste[]
+}
+
+model Fiche {
+  id               String   @id @default(cuid())
+  slug             String   @unique
+  numero           Int      @unique
+  titre            String
+  categorie        String   // accident | incident | securite | gestion-agent | evacuation
+  priorite         String   // urgente | normale
+  mnemonique       String?
+  resume           String
+  etapes           String   // JSON: Etape[]
+  references       String?  // JSON: string[]
+  avisObligatoires String?  // JSON: string[]
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  contacts FicheContact[]
+  secteurs FicheSecteur[]
+}
+
+// Tables de jonction pour les relations N-N
+model FicheContact {
+  ficheId   String
+  contactId String
+  fiche     Fiche   @relation(fields: [ficheId], references: [id], onDelete: Cascade)
+  contact   Contact @relation(fields: [contactId], references: [id], onDelete: Cascade)
+
+  @@id([ficheId, contactId])
+}
+
+model FicheSecteur {
+  ficheId   String
+  secteurId String
+  fiche     Fiche   @relation(fields: [ficheId], references: [id], onDelete: Cascade)
+  secteur   Secteur @relation(fields: [secteurId], references: [id], onDelete: Cascade)
+
+  @@id([ficheId, secteurId])
+}
+
+model Mnemonique {
+  id          String   @id @default(cuid())
+  acronyme    String
+  titre       String
+  description String
+  lettres     String   // JSON: LettreAcronyme[]
+  contexte    String?
+  couleur     String?  // blue | amber | red | green | purple
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Abreviation {
+  id         String   @id @default(cuid())
+  sigle      String   @unique
+  definition String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model Poste {
+  id              String   @id @default(cuid())
+  slug            String   @unique
+  nom             String
+  typePoste       String
+  lignes          String   // JSON: string[]
+  adresse         String
+  horaires        String
+  electrification String
+  systemeBlock    String
+  annuaire        String   // JSON: AnnuaireSection[]
+  circuitsVoie    String   // JSON: CircuitVoie[]
+  pnSensibles     String   // JSON: PNSensiblePoste[]
+  particularites  String   // JSON: string[]
+  proceduresCles  String   // JSON: ProcedureCle[]
+  dbc             String?  // JSON: Dbc[]
+  rex             String?  // JSON: string[]
+  secteurId       String?
+  secteur         Secteur? @relation(fields: [secteurId], references: [id])
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+// ─── Points d'accès ferroviaires (KML + back-office) ──────────────────────────
+
+model AccesRail {
+  id          String   @id @default(cuid())
+  ligne       String
+  pk          String
+  type        String?  // PN | TUN | PRO | SRD | PRA | etc.
+  identifiant String?  // ex: 178-2
+  nomAffiche  String   // ex: PN 178-2
+  nomComplet  String   // nom brut original
+  latitude    Float
+  longitude   Float
+  description String?
+  source      String   @default("KML") // KML | BACKOFFICE
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([ligne])
+  @@index([pk])
+}
+
+// ─── Administrateur back-office ────────────────────────────────────────────────
+
+model AdminUser {
+  id        String   @id @default(cuid())
+  username  String   @unique
+  password  String   // bcrypt hash
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}

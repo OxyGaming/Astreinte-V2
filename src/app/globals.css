@@ -1,0 +1,49 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --brand-blue: #1e3a8a;
+  }
+
+  html {
+    font-family: "Inter", system-ui, -apple-system, sans-serif;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body {
+    @apply bg-slate-50 text-slate-900 antialiased;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply bg-blue-800 text-white font-semibold px-4 py-3 rounded-xl active:bg-blue-900 transition-colors;
+  }
+
+  .card {
+    @apply bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden;
+  }
+
+  .badge-urgent {
+    @apply inline-flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-full bg-red-100 text-red-700 border border-red-200;
+  }
+
+  .badge-normale {
+    @apply inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full bg-slate-100 text-slate-600;
+  }
+
+  .step-critique {
+    @apply border-l-4 border-red-500 bg-red-50;
+  }
+
+  .step-normale {
+    @apply border-l-4 border-blue-300 bg-white;
+  }
+}
+
+/* Safe area for mobile bottom nav */
+.pb-safe {
+  padding-bottom: calc(env(safe-area-inset-bottom) + 4rem);
+}
