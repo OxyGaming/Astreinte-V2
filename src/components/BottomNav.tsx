@@ -2,14 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, FileText, Phone, MapPin, AlignLeft, Building2, Settings, MapPinned } from "lucide-react";
+import { Home, FileText, Phone, MapPin, AlignLeft, Building2, MapPinned, ClipboardList } from "lucide-react";
 import LogoutButton from "./LogoutButton";
 
 const navItems = [
   { href: "/", label: "Accueil", icon: Home },
   { href: "/fiches", label: "Fiches", icon: FileText },
+  { href: "/sessions", label: "Événements", icon: ClipboardList },
   { href: "/contacts", label: "Contacts", icon: Phone },
-  { href: "/acces", label: "Accès", icon: MapPinned },
   { href: "/secteurs", label: "Secteurs", icon: MapPin },
   { href: "/postes", label: "Postes", icon: Building2 },
   { href: "/mnemoniques", label: "Mnémo", icon: AlignLeft },
@@ -48,13 +48,6 @@ export default function BottomNav() {
           );
         })}
         <LogoutButton variant="mobile" />
-        <Link
-          href="/admin/login"
-          className="flex items-end justify-center pb-3 px-2 text-slate-300 hover:text-slate-500 opacity-30 hover:opacity-60 transition-opacity"
-          title="Administration"
-        >
-          <Settings size={14} />
-        </Link>
       </div>
       <div className="h-safe-bottom" style={{ height: "env(safe-area-inset-bottom)" }} />
     </nav>

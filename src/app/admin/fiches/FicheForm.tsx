@@ -88,8 +88,8 @@ export default function FicheForm({ fiche, contacts, secteurs, mode }: Props) {
     setSaving(true);
     setError(null);
     try {
-      const referencesArr = form.references.trim() ? form.references.split("\n").map((r) => r.trim()).filter(Boolean) : [];
-      const avisArr = form.avisObligatoires.trim() ? form.avisObligatoires.split("\n").map((a) => a.trim()).filter(Boolean) : [];
+      const referencesArr = form.references.trim() ? form.references.split("\n").map((r: string) => r.trim()).filter(Boolean) : [];
+      const avisArr = form.avisObligatoires.trim() ? form.avisObligatoires.split("\n").map((a: string) => a.trim()).filter(Boolean) : [];
 
       const url = mode === "create" ? "/api/admin/fiches" : `/api/admin/fiches/${fiche!.id}`;
       const method = mode === "create" ? "POST" : "PUT";

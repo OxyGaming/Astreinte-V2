@@ -152,3 +152,71 @@ model AdminUser {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
+
+// ─── Utilisateurs front-office ─────────────────────────────────────────────────
+
+model User {
+  id        String   @id @default(cuid())
+  username  String   @unique
+  password  String   // bcrypt hash
+  nom       String
+  prenom    String
+  role      String   @default("USER") // ADMIN | EDITOR | USER
+  actif     Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  sessions    FicheSession[]
+  actionLogs  FicheActionLog[]
+  commentLogs FicheCommentLog[]
+}
+
+// ─── Sessions de fiche (événements en cours) ───────────────────────────────────
+
+model FicheSession {
+  id              String    @id @default(cuid())
+  ficheSlug       String
+  ficheTitre      String
+  createdByUserId String
+  startedAt       DateTime  @default(now())
+  endedAt         DateTime?
+  status          String    @default("active") // active | archived
+
+  createdBy   User             @relation(fields: [createdByUserId], references: [id])
+  actionLogs  FicheActionLog[]
+  commentLogs FicheCommentLog[]
+
+  @@index([ficheSlug])
+  @@index([status])
+}
+
+// ─── Journal des actions cochées ───────────────────────────────────────────────
+
+model FicheActionLog {
+  id          String   @id @default(cuid())
+  sessionId   String
+  ficheSlug   String
+  etapeOrdre  Int
+  actionIndex Int
+  actionLabel String
+  userId      String
+  timestamp   DateTime @default(now())
+  type        String   // checked | unchecked
+
+  session FicheSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  user    User         @relation(fields: [userId], references: [id])
+}
+
+// ─── Journal des commentaires terrain ─────────────────────────────────────────
+
+model FicheCommentLog {
+  id        String   @id @default(cuid())
+  sessionId String
+  ficheSlug String
+  userId    String
+  timestamp DateTime @default(now())
+  message   String
+
+  session FicheSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  user    User         @relation(fields: [userId], references: [id])
+}

@@ -28,3 +28,9 @@ yarn-error.log*
 .vercel
 
 /src/generated/prisma
+
+# Build artifacts
+tsconfig.tsbuildinfo
+
+# Duplicate DB in prisma folder
+prisma/dev.db

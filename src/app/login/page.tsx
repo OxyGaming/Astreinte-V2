@@ -104,7 +104,7 @@ function LoginForm() {
         </div>
 
         <p className="text-blue-400 text-xs text-center mt-6">
-          Secteur Gier / Rive Droite Nord
+          Bienvenue
         </p>
       </div>
     </div>

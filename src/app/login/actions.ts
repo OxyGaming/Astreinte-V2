@@ -2,12 +2,8 @@
 
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import {
-  checkCredentials,
-  generateToken,
-  COOKIE_NAME,
-  COOKIE_MAX_AGE,
-} from "@/lib/auth";
+import { verifyUserCredentials } from "@/lib/user-auth";
+import { COOKIE_NAME, COOKIE_MAX_AGE, createUserToken } from "@/lib/auth";
 
 export async function loginAction(
   _prevState: { error?: string } | null,
@@ -17,12 +13,13 @@ export async function loginAction(
   const password = formData.get("password") as string;
   const from = (formData.get("from") as string) || "/";
 
-  if (!checkCredentials(username, password)) {
+  const user = await verifyUserCredentials(username, password);
+  if (!user) {
     return { error: "Identifiant ou mot de passe incorrect." };
   }
 
   const cookieStore = await cookies();
-  cookieStore.set(COOKIE_NAME, generateToken(), {
+  cookieStore.set(COOKIE_NAME, createUserToken(user.id), {
     httpOnly: true,
     sameSite: "strict",
     path: "/",

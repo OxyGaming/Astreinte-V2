@@ -169,3 +169,57 @@ export interface AccesRail {
   description?: string;
   source: "KML" | "BACKOFFICE";
 }
+
+// ─── Utilisateurs front-office ─────────────────────────────────────────────────
+
+export type UserRole = "ADMIN" | "EDITOR" | "USER";
+
+export interface User {
+  id: string;
+  username: string;
+  nom: string;
+  prenom: string;
+  role: UserRole;
+  actif: boolean;
+}
+
+// ─── Sessions de fiche ─────────────────────────────────────────────────────────
+
+export interface FicheSession {
+  id: string;
+  ficheSlug: string;
+  ficheTitre: string;
+  createdByUserId: string;
+  createdByNom: string;
+  createdByPrenom: string;
+  startedAt: string; // ISO string
+  endedAt: string | null;
+  status: "active" | "archived";
+}
+
+// ─── Journal (entrées unifiées) ────────────────────────────────────────────────
+
+export interface JournalActionEntry {
+  kind: "action";
+  id: string;
+  timestamp: string;
+  userId: string;
+  userNom: string;
+  userPrenom: string;
+  etapeOrdre: number;
+  actionIndex: number;
+  actionLabel: string;
+  type: "checked" | "unchecked";
+}
+
+export interface JournalCommentEntry {
+  kind: "comment";
+  id: string;
+  timestamp: string;
+  userId: string;
+  userNom: string;
+  userPrenom: string;
+  message: string;
+}
+
+export type JournalEntry = JournalActionEntry | JournalCommentEntry;

@@ -3,7 +3,7 @@
  * Remplace les imports directs depuis src/data/*.ts dans le front-office.
  */
 import { prisma } from "./prisma";
-import type { Fiche, Contact, Secteur, Mnemonique, Abréviation, Etape, PointAcces, Procedure, PassageNiveau, LettreAcronyme, AccesRail } from "./types";
+import type { Fiche, Contact, Secteur, Mnemonique, Abréviation, Etape, PointAcces, Procedure, PassageNiveau, LettreAcronyme, AccesRail, User, FicheSession, JournalEntry } from "./types";
 
 // ─── Helpers de désérialisation JSON ─────────────────────────────────────────
 
@@ -207,4 +207,186 @@ function dbToAccesRail(row: {
     description: row.description ?? undefined,
     source: row.source as AccesRail["source"],
   };
+}
+
+// ─── Utilisateurs front-office ─────────────────────────────────────────────────
+
+export async function getAllUsers(): Promise<User[]> {
+  const rows = await prisma.user.findMany({ orderBy: [{ nom: "asc" }, { prenom: "asc" }] });
+  return rows.map(dbToUser);
+}
+
+export async function getUserById(id: string): Promise<User | null> {
+  const row = await prisma.user.findUnique({ where: { id } });
+  return row ? dbToUser(row) : null;
+}
+
+export async function getUserByUsername(username: string): Promise<(User & { password: string }) | null> {
+  const row = await prisma.user.findUnique({ where: { username } });
+  if (!row) return null;
+  return { ...dbToUser(row), password: row.password };
+}
+
+function dbToUser(row: {
+  id: string; username: string; nom: string; prenom: string; role: string; actif: boolean;
+}): User {
+  return {
+    id: row.id,
+    username: row.username,
+    nom: row.nom,
+    prenom: row.prenom,
+    role: row.role as User["role"],
+    actif: row.actif,
+  };
+}
+
+// ─── Sessions de fiche ─────────────────────────────────────────────────────────
+
+export async function createFicheSession(
+  ficheSlug: string,
+  ficheTitre: string,
+  userId: string
+): Promise<FicheSession> {
+  const row = await prisma.ficheSession.create({
+    data: { ficheSlug, ficheTitre, createdByUserId: userId },
+    include: { createdBy: { select: { nom: true, prenom: true } } },
+  });
+  return dbToSession(row);
+}
+
+export async function getActiveSession(ficheSlug: string): Promise<FicheSession | null> {
+  const row = await prisma.ficheSession.findFirst({
+    where: { ficheSlug, status: "active" },
+    orderBy: { startedAt: "desc" },
+    include: { createdBy: { select: { nom: true, prenom: true } } },
+  });
+  return row ? dbToSession(row) : null;
+}
+
+export async function getSessionById(id: string): Promise<FicheSession | null> {
+  const row = await prisma.ficheSession.findUnique({
+    where: { id },
+    include: { createdBy: { select: { nom: true, prenom: true } } },
+  });
+  return row ? dbToSession(row) : null;
+}
+
+export async function getAllSessions(): Promise<FicheSession[]> {
+  const rows = await prisma.ficheSession.findMany({
+    orderBy: { startedAt: "desc" },
+    include: { createdBy: { select: { nom: true, prenom: true } } },
+  });
+  return rows.map(dbToSession);
+}
+
+export async function archiveFicheSession(id: string): Promise<FicheSession> {
+  const row = await prisma.ficheSession.update({
+    where: { id },
+    data: { status: "archived", endedAt: new Date() },
+    include: { createdBy: { select: { nom: true, prenom: true } } },
+  });
+  return dbToSession(row);
+}
+
+function dbToSession(row: {
+  id: string; ficheSlug: string; ficheTitre: string; createdByUserId: string;
+  startedAt: Date; endedAt: Date | null; status: string;
+  createdBy: { nom: string; prenom: string };
+}): FicheSession {
+  return {
+    id: row.id,
+    ficheSlug: row.ficheSlug,
+    ficheTitre: row.ficheTitre,
+    createdByUserId: row.createdByUserId,
+    createdByNom: row.createdBy.nom,
+    createdByPrenom: row.createdBy.prenom,
+    startedAt: row.startedAt.toISOString(),
+    endedAt: row.endedAt ? row.endedAt.toISOString() : null,
+    status: row.status as FicheSession["status"],
+  };
+}
+
+// ─── Journal (actions + commentaires) ─────────────────────────────────────────
+
+export async function addActionLog(
+  sessionId: string,
+  ficheSlug: string,
+  etapeOrdre: number,
+  actionIndex: number,
+  actionLabel: string,
+  userId: string,
+  type: "checked" | "unchecked"
+): Promise<void> {
+  await prisma.ficheActionLog.create({
+    data: { sessionId, ficheSlug, etapeOrdre, actionIndex, actionLabel, userId, type },
+  });
+}
+
+export async function addCommentLog(
+  sessionId: string,
+  ficheSlug: string,
+  userId: string,
+  message: string
+): Promise<void> {
+  await prisma.ficheCommentLog.create({
+    data: { sessionId, ficheSlug, userId, message },
+  });
+}
+
+export async function getSessionJournal(sessionId: string): Promise<JournalEntry[]> {
+  const [actions, comments] = await Promise.all([
+    prisma.ficheActionLog.findMany({
+      where: { sessionId },
+      include: { user: { select: { nom: true, prenom: true } } },
+      orderBy: { timestamp: "asc" },
+    }),
+    prisma.ficheCommentLog.findMany({
+      where: { sessionId },
+      include: { user: { select: { nom: true, prenom: true } } },
+      orderBy: { timestamp: "asc" },
+    }),
+  ]);
+
+  const entries: JournalEntry[] = [
+    ...actions.map((a) => ({
+      kind: "action" as const,
+      id: a.id,
+      timestamp: a.timestamp.toISOString(),
+      userId: a.userId,
+      userNom: a.user.nom,
+      userPrenom: a.user.prenom,
+      etapeOrdre: a.etapeOrdre,
+      actionIndex: a.actionIndex,
+      actionLabel: a.actionLabel,
+      type: a.type as "checked" | "unchecked",
+    })),
+    ...comments.map((c) => ({
+      kind: "comment" as const,
+      id: c.id,
+      timestamp: c.timestamp.toISOString(),
+      userId: c.userId,
+      userNom: c.user.nom,
+      userPrenom: c.user.prenom,
+      message: c.message,
+    })),
+  ];
+
+  return entries.sort((a, b) => a.timestamp.localeCompare(b.timestamp));
+}
+
+export async function getCheckedActionsForSession(
+  sessionId: string
+): Promise<{ etapeOrdre: number; actionIndex: number; type: string }[]> {
+  // Return only the LAST log entry per action (to get current state)
+  const logs = await prisma.ficheActionLog.findMany({
+    where: { sessionId },
+    orderBy: { timestamp: "asc" },
+    select: { etapeOrdre: true, actionIndex: true, type: true },
+  });
+  // Build map: keep last state per action key
+  const map = new Map<string, { etapeOrdre: number; actionIndex: number; type: string }>();
+  for (const log of logs) {
+    map.set(`${log.etapeOrdre}_${log.actionIndex}`, log);
+  }
+  return [...map.values()];
 }
