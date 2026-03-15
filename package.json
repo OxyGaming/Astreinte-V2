@@ -13,7 +13,8 @@
     "db:seed": "tsx prisma/seed.ts",
     "db:seed-postes": "tsx prisma/seed-postes.ts",
     "db:seed-acces": "tsx prisma/seed-acces.ts",
-    "db:reset": "prisma migrate reset --force && tsx prisma/seed.ts",
+    "db:export": "tsx prisma/export.ts",
+    "db:reset": "prisma migrate reset --force && tsx prisma/seed.ts && tsx prisma/seed-postes.ts && tsx prisma/seed-acces.ts",
     "db:studio": "prisma studio"
   },
   "prisma": {
@@ -29,7 +30,8 @@
     "next": "^16.1.6",
     "prisma": "^7.5.0",
     "react": "^18",
-    "react-dom": "^18"
+    "react-dom": "^18",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",

@@ -1,6 +1,6 @@
 import { ReactNode } from "react";
 import Link from "next/link";
-import { FileText, Users, MapPin, BookOpen, AlignLeft, LayoutDashboard, LogOut, Shield, Building2, MapPinned, UserCog } from "lucide-react";
+import { FileText, Users, MapPin, BookOpen, AlignLeft, LayoutDashboard, LogOut, Shield, Building2, MapPinned, UserCog, Upload } from "lucide-react";
 import { adminLogoutAction } from "./login/actions";
 
 const navItems = [
@@ -13,6 +13,7 @@ const navItems = [
   { href: "/admin/mnemoniques", label: "Mnémoniques", icon: BookOpen },
   { href: "/admin/abreviations", label: "Abréviations", icon: AlignLeft },
   { href: "/admin/users", label: "Utilisateurs", icon: UserCog },
+  { href: "/admin/import", label: "Import de données", icon: Upload },
 ];
 
 export default function AdminLayout({ children }: { children: ReactNode }) {
