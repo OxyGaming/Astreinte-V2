@@ -1,16 +1,34 @@
 import { NextResponse } from "next/server";
 import * as XLSX from "xlsx";
+import { prisma } from "@/lib/prisma";
+
+interface Etape {
+  ordre: number;
+  titre: string;
+  description: string;
+  critique?: boolean;
+  actions?: string[];
+}
 
 export async function GET() {
   try {
+    // ─── Récupérer toutes les fiches avec leurs relations ──────────────────────
+    const fiches = await prisma.fiche.findMany({
+      orderBy: { numero: "asc" },
+      include: {
+        contacts: { include: { contact: { select: { nom: true } } } },
+        secteurs: { include: { secteur: { select: { nom: true } } } },
+      },
+    });
+
     const wb = XLSX.utils.book_new();
 
     // ─── Onglet AIDE ────────────────────────────────────────────────────────────
     const aideData = [
       ["MODE D'EMPLOI — IMPORT DE FICHES RÉFLEXES"],
       [""],
-      ["Ce fichier vous permet de créer des fiches réflexes sans écrire de code."],
-      ["Remplissez les onglets dans l'ordre, puis importez ce fichier dans le back-office."],
+      ["Ce fichier contient les données actuelles de la base. Vous pouvez modifier les lignes existantes"],
+      ["ou en ajouter de nouvelles, puis réimporter ce fichier dans le back-office."],
       [""],
       ["═══ ONGLET FICHES ══════════════════════════════════════════════════════"],
       ["Colonne", "Description", "Obligatoire", "Valeurs autorisées / Exemples"],
@@ -51,81 +69,112 @@ export async function GET() {
       [""],
       ["IMPORTANT : Ne supprimez pas et ne renommez pas les onglets."],
       ["IMPORTANT : La ligne d'en-tête (première ligne) ne doit pas être modifiée."],
+      ["IMPORTANT : En mode 'Créer + mettre à jour', les fiches existantes (même slug/numéro) seront mises à jour."],
     ];
     const wsAide = XLSX.utils.aoa_to_sheet(aideData);
-    wsAide["!cols"] = [{ wch: 24 }, { wch: 50 }, { wch: 14 }, { wch: 50 }];
+    wsAide["!cols"] = [{ wch: 24 }, { wch: 55 }, { wch: 14 }, { wch: 50 }];
     XLSX.utils.book_append_sheet(wb, wsAide, "Aide");
 
     // ─── Onglet FICHES ──────────────────────────────────────────────────────────
-    const fichesData = [
+    const fichesRows: unknown[][] = [
       ["numero", "slug", "titre", "categorie", "priorite", "mnemonique", "resume", "references", "avis_obligatoires"],
-      [1, "accident-grave-gare", "Accident grave en gare", "accident", "urgente", "CAMMI", "Procédure à appliquer en cas d'accident grave en gare.", "OP522|RFN005", "COGC|DSP"],
-      [2, "incident-signal", "Incident signal carré", "incident", "urgente", "", "Procédure en cas de signal carré franchit.", "", "COGC"],
     ];
-    const wsFiches = XLSX.utils.aoa_to_sheet(fichesData);
+    for (const f of fiches) {
+      const refs = f.references ? (JSON.parse(f.references) as string[]).join("|") : "";
+      const avis = f.avisObligatoires ? (JSON.parse(f.avisObligatoires) as string[]).join("|") : "";
+      fichesRows.push([
+        f.numero,
+        f.slug,
+        f.titre,
+        f.categorie,
+        f.priorite,
+        f.mnemonique || "",
+        f.resume,
+        refs,
+        avis,
+      ]);
+    }
+    const wsFiches = XLSX.utils.aoa_to_sheet(fichesRows);
     wsFiches["!cols"] = [
-      { wch: 10 }, { wch: 28 }, { wch: 40 }, { wch: 18 }, { wch: 12 },
-      { wch: 16 }, { wch: 50 }, { wch: 20 }, { wch: 20 },
+      { wch: 10 }, { wch: 30 }, { wch: 45 }, { wch: 18 }, { wch: 12 },
+      { wch: 16 }, { wch: 55 }, { wch: 22 }, { wch: 22 },
     ];
     XLSX.utils.book_append_sheet(wb, wsFiches, "Fiches");
 
     // ─── Onglet ETAPES ──────────────────────────────────────────────────────────
-    const etapesData = [
+    const etapesRows: unknown[][] = [
       ["slug_fiche", "ordre", "titre", "description", "critique"],
-      ["accident-grave-gare", 1, "Alerte et premiers secours", "Déclencher l'alarme et appeler les secours.", "oui"],
-      ["accident-grave-gare", 2, "Sécurisation de la zone", "Baliser et sécuriser le périmètre autour de l'accident.", "non"],
-      ["incident-signal", 1, "Arrêt du train", "S'assurer que le train est immobilisé.", "oui"],
-      ["incident-signal", 2, "Contact avec le COGC", "Informer le régulateur de la situation.", "non"],
     ];
-    const wsEtapes = XLSX.utils.aoa_to_sheet(etapesData);
-    wsEtapes["!cols"] = [{ wch: 28 }, { wch: 8 }, { wch: 36 }, { wch: 50 }, { wch: 10 }];
+    for (const f of fiches) {
+      let etapes: Etape[] = [];
+      try { etapes = JSON.parse(f.etapes) as Etape[]; } catch { etapes = []; }
+      for (const e of etapes) {
+        etapesRows.push([
+          f.slug,
+          e.ordre,
+          e.titre,
+          e.description,
+          e.critique ? "oui" : "non",
+        ]);
+      }
+    }
+    const wsEtapes = XLSX.utils.aoa_to_sheet(etapesRows);
+    wsEtapes["!cols"] = [{ wch: 30 }, { wch: 8 }, { wch: 40 }, { wch: 55 }, { wch: 10 }];
     XLSX.utils.book_append_sheet(wb, wsEtapes, "Etapes");
 
     // ─── Onglet ACTIONS ─────────────────────────────────────────────────────────
-    const actionsData = [
+    const actionsRows: unknown[][] = [
       ["slug_fiche", "ordre_etape", "ordre_action", "texte"],
-      ["accident-grave-gare", 1, 1, "Appeler le 15 (SAMU)"],
-      ["accident-grave-gare", 1, 2, "Appeler le 18 (Pompiers)"],
-      ["accident-grave-gare", 1, 3, "Prévenir le chef de gare"],
-      ["accident-grave-gare", 2, 1, "Mettre en place le balisage réglementaire"],
-      ["accident-grave-gare", 2, 2, "Interdire l'accès au quai concerné"],
-      ["incident-signal", 1, 1, "Vérifier la position du signal sur le TCO"],
-      ["incident-signal", 2, 1, "Appeler le COGC au numéro d'astreinte"],
     ];
-    const wsActions = XLSX.utils.aoa_to_sheet(actionsData);
-    wsActions["!cols"] = [{ wch: 28 }, { wch: 14 }, { wch: 14 }, { wch: 50 }];
+    for (const f of fiches) {
+      let etapes: Etape[] = [];
+      try { etapes = JSON.parse(f.etapes) as Etape[]; } catch { etapes = []; }
+      for (const e of etapes) {
+        const actions = e.actions || [];
+        actions.forEach((texte, idx) => {
+          actionsRows.push([f.slug, e.ordre, idx + 1, texte]);
+        });
+      }
+    }
+    const wsActions = XLSX.utils.aoa_to_sheet(actionsRows);
+    wsActions["!cols"] = [{ wch: 30 }, { wch: 14 }, { wch: 14 }, { wch: 55 }];
     XLSX.utils.book_append_sheet(wb, wsActions, "Actions");
 
     // ─── Onglet CONTACTS_LIES ───────────────────────────────────────────────────
-    const contactsData = [
-      ["slug_fiche", "nom_contact"],
-      ["accident-grave-gare", "Exemples : indiquez le nom exact du contact tel qu'il apparaît dans la base"],
-    ];
-    const wsContacts = XLSX.utils.aoa_to_sheet(contactsData);
-    wsContacts["!cols"] = [{ wch: 28 }, { wch: 50 }];
+    const contactsRows: unknown[][] = [["slug_fiche", "nom_contact"]];
+    for (const f of fiches) {
+      for (const fc of f.contacts) {
+        contactsRows.push([f.slug, fc.contact.nom]);
+      }
+    }
+    const wsContacts = XLSX.utils.aoa_to_sheet(contactsRows);
+    wsContacts["!cols"] = [{ wch: 30 }, { wch: 50 }];
     XLSX.utils.book_append_sheet(wb, wsContacts, "Contacts_lies");
 
     // ─── Onglet SECTEURS_LIES ───────────────────────────────────────────────────
-    const secteursData = [
-      ["slug_fiche", "nom_secteur"],
-      ["accident-grave-gare", "Exemples : indiquez le nom exact du secteur tel qu'il apparaît dans la base"],
-    ];
-    const wsSecteurs = XLSX.utils.aoa_to_sheet(secteursData);
-    wsSecteurs["!cols"] = [{ wch: 28 }, { wch: 50 }];
+    const secteursRows: unknown[][] = [["slug_fiche", "nom_secteur"]];
+    for (const f of fiches) {
+      for (const fs of f.secteurs) {
+        secteursRows.push([f.slug, fs.secteur.nom]);
+      }
+    }
+    const wsSecteurs = XLSX.utils.aoa_to_sheet(secteursRows);
+    wsSecteurs["!cols"] = [{ wch: 30 }, { wch: 50 }];
     XLSX.utils.book_append_sheet(wb, wsSecteurs, "Secteurs_lies");
 
-    // Générer le fichier
+    // ─── Générer le fichier ─────────────────────────────────────────────────────
     const buffer: Buffer = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
 
+    const date = new Date().toISOString().slice(0, 10);
     return new NextResponse(buffer as unknown as BodyInit, {
       status: 200,
       headers: {
         "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        "Content-Disposition": 'attachment; filename="modele_fiches_astreinte.xlsx"',
+        "Content-Disposition": `attachment; filename="fiches_astreinte_${date}.xlsx"`,
         "Cache-Control": "no-cache",
       },
     });
   } catch {
-    return NextResponse.json({ error: "Erreur lors de la génération du modèle." }, { status: 500 });
+    return NextResponse.json({ error: "Erreur lors de la génération du fichier." }, { status: 500 });
   }
 }
