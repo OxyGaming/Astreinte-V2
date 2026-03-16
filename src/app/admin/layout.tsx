@@ -1,10 +1,24 @@
 import { ReactNode } from "react";
 import Link from "next/link";
-import { FileText, Users, MapPin, BookOpen, AlignLeft, LayoutDashboard, LogOut, Shield, Building2, MapPinned, UserCog, Upload } from "lucide-react";
+import {
+  FileText,
+  Users,
+  MapPin,
+  BookOpen,
+  AlignLeft,
+  LayoutDashboard,
+  LogOut,
+  Shield,
+  Building2,
+  MapPinned,
+  UserCog,
+  Upload,
+} from "lucide-react";
 import { adminLogoutAction } from "./login/actions";
+import AdminMobileNav from "@/components/AdminMobileNav";
 
 const navItems = [
-  { href: "/admin", label: "Tableau de bord", icon: LayoutDashboard, exact: true },
+  { href: "/admin", label: "Tableau de bord", icon: LayoutDashboard },
   { href: "/admin/fiches", label: "Fiches réflexes", icon: FileText },
   { href: "/admin/contacts", label: "Contacts", icon: Users },
   { href: "/admin/secteurs", label: "Secteurs", icon: MapPin },
@@ -19,8 +33,8 @@ const navItems = [
 export default function AdminLayout({ children }: { children: ReactNode }) {
   return (
     <div className="min-h-screen bg-gray-100 flex">
-      {/* Sidebar */}
-      <aside className="w-64 bg-gray-900 text-white flex flex-col fixed inset-y-0 left-0 z-40 shadow-xl">
+      {/* --- Sidebar desktop (lg+) --- */}
+      <aside className="hidden lg:flex w-64 bg-gray-900 text-white flex-col fixed inset-y-0 left-0 z-40 shadow-xl">
         {/* Logo */}
         <div className="p-5 border-b border-gray-700">
           <div className="flex items-center gap-3">
@@ -42,7 +56,10 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
               href={item.href}
               className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-gray-300 hover:bg-gray-700 hover:text-white transition-colors group"
             >
-              <item.icon size={16} className="text-gray-400 group-hover:text-blue-400 transition-colors flex-shrink-0" />
+              <item.icon
+                size={16}
+                className="text-gray-400 group-hover:text-blue-400 transition-colors flex-shrink-0"
+              />
               {item.label}
             </Link>
           ))}
@@ -68,8 +85,12 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
         </div>
       </aside>
 
-      {/* Main content */}
-      <main className="flex-1 ml-64 min-h-screen">
+      {/* --- Navigation mobile (< lg) --- */}
+      <AdminMobileNav />
+
+      {/* --- Contenu principal --- */}
+      {/* pt-14 sur mobile pour compenser la barre de navigation fixe */}
+      <main className="flex-1 lg:ml-64 min-h-screen pt-14 lg:pt-0">
         {children}
       </main>
     </div>

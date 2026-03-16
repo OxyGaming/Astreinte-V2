@@ -18,19 +18,30 @@ export async function verifyAdminCredentials(
   return { id: user.id, username: user.username };
 }
 
-/** Crée un token de session admin (simple, suffisant pour MVP) */
+const getAdminSecret = (): string => {
+  const secret = process.env.ADMIN_SESSION_SECRET;
+  if (!secret) {
+    if (process.env.NODE_ENV === "production") {
+      throw new Error(
+        "[SÉCURITÉ] ADMIN_SESSION_SECRET est obligatoire en production. Définissez cette variable d'environnement."
+      );
+    }
+    return "admin-dev-insecure-do-not-use-in-prod";
+  }
+  return secret;
+};
+
+/** Crée un token de session admin */
 export function createAdminToken(userId: string): string {
-  const secret = process.env.ADMIN_SESSION_SECRET || "admin-secret-2025";
-  return Buffer.from(`${secret}:${userId}`).toString("base64");
+  return Buffer.from(`${getAdminSecret()}:${userId}`).toString("base64");
 }
 
 /** Valide un token admin */
 export function isValidAdminToken(token: string | undefined): boolean {
   if (!token) return false;
   try {
-    const secret = process.env.ADMIN_SESSION_SECRET || "admin-secret-2025";
     const decoded = Buffer.from(token, "base64").toString("utf-8");
-    return decoded.startsWith(`${secret}:`);
+    return decoded.startsWith(`${getAdminSecret()}:`);
   } catch {
     return false;
   }

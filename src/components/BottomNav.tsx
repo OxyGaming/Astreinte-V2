@@ -18,7 +18,7 @@ const navItems = [
 export default function BottomNav() {
   const pathname = usePathname();
 
-  if (pathname.startsWith("/login")) return null;
+  if (pathname.startsWith("/login") || pathname.startsWith("/admin")) return null;
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 z-50 lg:hidden">

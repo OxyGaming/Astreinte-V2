@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/user-auth";
 import { getSessionById, addActionLog } from "@/lib/db";
+import { validateActionLog } from "@/lib/validate";
 
 interface Params {
   params: Promise<{ id: string }>;
@@ -18,11 +19,26 @@ export async function POST(req: NextRequest, { params }: Params) {
     return NextResponse.json({ error: "Session archivée — modifications impossibles" }, { status: 400 });
   }
 
-  const { etapeOrdre, actionIndex, actionLabel, type } = await req.json();
-  if (etapeOrdre == null || actionIndex == null || !actionLabel || !type) {
-    return NextResponse.json({ error: "Données manquantes" }, { status: 400 });
+  let body: unknown;
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: "Corps de requête JSON invalide" }, { status: 400 });
   }
 
-  await addActionLog(id, session.ficheSlug, etapeOrdre, actionIndex, actionLabel, user.id, type);
+  const data = validateActionLog(body);
+  if (!data) {
+    return NextResponse.json({ error: "Données manquantes ou invalides" }, { status: 400 });
+  }
+
+  await addActionLog(
+    id,
+    session.ficheSlug,
+    data.etapeOrdre,
+    data.actionIndex,
+    data.actionLabel,
+    user.id,
+    data.type
+  );
   return NextResponse.json({ ok: true }, { status: 201 });
 }

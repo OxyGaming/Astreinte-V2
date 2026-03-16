@@ -3,7 +3,18 @@
 export const COOKIE_NAME = "astreinte-auth";
 export const COOKIE_MAX_AGE = 60 * 60 * 24 * 7; // 7 jours
 
-const getSecret = () => process.env.SESSION_SECRET || "astreinte-internal-2025";
+const getSecret = (): string => {
+  const secret = process.env.SESSION_SECRET;
+  if (!secret) {
+    if (process.env.NODE_ENV === "production") {
+      throw new Error(
+        "[SÉCURITÉ] SESSION_SECRET est obligatoire en production. Définissez cette variable d'environnement."
+      );
+    }
+    return "astreinte-dev-insecure-do-not-use-in-prod";
+  }
+  return secret;
+};
 
 /** Crée un token encodant l'userId — compatible Edge Runtime */
 export function createUserToken(userId: string): string {
