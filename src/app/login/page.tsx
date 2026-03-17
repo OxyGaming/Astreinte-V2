@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { loginAction } from "./actions";
 import { Shield, Eye, EyeOff } from "lucide-react";
 import { Suspense, useState } from "react";
+import Link from "next/link";
 
 function LoginForm() {
   const searchParams = useSearchParams();
@@ -101,10 +102,19 @@ function LoginForm() {
               {pending ? "Connexion…" : "Se connecter"}
             </button>
           </form>
+
+          <div className="mt-5 pt-5 border-t border-slate-100 text-center">
+            <p className="text-sm text-slate-500">
+              Pas encore de compte ?{" "}
+              <Link href="/register" className="text-blue-600 hover:text-blue-800 font-semibold transition-colors">
+                Faire une demande d'inscription
+              </Link>
+            </p>
+          </div>
         </div>
 
         <p className="text-blue-400 text-xs text-center mt-6">
-          Bienvenue
+          Accès réservé aux agents autorisés
         </p>
       </div>
     </div>

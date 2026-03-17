@@ -12,16 +12,33 @@ export type SessionUser = {
   role: string; // ADMIN | EDITOR | USER
 };
 
-/** Vérifie les identifiants et retourne l'utilisateur ou null */
+export type CredentialResult =
+  | { user: SessionUser; error: null }
+  | { user: null; error: "invalid" | "pending" | "rejected" | "inactive" };
+
+/** Vérifie les identifiants et retourne l'utilisateur ou une raison de refus */
 export async function verifyUserCredentials(
   username: string,
   password: string
-): Promise<SessionUser | null> {
+): Promise<CredentialResult> {
   const user = await prisma.user.findUnique({ where: { username } });
-  if (!user || !user.actif) return null;
+  if (!user) return { user: null, error: "invalid" };
+
+  // Vérifier le mot de passe en premier (évite l'énumération de comptes via timing)
   const valid = await bcrypt.compare(password, user.password);
-  if (!valid) return null;
-  return { id: user.id, username: user.username, nom: user.nom, prenom: user.prenom, role: user.role };
+  if (!valid) return { user: null, error: "invalid" };
+
+  // Vérifier le statut d'inscription
+  if (user.status === "pending") return { user: null, error: "pending" };
+  if (user.status === "rejected") return { user: null, error: "rejected" };
+
+  // Vérifier si le compte est actif
+  if (!user.actif) return { user: null, error: "inactive" };
+
+  return {
+    user: { id: user.id, username: user.username, nom: user.nom, prenom: user.prenom, role: user.role },
+    error: null,
+  };
 }
 
 /** Lit le cookie et retourne l'utilisateur courant, ou null */
@@ -33,9 +50,9 @@ export async function getCurrentUser(): Promise<SessionUser | null> {
   if (!userId) return null;
   const user = await prisma.user.findUnique({
     where: { id: userId },
-    select: { id: true, username: true, nom: true, prenom: true, role: true, actif: true },
+    select: { id: true, username: true, nom: true, prenom: true, role: true, actif: true, status: true },
   });
-  if (!user || !user.actif) return null;
+  if (!user || !user.actif || user.status !== "approved") return null;
   return { id: user.id, username: user.username, nom: user.nom, prenom: user.prenom, role: user.role };
 }
 

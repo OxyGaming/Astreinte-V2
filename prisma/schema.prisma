@@ -161,8 +161,12 @@ model User {
   password  String   // bcrypt hash
   nom       String
   prenom    String
+  email     String?  @unique
   role      String   @default("USER") // ADMIN | EDITOR | USER
   actif     Boolean  @default(true)
+  status    String   @default("approved") // pending | approved | rejected
+  poste     String?  // poste / service (optionnel, inscription)
+  motif     String?  // motif de la demande (optionnel, inscription)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

@@ -227,16 +227,35 @@ export async function getUserByUsername(username: string): Promise<(User & { pas
   return { ...dbToUser(row), password: row.password };
 }
 
+export async function getPendingRegistrations(): Promise<User[]> {
+  const rows = await prisma.user.findMany({
+    where: { status: "pending" },
+    orderBy: { createdAt: "asc" },
+  });
+  return rows.map(dbToUser);
+}
+
+export async function countPendingRegistrations(): Promise<number> {
+  return prisma.user.count({ where: { status: "pending" } });
+}
+
 function dbToUser(row: {
-  id: string; username: string; nom: string; prenom: string; role: string; actif: boolean;
+  id: string; username: string; nom: string; prenom: string;
+  email?: string | null; role: string; actif: boolean; status: string;
+  poste?: string | null; motif?: string | null; createdAt: Date;
 }): User {
   return {
     id: row.id,
     username: row.username,
     nom: row.nom,
     prenom: row.prenom,
+    email: row.email ?? undefined,
     role: row.role as User["role"],
     actif: row.actif,
+    status: row.status as User["status"],
+    poste: row.poste ?? undefined,
+    motif: row.motif ?? undefined,
+    createdAt: row.createdAt.toISOString(),
   };
 }
 

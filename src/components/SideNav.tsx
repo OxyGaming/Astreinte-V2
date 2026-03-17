@@ -19,7 +19,7 @@ const navItems = [
 export default function SideNav() {
   const pathname = usePathname();
 
-  if (pathname.startsWith("/login") || pathname.startsWith("/admin")) return null;
+  if (pathname.startsWith("/login") || pathname.startsWith("/register") || pathname.startsWith("/admin")) return null;
 
   return (
     <aside className="hidden lg:flex flex-col fixed left-0 top-0 h-full w-64 bg-blue-900 text-white z-40">

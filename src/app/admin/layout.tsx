@@ -13,6 +13,7 @@ import {
   MapPinned,
   UserCog,
   Upload,
+  ClipboardList,
 } from "lucide-react";
 import { adminLogoutAction } from "./login/actions";
 import AdminMobileNav from "@/components/AdminMobileNav";
@@ -27,6 +28,7 @@ const navItems = [
   { href: "/admin/mnemoniques", label: "Mnémoniques", icon: BookOpen },
   { href: "/admin/abreviations", label: "Abréviations", icon: AlignLeft },
   { href: "/admin/users", label: "Utilisateurs", icon: UserCog },
+  { href: "/admin/registrations", label: "Inscriptions", icon: ClipboardList },
   { href: "/admin/import", label: "Import de données", icon: Upload },
 ];
 

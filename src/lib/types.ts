@@ -46,6 +46,7 @@ export interface PointAcces {
   gps?: string;
   note?: string;
   code?: string;
+  reference?: string;
 }
 
 export interface Procedure {
@@ -173,14 +174,20 @@ export interface AccesRail {
 // ─── Utilisateurs front-office ─────────────────────────────────────────────────
 
 export type UserRole = "ADMIN" | "EDITOR" | "USER";
+export type UserStatus = "pending" | "approved" | "rejected";
 
 export interface User {
   id: string;
   username: string;
   nom: string;
   prenom: string;
+  email?: string;
   role: UserRole;
   actif: boolean;
+  status: UserStatus;
+  poste?: string;
+  motif?: string;
+  createdAt?: string;
 }
 
 // ─── Sessions de fiche ─────────────────────────────────────────────────────────

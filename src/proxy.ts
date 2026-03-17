@@ -5,6 +5,8 @@ import { ADMIN_COOKIE, isValidAdminToken } from "@/lib/admin-auth-edge";
 
 const PUBLIC_PREFIXES = [
   "/login",
+  "/register",
+  "/api/register",
   "/admin/login",
   "/_next",
   "/favicon.ico",

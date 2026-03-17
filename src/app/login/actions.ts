@@ -37,13 +37,20 @@ export async function loginAction(
     };
   }
 
-  const user = await verifyUserCredentials(input.username, input.password);
-  if (!user) {
+  const result = await verifyUserCredentials(input.username, input.password);
+  if (result.error === "pending") {
+    return { error: "Votre compte est en attente de validation par un administrateur." };
+  }
+  if (result.error === "rejected") {
+    return { error: "Votre demande d'inscription a été refusée. Contactez un administrateur." };
+  }
+  if (result.error !== null) {
     return { error: "Identifiant ou mot de passe incorrect." };
   }
 
   // Connexion réussie → on réinitialise le compteur
   resetRateLimit(rateLimitKey);
+  const user = result.user;
 
   const isProduction = process.env.NODE_ENV === "production";
   const cookieStore = await cookies();
