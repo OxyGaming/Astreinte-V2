@@ -233,14 +233,31 @@ export default function KmlImportClient() {
         ligne: p.ligne,
         description: p.description || null,
       }));
-      const res = await fetch("/api/admin/import/kml", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ points: payload }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Erreur lors de l'import.");
-      setResult(data);
+
+      // Envoi par lots de 500 pour éviter les limites de taille de requête
+      const BATCH_SIZE = 500;
+      let totalImported = 0;
+      let totalSkipped = 0;
+      const allErrors: string[] = [];
+
+      for (let i = 0; i < payload.length; i += BATCH_SIZE) {
+        const batch = payload.slice(i, i + BATCH_SIZE);
+        const res = await fetch("/api/admin/import/kml", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ points: batch }),
+        });
+        if (!res.ok) {
+          const text = await res.text();
+          throw new Error(`Erreur serveur (lot ${Math.floor(i / BATCH_SIZE) + 1}) : ${text.slice(0, 200)}`);
+        }
+        const data = await res.json();
+        totalImported += data.imported ?? 0;
+        totalSkipped += data.skipped ?? 0;
+        if (Array.isArray(data.errors)) allErrors.push(...data.errors);
+      }
+
+      setResult({ imported: totalImported, skipped: totalSkipped, errors: allErrors });
       setPoints([]);
       setFileName("");
     } catch (e: unknown) {
