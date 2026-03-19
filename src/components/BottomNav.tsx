@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, FileText, Phone, MapPin, AlignLeft, Building2, MapPinned, ClipboardList } from "lucide-react";
+import { Home, FileText, Phone, MapPin, Navigation, Building2, MapPinned, ClipboardList } from "lucide-react";
 import LogoutButton from "./LogoutButton";
 
 const navItems = [
@@ -12,7 +12,7 @@ const navItems = [
   { href: "/contacts", label: "Contacts", icon: Phone },
   { href: "/secteurs", label: "Secteurs", icon: MapPin },
   { href: "/postes", label: "Postes", icon: Building2 },
-  { href: "/mnemoniques", label: "Mnémo", icon: AlignLeft },
+  { href: "/acces", label: "Accès", icon: Navigation },
 ];
 
 export default function BottomNav() {
