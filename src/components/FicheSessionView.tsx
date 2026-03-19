@@ -1,9 +1,19 @@
 "use client";
 
 import { useState, useCallback, useRef } from "react";
-import { Play, Archive, Send, CheckSquare, Square, MessageSquare, Clock, User, ChevronDown, ChevronUp, AlertTriangle } from "lucide-react";
+import { Play, Archive, Send, CheckSquare, Square, MessageSquare, Clock, User, ChevronDown, ChevronUp, AlertTriangle, Mic, Square as StopIcon } from "lucide-react";
 import type { Fiche, FicheSession, JournalEntry } from "@/lib/types";
 import type { SessionUser } from "@/lib/user-auth";
+import { useSpeechRecognition } from "@/hooks/useSpeechRecognition";
+
+const SPEECH_ERRORS: Record<string, string> = {
+  "not-supported": "La dictée vocale n'est pas disponible sur ce navigateur.",
+  "permission-denied": "Accès au microphone refusé. Vérifiez les permissions du navigateur.",
+  "no-speech": "Aucune voix détectée. Réessayez.",
+  "audio-capture": "Impossible d'accéder au microphone.",
+  "network": "Erreur réseau lors de la dictée.",
+  "unknown": "Erreur lors de la dictée vocale.",
+};
 
 interface Props {
   fiche: Fiche;
@@ -40,6 +50,8 @@ export default function FicheSessionView({
   const [submittingComment, setSubmittingComment] = useState(false);
   const [showJournal, setShowJournal] = useState(true);
   const journalRef = useRef<HTMLDivElement>(null);
+
+  const speech = useSpeechRecognition((text) => setComment(text));
 
   const actionKey = (etapeOrdre: number, actionIndex: number) =>
     `etape_${etapeOrdre}_action_${actionIndex}`;
@@ -329,23 +341,80 @@ export default function FicheSessionView({
 
               {/* Comment input */}
               {!isArchived && (
-                <div className="border-t border-slate-200 p-3 bg-slate-50 flex gap-2">
-                  <input
-                    type="text"
-                    value={comment}
-                    onChange={(e) => setComment(e.target.value)}
-                    onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && submitComment()}
-                    placeholder="Ajouter un commentaire terrain…"
-                    className="flex-1 px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
-                  />
-                  <button
-                    onClick={submitComment}
-                    disabled={!comment.trim() || submittingComment}
-                    className="flex items-center gap-1.5 bg-blue-800 hover:bg-blue-700 disabled:bg-blue-300 text-white text-sm font-semibold px-3 py-2 rounded-lg transition-colors flex-shrink-0"
-                  >
-                    <Send size={14} />
-                    Ajouter
-                  </button>
+                <div className="border-t border-slate-200 p-3 bg-slate-50 space-y-1.5">
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={comment}
+                      onChange={(e) => {
+                        setComment(e.target.value);
+                        if (speech.error) speech.clearError();
+                      }}
+                      onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && submitComment()}
+                      placeholder={speech.isListening ? "Parlez…" : "Ajouter un commentaire terrain…"}
+                      className={`flex-1 px-3 py-2 text-sm bg-white border rounded-lg focus:outline-none focus:ring-2 transition-colors ${
+                        speech.isListening
+                          ? "border-red-300 focus:ring-red-300"
+                          : "border-slate-200 focus:ring-blue-400"
+                      }`}
+                    />
+
+                    {/* Mic button — hidden if browser doesn't support Speech API */}
+                    {speech.isSupported && (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          speech.isListening
+                            ? speech.stop()
+                            : speech.start(comment)
+                        }
+                        disabled={submittingComment}
+                        title={speech.isListening ? "Arrêter la dictée" : "Dicter un commentaire (fr-FR)"}
+                        className={`flex items-center justify-center w-9 h-9 rounded-lg transition-all flex-shrink-0 disabled:opacity-40 disabled:cursor-not-allowed ${
+                          speech.isListening
+                            ? "bg-red-500 hover:bg-red-600 text-white"
+                            : "bg-slate-200 hover:bg-slate-300 text-slate-600"
+                        }`}
+                      >
+                        {speech.isListening ? (
+                          <StopIcon size={15} fill="currentColor" />
+                        ) : (
+                          <Mic size={15} />
+                        )}
+                      </button>
+                    )}
+
+                    <button
+                      onClick={submitComment}
+                      disabled={!comment.trim() || submittingComment}
+                      className="flex items-center gap-1.5 bg-blue-800 hover:bg-blue-700 disabled:bg-blue-300 text-white text-sm font-semibold px-3 py-2 rounded-lg transition-colors flex-shrink-0"
+                    >
+                      <Send size={14} />
+                      Ajouter
+                    </button>
+                  </div>
+
+                  {/* Listening indicator */}
+                  {speech.isListening && (
+                    <div className="flex items-center gap-1.5 text-xs text-red-500 font-medium px-0.5">
+                      <span className="inline-block w-2 h-2 rounded-full bg-red-500 animate-pulse flex-shrink-0" />
+                      Écoute en cours… Parlez maintenant.
+                    </div>
+                  )}
+
+                  {/* Error message */}
+                  {speech.error && !speech.isListening && (
+                    <p className="text-xs text-red-500 px-0.5">
+                      {SPEECH_ERRORS[speech.error] ?? SPEECH_ERRORS["unknown"]}
+                    </p>
+                  )}
+
+                  {/* Browser not supported (shown once user tries) */}
+                  {!speech.isSupported && (
+                    <p className="text-xs text-slate-400 italic px-0.5">
+                      La dictée vocale n'est pas disponible sur ce navigateur.
+                    </p>
+                  )}
                 </div>
               )}
             </div>
