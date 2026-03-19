@@ -1,9 +1,11 @@
 /**
- * Seed one-shot pour insérer les 3 référentiels de postes en base.
- * Utilise upsert (slug unique) → idempotent, ne touche pas aux autres données.
- * Usage : npx tsx prisma/seed-postes.ts
+ * Seed des postes depuis prisma/data/postes.json
+ * Utilise upsert (slug unique) → idempotent.
+ * Usage : npm run db:seed-postes
  */
 import "dotenv/config";
+import { readFileSync } from "fs";
+import { join } from "path";
 import { PrismaClient } from "../src/generated/prisma/client";
 import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
 import path from "path";
@@ -14,238 +16,19 @@ const url = path.isAbsolute(dbPath) ? dbPath : path.join(process.cwd(), dbPath);
 const adapter = new PrismaBetterSqlite3({ url });
 const prisma = new PrismaClient({ adapter });
 
-// Récupérer les secteurs pour résoudre les IDs par slug
-async function getSecteurId(slug: string): Promise<string | null> {
-  const s = await prisma.secteur.findUnique({ where: { slug }, select: { id: true } });
-  return s?.id ?? null;
-}
+type PosteRow = {
+  slug: string; nom: string; typePoste: string; lignes: string;
+  adresse: string; horaires: string; electrification: string; systemeBlock: string;
+  annuaire: string; circuitsVoie: string; pnSensibles: string; particularites: string;
+  proceduresCles: string; dbc: string | null; rex: string | null; secteurId: string | null;
+};
 
 async function main() {
   console.log("🌱 Seed postes...");
 
-  const secteurPierreBenite = await getSecteurId("pierre-benite-badan");
-  const secteurGivorsCanal = await getSecteurId("givors-canal");
-  const secteurPeyraud = await getSecteurId("peyraud");
-
-  const postesData = [
-    {
-      slug: "badan",
-      nom: "Badan",
-      typePoste: "Poste à leviers individuels",
-      lignes: JSON.stringify(["750000"]),
-      adresse: "Rue Paul Langevin, 69520 Grigny-sur-Rhône",
-      horaires: "3×8 : 5h–13h / 13h–21h / 21h–5h",
-      electrification: "1500V CC",
-      systemeBlock: "BAL",
-      secteurId: secteurPierreBenite,
-      annuaire: JSON.stringify([
-        { titre: "Gares encadrantes", contacts: [
-          { nom: "Badan P1", telephone: "04 37 60 33 23" },
-          { nom: "Badan P2", telephone: "04 37 60 33 56" },
-          { nom: "AC Perrache Nord", telephone: "04 69 85 69 03" },
-          { nom: "Givors Canal", telephone: "04 37 60 13 09" },
-        ]},
-        { titre: "Régulation", contacts: [
-          { nom: "Régul Sud", telephone: "04 26 21 74 95" },
-        ]},
-        { titre: "Forces de l'ordre", contacts: [
-          { nom: "Commissariat Givors", telephone: "04 72 49 26 50" },
-          { nom: "Gendarmerie Irigny", telephone: "04 78 50 30 33" },
-          { nom: "Gendarmerie Brignais", telephone: "04 78 05 18 42" },
-        ]},
-        { titre: "Entreprises ferroviaires (ExF)", contacts: [
-          { nom: "DB Cargo", telephone: "09 77 40 00 01" },
-          { nom: "Ferromove", telephone: "07 68 03 84 15" },
-          { nom: "Hexafret", telephone: "04 26 21 17 49" },
-        ]},
-      ]),
-      circuitsVoie: JSON.stringify([
-        { designation: "C12/V2", voie: "Voie 2 Badan–Chasse", delai_max: "72h", note: "Passage obligatoire toutes les 72h maximum" },
-        { designation: "C55/V1", voie: "Voie 1 Badan–Chasse", delai_max: "72h", note: "Passage obligatoire toutes les 72h maximum" },
-      ]),
-      pnSensibles: JSON.stringify([
-        { numero: "363", contact: "Gendarmerie Irigny", telephone: "04 78 50 30 33" },
-        { numero: "361", contact: "—", note: "PN normalement fermé — portails cadenassés" },
-      ]),
-      particularites: JSON.stringify([
-        "Aiguilles V et W : type Saxby avec serrure S, manœuvrables uniquement par clé X11",
-        "Point B : guérite fermée, liaison téléphonique avec AC P1, transmetteur électrique A avec clé A, commutateur Cv26",
-        "TVP Vernaison : prestataire lun–ven 15h30–20h30 — contacter Badan ou CCGOL hors ces horaires",
-        "Souterrain Grigny-Le-Sablon : appliquer procédure DC01503 fiche 10.4",
-        "Situation perturbée la plus fréquente : annulateur de verrou pour libérer enclenchement d'approche (modification d'itinéraire)",
-        "PN 361 normalement fermé — portails cadenassés",
-      ]),
-      proceduresCles: JSON.stringify([
-        { titre: "Consigne UTIL", description: "Utilisation des installations de Badan P1", reference: "EIC RA DC07446" },
-        { titre: "Organisation", description: "Organisation du poste Badan P1 et P2", reference: "EIC RA DC07294" },
-        { titre: "Protection", description: "Mesures de protection Badan", reference: "EIC RA CM07371" },
-        { titre: "Consigne bleue", description: "Consigne bleue Badan", reference: "EIC RA IN00600" },
-        { titre: "Cessation de service Badan P2", description: "Procédure de cessation et reprise du service pour Badan P2", reference: "EIC RA DC07294" },
-        { titre: "Cessation de service Badan P1", description: "Procédure de cessation et reprise du service pour Badan P1", reference: "EIC RA DC07292" },
-      ]),
-      dbc: null,
-      rex: JSON.stringify([
-        "DAA V2 : l'appui sur le bouton poussoir entraîne la fermeture du carré 342 au km 544,420 voie 2",
-      ]),
-    },
-    {
-      slug: "givors-canal",
-      nom: "Givors Canal",
-      typePoste: "PRS (Poste Tout Relais à Transit Souple)",
-      lignes: JSON.stringify(["750000", "800000", "906000"]),
-      adresse: "Rue Auguste Delaune, 69700 Givors",
-      horaires: "AC 3×8 : 4h30–12h30 / 12h30–20h30 / 20h30–4h30 | Aiguilleur 2×8 : 4h30–12h30 / 12h20–20h20",
-      electrification: "1500V CC",
-      systemeBlock: "BAL",
-      secteurId: secteurGivorsCanal,
-      annuaire: JSON.stringify([
-        { titre: "Gares encadrantes", contacts: [
-          { nom: "AC Perrache Nord", telephone: "04 69 85 69 03" },
-          { nom: "Badan P1", telephone: "04 37 60 33 23" },
-          { nom: "Chasse P1", telephone: "04 37 60 13 36" },
-          { nom: "Chasse P2", telephone: "04 37 60 13 38" },
-          { nom: "Givors Ville", telephone: "04 37 60 13 08" },
-          { nom: "Peyraud", telephone: "04 75 61 87 09" },
-        ]},
-        { titre: "Régulation", contacts: [
-          { nom: "Régul Sud", telephone: "04 26 21 74 95" },
-          { nom: "CCL CCGOL", telephone: "04 69 85 69 07" },
-        ]},
-        { titre: "Astreintes", contacts: [
-          { nom: "RDN", telephone: "06 19 56 36 55" },
-          { nom: "RGN", telephone: "06 18 40 28 39" },
-          { nom: "Centre CCR", telephone: "06 17 28 21 64" },
-        ]},
-        { titre: "Forces de l'ordre", contacts: [
-          { nom: "Commissariat Givors", telephone: "04 72 49 26 50" },
-          { nom: "Gendarmerie Irigny", telephone: "04 78 50 30 33" },
-          { nom: "Gendarmerie Brignais", telephone: "04 78 05 18 42" },
-          { nom: "Gendarmerie Chasse-sur-Rhône", telephone: "04 37 20 12 80" },
-        ]},
-      ]),
-      circuitsVoie: JSON.stringify([
-        { designation: "Zone Condrieu", voie: "IN-A, A-1S, 2S-A, A-2N", note: "Surveillance régulière obligatoire" },
-        { designation: "Zone RACC", voie: "1CV-1V, 2V-2CV, 1V-2BC, 1B-2V", note: "Surveillance régulière obligatoire" },
-        { designation: "C12/V2 — Zone Badan P1", voie: "Voie 2 Badan–Chasse", delai_max: "72h", note: "Passage obligatoire toutes les 72h maximum" },
-        { designation: "C55/V1 — Zone Badan P1", voie: "Voie 1 Badan–Chasse", delai_max: "72h", note: "Passage obligatoire toutes les 72h maximum" },
-      ]),
-      pnSensibles: JSON.stringify([
-        { numero: "16, 17, 18", contact: "Gendarmerie Ampuis", note: "Avis gendarmerie obligatoire en cas d'incident" },
-        { numero: "29", contact: "Gendarmerie Serrières", note: "Avis gendarmerie obligatoire en cas d'incident" },
-        { numero: "363", contact: "Gendarmerie Irigny", telephone: "04 78 50 30 33" },
-        { numero: "361", contact: "—", note: "PN normalement fermé — portails cadenassés" },
-      ]),
-      particularites: JSON.stringify([
-        "DBC surveillance : Loire V1 et Loire V2",
-        "OLERON : pas d'enregistreur — 2 enregistreurs papier (Condrieu + Givors Canal)",
-        "Arrêt d'urgence via CCL-R uniquement (ZAL zone Peyraud–La Voulte restreinte)",
-        "Point A de Condrieu : Cv31, C41, aiguilles B/E/C, taquet D, bouton annonce PN16",
-        "Dessertes ITE : km 541,8 (clé PSR) et km 538,4 (clé PGC)",
-        "Passerelle Irigny-Yvours, Souterrain Grigny-Le-Sablon, Souterrain Givors Ville → fiche 10.4 DC01503",
-        "Détecteur chute de rochers Trèves-Burel : reprise voie 1 impossible sans avis préalable du mainteneur",
-        "TVP Vernaison : prestataire lun–ven 15h30–20h30 — hors horaires, agent prestataire contacte Badan ou CCGOL",
-        "PN 361 normalement fermé — portails cadenassés",
-        "Agent E : compétent pour Givors Ville ET Givors Canal",
-        "Circulation Chasse → GIV envoyée par erreur sur Racc Peyraud V1 : appliquer Art 6 DC11683 ou fiche 204 DC01560",
-      ]),
-      proceduresCles: JSON.stringify([
-        { titre: "Consigne UTIL Givors Canal", description: "Utilisation des installations de Givors Canal", reference: "EIC RA DC07454" },
-        { titre: "Consigne UTIL Badan", description: "Utilisation des installations de Badan P1", reference: "EIC RA DC07446" },
-        { titre: "Cessation de service Badan P1", description: "Procédure de cessation et reprise du service pour Badan P1", reference: "EIC RA DC07292" },
-        { titre: "Cessation de service Givors Canal", description: "Procédure de cessation et reprise du service pour Givors Canal", reference: "EIC RA DC07283" },
-        { titre: "Erreur d'envoi Chasse → Racc Peyraud V1", description: "Circulation en provenance de Chasse vers GIV envoyée par erreur sur Raccordement Peyraud V1", reference: "Art 6 DC11683 / fiche 204 DC01560" },
-        { titre: "Souterrains et passerelle", description: "Passerelle Irigny-Yvours, Souterrain Grigny-Le-Sablon, Souterrain Givors Ville", reference: "DC01503 fiche 10.4" },
-      ]),
-      dbc: JSON.stringify([
-        { designation: "DBC Loire V1", voie: "Loire V1", note: "Surveillance obligatoire" },
-        { designation: "DBC Loire V2", voie: "Loire V2", note: "Surveillance obligatoire" },
-      ]),
-      rex: null,
-    },
-    {
-      slug: "peyraud",
-      nom: "Peyraud",
-      typePoste: "PRS (Poste Tout Relais à Transit Souple)",
-      lignes: JSON.stringify(["800000"]),
-      adresse: "Rue des Ferrettes, 07340 Peyraud",
-      horaires: "3×8 : 5h–12h30 / 12h30–21h / 21h–5h",
-      electrification: "1500V CC",
-      systemeBlock: "BAL",
-      secteurId: secteurPeyraud,
-      annuaire: JSON.stringify([
-        { titre: "Gares encadrantes", contacts: [
-          { nom: "Saint Rambert", telephone: "04 75 61 87 0X", note: "Numéro à confirmer" },
-          { nom: "Givors Canal", telephone: "04 37 60 13 09" },
-          { nom: "La Voulte", telephone: "04 75 61 88 63" },
-          { nom: "Tournon", telephone: "04 75 61 87 05" },
-          { nom: "Saint-Péray", telephone: "04 75 61 88 05" },
-          { nom: "Badan P1", telephone: "04 37 60 33 23" },
-          { nom: "Badan P2", telephone: "04 37 60 33 56" },
-        ]},
-        { titre: "Régulation", contacts: [
-          { nom: "CCL-R (Régul VDR)", telephone: "04 26 72 99 93" },
-          { nom: "CRC Lyon", telephone: "04 72 40 11 29" },
-          { nom: "RSS", telephone: "04 72 40 16 19" },
-        ]},
-        { titre: "Astreintes", contacts: [
-          { nom: "RDN", telephone: "06 19 56 36 55" },
-          { nom: "RDS", telephone: "06 29 99 81 82" },
-          { nom: "RGN", telephone: "06 18 40 28 39" },
-        ]},
-        { titre: "Encadrement", contacts: [
-          { nom: "Jessie ACHILLE", role: "DPx", telephone: "06 13 22 61 80" },
-          { nom: "Yannis EL JAID", role: "ADPx", telephone: "07 77 28 54 96" },
-          { nom: "Jean-Daniel DUMAS", role: "DUO", telephone: "06 09 61 44 29" },
-          { nom: "Régis FONGARLAND", role: "RDUO", telephone: "06 01 15 42 05" },
-        ]},
-        { titre: "Maintenance", contacts: [
-          { nom: "Supervision", telephone: "04 26 21 18 44" },
-          { nom: "Graisseurs", telephone: "06 22 02 36 95" },
-          { nom: "Nour Eddine ABAIDIA", telephone: "06 23 55 75 39" },
-        ]},
-        { titre: "Forces de l'ordre", contacts: [
-          { nom: "SUGE", telephone: "19" },
-          { nom: "Gendarmerie Serrières", telephone: "04 75 34 02 02" },
-        ]},
-      ]),
-      circuitsVoie: JSON.stringify([
-        { designation: "Voie 1bis", note: "Circuit de voie local à surveiller" },
-        { designation: "Voie 2bis", note: "Circuit de voie local à surveiller" },
-        { designation: "Raccordement sud Peyraud", note: "Circuit de voie local à surveiller" },
-      ]),
-      pnSensibles: JSON.stringify([
-        { numero: "16, 17, 18", contact: "Gendarmerie", note: "Avis gendarmerie obligatoire en cas d'incident" },
-        { numero: "29", contact: "Gendarmerie Serrières", telephone: "04 75 34 02 02", note: "Avis gendarmerie obligatoire en cas d'incident" },
-        { numero: "37", contact: "Gendarmerie", note: "Avis gendarmerie obligatoire en cas d'incident" },
-        { numero: "63", contact: "Gendarmerie", note: "Avis gendarmerie obligatoire en cas d'incident" },
-        { numero: "35", contact: "—", note: "En cas d'arrêt au carré 578,7 : PN 35 maintenu fermé — voir art. 204 consigne rose" },
-      ]),
-      particularites: JSON.stringify([
-        "Arrêt d'urgence via CCL-R uniquement — pas de ZAL locale disponible",
-        "OLERON enregistreur : DV / VB / VU",
-        "SAAT MISTRAL n°54 — vérifier le fonctionnement régulièrement",
-        "DBC Andance V2 et Limony V1 — surveillance obligatoire",
-        "Point F : zone de manœuvres sur voie de débranchement",
-        "TCO : présence d'un bouton SEC — si TCO hors service, appliquer fiche 313 DC01560",
-        "PN sensibles 16, 17, 18, 29, 37, 63 : avis gendarmerie obligatoire en cas d'incident",
-        "Surveillance des trains en marche obligatoire (DC01505 art. 2.1.8) — boutons DAA V1 C 578,7 et DAA V2 C 571,5 sur la table de commande",
-      ]),
-      proceduresCles: JSON.stringify([
-        { titre: "TCO hors service", description: "En cas de défaillance du TCO, appliquer la procédure spécifique", reference: "Fiche 313 DC01560" },
-        { titre: "Réception occupée V1bis côté SUD", description: "Un bouton poussoir situé sur le C11 permet la réception occupée V1bis côté SUD." },
-        { titre: "Surveillance des trains en marche", description: "L'AC de Peyraud P1 dispose des boutons DAA V1 C 578,7 et DAA V2 C 571,5 sur la table de commande.", reference: "DC01503 / DC01505 art. 2.1.8" },
-        { titre: "Dérangements — Consigne UTIL", description: "Se référer à la consigne UTIL pour la gestion des cas de dérangements." },
-      ]),
-      dbc: JSON.stringify([
-        { designation: "DBC Andance V2", voie: "Voie 2 — section Andance", note: "Surveillance obligatoire" },
-        { designation: "DBC Limony V1", voie: "Voie 1 — section Limony", note: "Surveillance obligatoire" },
-      ]),
-      rex: JSON.stringify([
-        "DFV avec aiguilles mal disposées : risque de talonnage — vérifier systématiquement la position des aiguilles avant tout mouvement",
-        "DFV accord SI sans vérification préalable : ne jamais accorder un signal d'installation sans avoir effectué les vérifications requises",
-      ]),
-    },
-  ];
+  const postesData: PosteRow[] = JSON.parse(
+    readFileSync(join(__dirname, "data", "postes.json"), "utf-8")
+  );
 
   for (const p of postesData) {
     await prisma.poste.upsert({

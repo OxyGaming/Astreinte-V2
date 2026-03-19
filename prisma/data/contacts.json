@@ -1,0 +1,172 @@
+[
+  {
+    "id": "suge",
+    "nom": "SUGE",
+    "role": "Sûreté ferroviaire",
+    "categorie": "urgence",
+    "telephone": "04 78 65 52 53",
+    "telephoneAlt": "19",
+    "note": "19 depuis un poste fixe",
+    "disponibilite": "24h/24"
+  },
+  {
+    "id": "supervision",
+    "nom": "Supervision",
+    "role": "Centre de supervision",
+    "categorie": "urgence",
+    "telephone": "04 26 21 18 44",
+    "telephoneAlt": null,
+    "note": null,
+    "disponibilite": "24h/24"
+  },
+  {
+    "id": "crc-cil",
+    "nom": "CRC ligne CIL",
+    "role": "Coordinateur Régional des Circulations — ligne CIL",
+    "categorie": "urgence",
+    "telephone": "04 26 21 78 18",
+    "telephoneAlt": null,
+    "note": null,
+    "disponibilite": "24h/24"
+  },
+  {
+    "id": "astreinte-loire",
+    "nom": "Astreinte Loire",
+    "role": "Astreinte secteur Loire",
+    "categorie": "astreinte",
+    "telephone": "06 10 46 30 65",
+    "telephoneAlt": null,
+    "note": null,
+    "disponibilite": "Période d'astreinte"
+  },
+  {
+    "id": "astreinte-gier",
+    "nom": "Astreinte Gier",
+    "role": "Astreinte secteur Gier / Rive Droite Nord",
+    "categorie": "astreinte",
+    "telephone": "06 19 56 36 55",
+    "telephoneAlt": null,
+    "note": null,
+    "disponibilite": "Période d'astreinte"
+  },
+  {
+    "id": "astreinte-nord",
+    "nom": "Astreinte Nord",
+    "role": "Astreinte secteur Nord",
+    "categorie": "astreinte",
+    "telephone": "06 17 28 21 64",
+    "telephoneAlt": null,
+    "note": null,
+    "disponibilite": "Période d'astreinte"
+  },
+  {
+    "id": "dti",
+    "nom": "DTI",
+    "role": "Dirigeant Territorial Infra",
+    "categorie": "encadrement",
+    "telephone": "06 09 73 40 20",
+    "telephoneAlt": null,
+    "note": null,
+    "disponibilite": "Astreinte"
+  },
+  {
+    "id": "dto",
+    "nom": "DTO",
+    "role": "Dirigeant Territorial Opérations",
+    "categorie": "encadrement",
+    "telephone": "06 24 95 69 90",
+    "telephoneAlt": null,
+    "note": null,
+    "disponibilite": "Astreinte"
+  },
+  {
+    "id": "soutien-psy",
+    "nom": "Pôle soutien psychologique",
+    "role": "Soutien psychologique agents",
+    "categorie": "urgence",
+    "telephone": "0800 39 17 87",
+    "telephoneAlt": null,
+    "note": "Numéro gratuit — disponible 24h/24",
+    "disponibilite": "24h/24"
+  },
+  {
+    "id": "gendarmerie-irigny",
+    "nom": "Gendarmerie Irigny",
+    "role": "Autorités — PN 363 (D36)",
+    "categorie": "externe",
+    "telephone": "04 78 50 30 33",
+    "telephoneAlt": null,
+    "note": "Aviser en cas de raté d'ouverture PN 363",
+    "disponibilite": null
+  },
+  {
+    "id": "gendarmerie-ampuis",
+    "nom": "Gendarmerie Ampuis",
+    "role": "Autorités — PN 16, 17, 18 (RN 86 Condrieu)",
+    "categorie": "externe",
+    "telephone": "04 74 56 10 26",
+    "telephoneAlt": null,
+    "note": "Aviser en cas de raté d'ouverture PN 16, 17, 18",
+    "disponibilite": null
+  },
+  {
+    "id": "gendarmerie-serrieres",
+    "nom": "Gendarmerie Serrières",
+    "role": "Autorités — PN 29 (RN 86 Limony)",
+    "categorie": "externe",
+    "telephone": "04 75 34 02 02",
+    "telephoneAlt": null,
+    "note": "Aviser en cas de raté d'ouverture PN 29",
+    "disponibilite": null
+  },
+  {
+    "id": "gendarmerie-andance",
+    "nom": "Gendarmerie Andance",
+    "role": "Autorités — PN 37 (RN 86 Andance)",
+    "categorie": "externe",
+    "telephone": "04 75 34 21 44",
+    "telephoneAlt": null,
+    "note": "Aviser en cas de raté d'ouverture PN 37",
+    "disponibilite": null
+  },
+  {
+    "id": "cnr-condrieu",
+    "nom": "Compagnie Nationale du Rhône",
+    "role": "Gestionnaire voies CNR — Condrieu",
+    "categorie": "externe",
+    "telephone": "04 74 78 38 80",
+    "telephoneAlt": null,
+    "note": "Z.A. de Vérenay BP 77, 69420 Condrieu",
+    "disponibilite": null
+  },
+  {
+    "id": "cmmrgsxve0000hgul8f56eae7",
+    "nom": "Police",
+    "role": "Secours",
+    "categorie": "urgence",
+    "telephone": "17",
+    "telephoneAlt": null,
+    "note": null,
+    "disponibilite": "24/24"
+  },
+  {
+    "id": "cmmrgt8sm0001hgul5zoqd19g",
+    "nom": "Pompier",
+    "role": "Secours",
+    "categorie": "urgence",
+    "telephone": "18",
+    "telephoneAlt": null,
+    "note": null,
+    "disponibilite": "24/24"
+  },
+  {
+    "id": "cmmrgtqnb0002hgulaf4ts0fx",
+    "nom": "SAMU",
+    "role": "Secours",
+    "categorie": "urgence",
+    "telephone": "15",
+    "telephoneAlt": null,
+    "note": null,
+    "disponibilite": "24/24"
+  }
+]

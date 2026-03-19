@@ -35,7 +35,7 @@ export default function SearchBar({ autoFocus = false }: { autoFocus?: boolean }
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Rechercher une fiche, contact, secteur…"
-          className="w-full pl-10 pr-10 py-3 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder-slate-400 shadow-sm"
+          className="w-full pl-10 pr-10 py-3 bg-white border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder-slate-400 shadow-sm"
         />
         {query && (
           <button

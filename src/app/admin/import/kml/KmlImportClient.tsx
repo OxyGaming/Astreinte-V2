@@ -27,6 +27,47 @@ interface ImportResult {
   errors: string[];
 }
 
+// ─── Parser du nom ferroviaire (format : "{ligne}-{voie} {pk} [{type} [{identifiant}]]") ─
+
+function parseNomFerroviaire(rawNom: string) {
+  const nom = rawNom.replace(/<!\[CDATA\[|\]\]>/g, "").trim();
+  const parts = nom.split(/\s+/).filter(Boolean);
+  let idx = 0;
+  let ligne = "";
+  let pk = "";
+  let type = "";
+  let identifiant = "";
+
+  // Token 0 : "{ligne}-{voie}" ex: "750000-1"
+  if (idx < parts.length && /^\d+-\d+$/.test(parts[idx])) {
+    ligne = parts[idx].split("-")[0];
+    idx++;
+  }
+
+  // Token 1 : PK ex: "389+364" ou "387"
+  if (idx < parts.length && /^\d+(\+\d+)?$/.test(parts[idx])) {
+    pk = parts[idx];
+    idx++;
+  }
+
+  // Tokens restants : type (majuscules 1-6 lettres) + identifiant
+  if (idx < parts.length) {
+    const candidate = parts[idx];
+    if (/^[A-Z]{1,6}$/.test(candidate)) {
+      type = candidate;
+      idx++;
+      if (idx < parts.length) {
+        identifiant = parts.slice(idx).join(" ");
+      }
+    } else {
+      identifiant = parts.slice(idx).join(" ");
+    }
+  }
+
+  // Données étendues en fallback si le nom ne suit pas le format standard
+  return { ligne, pk, type, identifiant };
+}
+
 // ─── Parser KML côté client ────────────────────────────────────────────────
 
 function parseKML(xmlString: string): ParsedPoint[] {
@@ -45,54 +86,45 @@ function parseKML(xmlString: string): ParsedPoint[] {
 
     // Coordonnées (format KML : lon,lat,alt)
     const coordText = pm.querySelector("coordinates")?.textContent?.trim() || "";
-    const parts = coordText.split(",").map((s) => parseFloat(s.trim()));
-    const longitude = parts[0] || null;
-    const latitude = parts[1] || null;
+    const coordParts = coordText.split(",").map((s) => parseFloat(s.trim()));
+    const longitude = coordParts[0] || null;
+    const latitude = coordParts[1] || null;
 
-    // Données étendues (SchemaData / SimpleData)
+    // Données étendues (SchemaData / SimpleData) — fallback si pas de format standard
     const extData: Record<string, string> = {};
     pm.querySelectorAll("SimpleData").forEach((sd) => {
       const key = sd.getAttribute("name") || "";
       extData[key.toUpperCase()] = sd.textContent?.trim() || "";
     });
-    // Data (clé/valeur alternatives)
     pm.querySelectorAll("Data").forEach((d) => {
       const key = d.getAttribute("name") || "";
       const val = d.querySelector("value")?.textContent?.trim() || "";
       extData[key.toUpperCase()] = val;
     });
 
-    // Détecter le type depuis le nom (PN, TUN, PRO, SRD, PRA, BIF, GAR…)
-    const typeReg = /^(PN|TUN|PRO|SRD|PRA|BIF|GAR|CAR|ITE|PA|PP)\s*/i;
-    const typeMatch = name.match(typeReg);
-    const type = typeMatch
-      ? typeMatch[1].toUpperCase()
-      : (extData["TYPE"] || extData["CATEGORIE"] || "");
-    const identifiant = typeMatch
-      ? name.slice(typeMatch[0].length).trim()
-      : (extData["IDENTIFIANT"] || extData["ID"] || name);
+    // Extraction depuis le nom (format standard ferroviaire)
+    const parsed = parseNomFerroviaire(name);
 
-    // PK et Ligne
-    const pk =
-      extData["PK"] ||
-      extData["PK_LIGNE"] ||
-      extData["POINT_KILOMETRIQUE"] ||
-      extractPKFromText(desc) ||
-      extractPKFromText(name) ||
-      "";
-    const ligne =
-      extData["LIGNE"] ||
-      extData["NUM_LIGNE"] ||
-      extData["CODE_LIGNE"] ||
-      extractLigneFromText(desc) ||
-      "";
+    // Fallback sur ExtendedData si le nom ne contient pas l'info
+    const ligne = parsed.ligne || extData["LIGNE"] || extData["NUM_LIGNE"] || extData["CODE_LIGNE"] || "";
+    const pk = parsed.pk || extData["PK"] || extData["PK_LIGNE"] || extData["POINT_KILOMETRIQUE"] || "";
+    const type = parsed.type || extData["TYPE"] || extData["CATEGORIE"] || "";
+    const identifiant = parsed.identifiant || extData["IDENTIFIANT"] || extData["ID"] || "";
+
+    // nomAffiche : type + identifiant, ou identifiant seul, ou PK, ou nom brut
+    let nomAffiche: string;
+    if (type && identifiant) nomAffiche = `${type} ${identifiant}`;
+    else if (type) nomAffiche = type;
+    else if (identifiant) nomAffiche = identifiant;
+    else if (pk) nomAffiche = `PK ${pk}`;
+    else nomAffiche = name;
 
     const hasCoords = latitude !== null && longitude !== null && !isNaN(latitude) && !isNaN(longitude);
     const error = !hasCoords ? "Coordonnées manquantes ou invalides" : undefined;
 
     return {
       nomComplet: name,
-      nomAffiche: name,
+      nomAffiche,
       latitude,
       longitude,
       type,
@@ -104,18 +136,6 @@ function parseKML(xmlString: string): ParsedPoint[] {
       error,
     };
   });
-}
-
-function extractPKFromText(text: string): string {
-  const m = text.match(/pk\s*[:\s]\s*([\d+,.]+)/i) ||
-    text.match(/([\d]+[+.,][\d]+)/);
-  return m ? m[1] : "";
-}
-
-function extractLigneFromText(text: string): string {
-  const m = text.match(/ligne\s*[:\s]\s*([^\s,<]+)/i) ||
-    text.match(/L[:\s]([A-Z0-9\-\/]+)/);
-  return m ? m[1] : "";
 }
 
 // ─── Composant principal ──────────────────────────────────────────────────

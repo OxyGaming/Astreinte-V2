@@ -1,0 +1,137 @@
+[
+  {
+    "id": "cmmrfzhz90000soulnrv0pytk",
+    "sigle": "AC",
+    "definition": "Agent Circulation"
+  },
+  {
+    "id": "cmmrfzhzh0001soulglcnu48x",
+    "sigle": "CIL",
+    "definition": "Chef Incident Local"
+  },
+  {
+    "id": "cmmrfzi1v000dsoulhoen597a",
+    "sigle": "CNOC",
+    "definition": "Centre National des Opérations de Circulation"
+  },
+  {
+    "id": "cmmrfzi1n000csoul76fv02cn",
+    "sigle": "COGC",
+    "definition": "Centre Opérationnel de Gestion des Circulations"
+  },
+  {
+    "id": "cmmrfzi39000ksouli3cg3shv",
+    "sigle": "COS",
+    "definition": "Commandant des Opérations de Secours"
+  },
+  {
+    "id": "cmmrfzhzo0002soul16jfjip9",
+    "sigle": "CRC",
+    "definition": "Coordinateur Régional des Circulations"
+  },
+  {
+    "id": "cmmrfzi2v000isoulydgqb2g8",
+    "sigle": "DE",
+    "definition": "Dirigeant d'Enquête"
+  },
+  {
+    "id": "cmmrfzhzv0003soul6qfo9qo8",
+    "sigle": "DTI",
+    "definition": "Dirigeant Territorial Infra"
+  },
+  {
+    "id": "cmmrfzi020004soulmap1uhrf",
+    "sigle": "DTO",
+    "definition": "Dirigeant Territorial Opérations"
+  },
+  {
+    "id": "cmmrfzi4g000qsoullj5nmdxo",
+    "sigle": "ECP",
+    "definition": "Épreuve de Contrôle des Performances"
+  },
+  {
+    "id": "cmmrfzi29000fsoulj579i4cu",
+    "sigle": "EF",
+    "definition": "Entreprise Ferroviaire"
+  },
+  {
+    "id": "cmmrfzi2g000gsoul4ceut0dk",
+    "sigle": "EPSF",
+    "definition": "Établissement Public de Sécurité Ferroviaire"
+  },
+  {
+    "id": "cmmrfzi49000psoul9s7x7ddo",
+    "sigle": "MC",
+    "definition": "Mesures Conservatoires"
+  },
+  {
+    "id": "cmmrfzi0a0005souleyjzwgzo",
+    "sigle": "MD",
+    "definition": "Marchandises Dangereuses"
+  },
+  {
+    "id": "cmmrfzi42000osouljikq6cp8",
+    "sigle": "MU",
+    "definition": "Mesures d'Urgence"
+  },
+  {
+    "id": "cmmrfzi3h000lsoulmhplf27k",
+    "sigle": "OPJ",
+    "definition": "Officier de Police Judiciaire"
+  },
+  {
+    "id": "cmmrfzi0h0006soula793v7ht",
+    "sigle": "PMR",
+    "definition": "Personne à Mobilité Réduite"
+  },
+  {
+    "id": "cmmrfzi0o0007souljd68um7r",
+    "sigle": "PN",
+    "definition": "Passage à Niveau"
+  },
+  {
+    "id": "cmmrfzi32000jsoulp1r5cskk",
+    "sigle": "RCI",
+    "definition": "Rapport de Compte-rendu d'Incident"
+  },
+  {
+    "id": "cmmrfzi3o000msoulgsy6malf",
+    "sigle": "RFN",
+    "definition": "Réseau Ferré National"
+  },
+  {
+    "id": "cmmrfzi0v0008soule7d0dyhh",
+    "sigle": "RO",
+    "definition": "Responsable des Opérations"
+  },
+  {
+    "id": "cmmrfzi120009soula6cmq3vp",
+    "sigle": "RSS",
+    "definition": "Régulateur Sous-Station"
+  },
+  {
+    "id": "cmmrfzi3v000nsoul2vh0zuzh",
+    "sigle": "SGC",
+    "definition": "Service de la Gestion des Circulations"
+  },
+  {
+    "id": "cmmrfzi22000esoulrxnub9n5",
+    "sigle": "SUGE",
+    "definition": "Sûreté Générale"
+  },
+  {
+    "id": "cmmrfzi2o000hsoulykcyxkg8",
+    "sigle": "TVP",
+    "definition": "Traversée de Voies Principales"
+  },
+  {
+    "id": "cmmrfzi19000asoul5bpxadt4",
+    "sigle": "UOC",
+    "definition": "Unité Opérationnelle Circulation"
+  },
+  {
+    "id": "cmmrfzi1g000bsoulqrdjtclp",
+    "sigle": "ZD",
+    "definition": "Zone Dangereuse"
+  }
+]

@@ -1,0 +1,74 @@
+[
+  {
+    "id": "fccca",
+    "acronyme": "FCCCA CCR SVPFE",
+    "titre": "Détection — Avis — Appel",
+    "description": "Protocole général de détection d'un écart, lancement des avis et appel des ressources.",
+    "lettres": "[{\"lettre\":\"F\",\"signification\":\"Figeage\",\"detail\":\"Figer la situation pour éviter qu'elle ne s'aggrave.\"},{\"lettre\":\"C\",\"signification\":\"COGC\",\"detail\":\"Aviser le COGC immédiatement.\"},{\"lettre\":\"C\",\"signification\":\"CRC\",\"detail\":\"Aviser le CRC et coordonner les circulations.\"},{\"lettre\":\"C\",\"signification\":\"Chef de file\",\"detail\":\"Identifier et aviser le chef de file compétent.\"},{\"lettre\":\"A\",\"signification\":\"Astreinte\",\"detail\":\"Aviser les astreintes concernées.\"},{\"lettre\":\"C\",\"signification\":\"Constatations\",\"detail\":\"Prendre les mesures utiles pour les constatations immédiates.\"},{\"lettre\":\"C\",\"signification\":\"CRC\",\"detail\":\"Confirmer les avis au CRC.\"},{\"lettre\":\"R\",\"signification\":\"Renseignements\",\"detail\":\"Recueillir les renseignements utiles.\"},{\"lettre\":\"S\",\"signification\":\"Secours\",\"detail\":\"Déclencher les secours si nécessaire.\"},{\"lettre\":\"V\",\"signification\":\"Vérification\",\"detail\":\"Vérifier les mesures prises.\"},{\"lettre\":\"P\",\"signification\":\"Protection\",\"detail\":\"Confirmer la protection de la voie et des personnes.\"},{\"lettre\":\"F\",\"signification\":\"Figeage\",\"detail\":\"Confirmer le figeage de la situation.\"},{\"lettre\":\"E\",\"signification\":\"Estimation délai\",\"detail\":\"Estimer le délai d'arrivée et le fournir au CRC.\"}]",
+    "contexte": "À appliquer dès détection d'une anomalie susceptible de mettre en péril la sécurité du système ferroviaire.",
+    "couleur": "blue"
+  },
+  {
+    "id": "fimermo",
+    "acronyme": "FIMERMO",
+    "titre": "Mesures d'urgence locales",
+    "description": "Mesures immédiates prises par les OPS pour éviter que la situation ne s'aggrave.",
+    "lettres": "[{\"lettre\":\"Fi\",\"signification\":\"Figeage\",\"detail\":\"Figer la situation.\"},{\"lettre\":\"M\",\"signification\":\"Mesures bien prises\",\"detail\":\"S'assurer que les mesures d'urgence locales sont en place.\"},{\"lettre\":\"E\",\"signification\":\"Estimation\",\"detail\":\"Estimer le délai d'arrivée.\"},{\"lettre\":\"R\",\"signification\":\"Renseignements utiles\",\"detail\":\"Recueillir et transmettre les renseignements.\"},{\"lettre\":\"M\",\"signification\":\"Matériels\",\"detail\":\"CCLET : Chasuble, Clé, Lampe, EPI, Téléphone.\"},{\"lettre\":\"O\",\"signification\":\"Organisation\",\"detail\":\"Organiser : Personnes, Matériel, Point d'accès.\"}]",
+    "contexte": "Applicable en cas d'incident ou de personnel ne satisfaisant pas aux conditions requises.",
+    "couleur": "red"
+  },
+  {
+    "id": "carbemi",
+    "acronyme": "CARBEMI",
+    "titre": "Protocole d'arrivée CIL",
+    "description": "Actions à effectuer à l'arrivée sur site en tant que Chef Incident Local.",
+    "lettres": "[{\"lettre\":\"C\",\"signification\":\"Chasuble CIL\",\"detail\":\"Revêtir le chasuble CIL.\"},{\"lettre\":\"A\",\"signification\":\"Avis CRC\",\"detail\":\"Aviser le CRC.\"},{\"lettre\":\"R\",\"signification\":\"Reprise mesures\",\"detail\":\"Reprendre les mesures de protections en cours.\"},{\"lettre\":\"B\",\"signification\":\"Bouclage\",\"detail\":\"Vérifier Mesures et Avis.\"},{\"lettre\":\"E\",\"signification\":\"État des lieux\",\"detail\":\"Réaliser un état des lieux rapide.\"},{\"lettre\":\"M\",\"signification\":\"Mesures conservatoires\",\"detail\":\"Prendre les mesures conservatoires (OP522).\"},{\"lettre\":\"I\",\"signification\":\"Identification\",\"detail\":\"Recenser les personnes présentes.\"}]",
+    "contexte": "Appliquer systématiquement à l'arrivée sur le lieu d'un incident.",
+    "couleur": "amber"
+  },
+  {
+    "id": "sici",
+    "acronyme": "SICI IPSI ART VR",
+    "titre": "Missions du CIL",
+    "description": "Ensemble des missions incombant au Chef Incident Local sur le terrain.",
+    "lettres": "[{\"lettre\":\"S\",\"signification\":\"Sécurité\",\"detail\":\"Reprendre les mesures de sécurité.\"},{\"lettre\":\"I\",\"signification\":\"Interface autorités\",\"detail\":\"Demander les prévisions d'intervention aux autorités.\"},{\"lettre\":\"C\",\"signification\":\"Coordination\",\"detail\":\"Coordonner les acteurs présents.\"},{\"lettre\":\"I\",\"signification\":\"Information\",\"detail\":\"Informer les échelons supérieurs.\"}]",
+    "contexte": "Missions CIL — à coordonner avec COS et OPJ.",
+    "couleur": "blue"
+  },
+  {
+    "id": "adidaa",
+    "acronyme": "ADIDAA",
+    "titre": "Avant reprise des circulations",
+    "description": "Vérifications obligatoires à effectuer avant d'autoriser la reprise des circulations.",
+    "lettres": "[{\"lettre\":\"A\",\"signification\":\"Autorisation secours et OPJ\",\"detail\":\"Avoir l'autorisation de reprise des secours et de l'OPJ.\"},{\"lettre\":\"D\",\"signification\":\"Dégagement gabarit\",\"detail\":\"S'assurer que le gabarit est dégagé.\"},{\"lettre\":\"I\",\"signification\":\"Installations sécurité\",\"detail\":\"Vérifier que les installations de sécurité sont en fonctionnement.\"},{\"lettre\":\"D\",\"signification\":\"Dégagement agents\",\"detail\":\"S'assurer du dégagement de tous les agents.\"},{\"lettre\":\"A\",\"signification\":\"Autorise reprise\",\"detail\":\"Autoriser les AC à reprendre la circulation.\"},{\"lettre\":\"A\",\"signification\":\"Avis COGC\",\"detail\":\"Donner l'avis au COGC de la fin de son intervention.\"}]",
+    "contexte": "Checklist systématique à valider avant toute reprise de circulation après un incident.",
+    "couleur": "red"
+  },
+  {
+    "id": "cammi",
+    "acronyme": "CAMMI CoCo RR",
+    "titre": "Protocole enquête — Dirigeant d'enquête",
+    "description": "Étapes à suivre lorsque l'agent est désigné Dirigeant d'enquête (DE) suite à un événement.",
+    "lettres": "[{\"lettre\":\"C\",\"signification\":\"COGC désigne DE\",\"detail\":\"Le COGC désigne le Dirigeant d'enquête.\"},{\"lettre\":\"A\",\"signification\":\"Attestation\",\"detail\":\"Attestation valable 3 ans.\"},{\"lettre\":\"M\",\"signification\":\"MU\",\"detail\":\"Vérifier l'intégrité des personnes, biens et environnement.\"},{\"lettre\":\"M\",\"signification\":\"MC\",\"detail\":\"Si risque grave : COGC → CNOC → EPSF + EF.\"},{\"lettre\":\"I\",\"signification\":\"Mesures enquête\",\"detail\":\"Prendre les mesures pour les besoins de l'enquête FSRR.\"},{\"lettre\":\"Co\",\"signification\":\"Conduire investigation\",\"detail\":\"HIPE : Humains, Infrastructure, Procédures, Environnement.\"},{\"lettre\":\"Co\",\"signification\":\"Collecter éléments\",\"detail\":\"Documents, bandes, photos, témoignages.\"},{\"lettre\":\"R\",\"signification\":\"Requiert expert\",\"detail\":\"Requérir un expert si nécessaire.\"},{\"lettre\":\"R\",\"signification\":\"Rédaction RCI\",\"detail\":\"3 premiers feuillets sous 12h, distribution finale sous 72h.\"}]",
+    "contexte": "Applicable si désigné DE par le COGC (attestation valable 3 ans).",
+    "couleur": "purple"
+  },
+  {
+    "id": "cetro",
+    "acronyme": "CETRO ARSD",
+    "titre": "Gestion agent — Intervention sur le vif",
+    "description": "Protocole de gestion d'un agent lors d'un constat sur le vif (K sur le vif).",
+    "lettres": "[{\"lettre\":\"C\",\"signification\":\"Constat sur le vif\",\"detail\":\"Informer l'opérateur, observer sans interférer.\"},{\"lettre\":\"E\",\"signification\":\"Explication et ressenti\",\"detail\":\"Expliquer la situation, demander le ressenti.\"},{\"lettre\":\"T\",\"signification\":\"Test alcool et psychoactif\",\"detail\":\"Procéder aux tests.\"},{\"lettre\":\"R\",\"signification\":\"Recueil déclarations\",\"detail\":\"Recueillir les déclarations et témoignages.\"},{\"lettre\":\"O\",\"signification\":\"Organisation service RH\",\"detail\":\"Organiser le service et contacter RH.\"},{\"lettre\":\"A\",\"signification\":\"Accompagnement fin de service\",\"detail\":\"Accompagner l'agent jusqu'en fin de service.\"},{\"lettre\":\"R\",\"signification\":\"Remplacement\",\"detail\":\"Organiser le remplacement.\"},{\"lettre\":\"S\",\"signification\":\"Suspension habilitations\",\"detail\":\"Suspension des habilitations Icare + courrier.\"},{\"lettre\":\"D\",\"signification\":\"Durée de travail\",\"detail\":\"Vérifier la durée de travail effectif et l'amplitude.\"}]",
+    "contexte": "Si constat d'un écart de comportement d'un agent en poste de sécurité.",
+    "couleur": "amber"
+  },
+  {
+    "id": "rabac",
+    "acronyme": "RABAC",
+    "titre": "Suite de la veille",
+    "description": "Actions de suivi après la détection et le traitement d'un écart de veille.",
+    "lettres": "[{\"lettre\":\"R\",\"signification\":\"Redressement\",\"detail\":\"Rappel à la règle dès que possible après l'écart.\"},{\"lettre\":\"A\",\"signification\":\"Adapter la veille\",\"detail\":\"F — MPA — KA = IMPACT VRL.\"},{\"lettre\":\"B\",\"signification\":\"Bouclage\",\"detail\":\"Bouclage 30 à 60 jours.\"},{\"lettre\":\"A\",\"signification\":\"AA si pas OK\",\"detail\":\"Lancer une Action d'Amélioration si nécessaire.\"},{\"lettre\":\"C\",\"signification\":\"Consolidation bouclage\",\"detail\":\"Consolidation sur 3 à 6 mois.\"}]",
+    "contexte": "Boucle de bouclage de la veille rénovée.",
+    "couleur": "green"
+  }
+]

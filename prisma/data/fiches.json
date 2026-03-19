@@ -1,0 +1,278 @@
+[
+  {
+    "id": "f01",
+    "slug": "dirigeant-enquete",
+    "numero": 1,
+    "titre": "Dirigeant d'enquête (OP522)",
+    "categorie": "incident",
+    "priorite": "urgente",
+    "mnemonique": "CAMMI CoCo RR",
+    "resume": "Protocole à appliquer lorsque vous êtes désigné Dirigeant d'enquête par le COGC suite à un événement de sécurité.",
+    "etapes": "[\n  {\n    \"ordre\": 1,\n    \"titre\": \"Désignation par le CRC\",\n    \"description\": \"Le COGC vous désigne Dirigeant d'enquête. Vérifier la validité de votre attestation DE (valable 3 ans).\",\n    \"actions\": [\n      \"Confirmer votre désignation au CRC\",\n      \"Vérifier la validité de l'attestation DE\",\n      \"Notifier votre heure de désignation sur le carnet\"\n    ]\n  },\n  {\n    \"ordre\": 3,\n    \"titre\": \"Mesures conservatoires (MC)\",\n    \"description\": \"Si risque grave ou imminent pour la sécurité.\",\n    \"critique\": true,\n    \"actions\": [\n      \"Aviser le COGC et l'ExF du risque identifié\"\n    ]\n  },\n  {\n    \"ordre\": 4,\n    \"titre\": \"S'identifier comme Dirigeant d'enquête\",\n    \"description\": \"Se faire reconnaître comme Dirigeant d'enquête auprès de toutes les parties présentes.\",\n    \"actions\": [\n      \"Se présenter à l'OPJ, COS et CIL\",\n      \"Informer les agents présents de la désignation\"\n    ]\n  },\n  {\n    \"ordre\": 5,\n    \"titre\": \"Conduire l'investigation (HIPE)\",\n    \"description\": \"Recueillir les éléments factuels selon la grille HIPE : Humains, Infrastructure, Procédures, Environnement.\",\n    \"actions\": [\n      \"Collecter les documents : carnets, bulletins, bandes graphiques\",\n      \"Prendre des photos : position des leviers et éléments de preuve\",\n      \"Recueillir les témoignages : les agents ne peuvent pas quitter les lieux\",\n      \"Réaliser les tests : alcoolémie et substances psychoactives si pertinent\",\n      \"Requérir un expert si nécessaire (exemple : trinôme pantographe)\"\n    ]\n  },\n  {\n    \"ordre\": 6,\n    \"titre\": \"Rédaction du RCI\",\n    \"description\": \"Rédiger le Rapport de Compte-rendu d'Incident dans les délais impartis.\",\n    \"critique\": true,\n    \"actions\": [\n      \"Rédiger les 3 premiers feuillets sous 12 heures (aux personnes indiquées sur le RCI)\",\n      \"Assurer la distribution finale sous 72 heures\",\n      \"Conserver les preuves et pièces collectées\"\n    ]\n  }\n]",
+    "references": "[\"OP522\"]",
+    "avisObligatoires": "[\"COGC si MC\"]",
+    "contactIds": [
+      "supervision"
+    ]
+  },
+  {
+    "id": "f02",
+    "slug": "accident-personne",
+    "numero": 2,
+    "titre": "Accident de personne",
+    "categorie": "accident",
+    "priorite": "urgente",
+    "mnemonique": "FIMERMO + CARBEMI",
+    "resume": "Conduite à tenir lors d'un accident impliquant une ou plusieurs personnes sur ou à proximité des voies.",
+    "etapes": "[\n  {\n    \"ordre\": 1,\n    \"titre\": \"Avant de partir en intervention\",\n    \"description\": \"Préparer l'intervention et organiser les moyens nécessaires avant de se rendre sur les lieux.\",\n    \"actions\": [\n      \"Préparer le matériel CCLET : chasuble, clé, lampe, EPI, téléphone\",\n      \"Prévoir nourriture, eau, RCI et livret CIL\",\n      \"Estimer son délai d'arrivée et le transmettre au CRC\",\n      \"Organiser les personnes, le matériel et le point d'accès à la zone\"\n    ]\n  },\n  {\n    \"ordre\": 2,\n    \"titre\": \"Arrivée sur les lieux\",\n    \"description\": \"Se signaler et s'identifier auprès des acteurs présents sur l'événement.\",\n    \"actions\": [\n      \"S’identifier auprès des acteurs présents\",\n      \"Se déclarer CIL sur CMOBIL\"\n    ]\n  },\n  {\n    \"ordre\": 3,\n    \"titre\": \"Protection immédiate de la voie\",\n    \"description\": \"Protéger immédiatement la voie et établir une zone de sécurité.\",\n    \"critique\": true,\n    \"actions\": [\n      \"Vérifier que la situation est figée, à défaut la figer\",\n      \"S'assurer que les mesures d'urgence locales sont en place\",\n      \"Recueillir et transmettre les renseignements utiles (point de choc, point d’arrêt, état de la personne)\",\n      \"Organiser les personnes, le matériel et le point d'accès à la zone\",\n      \"Mettre en place la zone de sécurité\"\n    ]\n  },\n  {\n    \"ordre\": 4,\n    \"titre\": \"S’assurer que les secours ont été déclenchés\",\n    \"description\": \"Contacter les services de secours en précisant la localisation exacte.\",\n    \"critique\": true,\n    \"actions\": [\n      \"Appeler le 15 (SAMU) pour urgence médicale\",\n      \"Appeler le 18 (pompiers) si nécessaire\",\n      \"Contacter police, gendarmerie ou pompes funèbres si nécessaire\",\n      \"Donner la localisation précise : km, voie, commune\",\n      \"Rester en ligne avec les secours\"\n    ]\n  },\n  {\n    \"ordre\": 5,\n    \"titre\": \"Vérifications utiles\",\n    \"description\": \"Effectuer les vérifications nécessaires en tant que Chef Incident Local.\",\n    \"actions\": [\n      \"Boucler et reprendre les mesures à son compte\",\n      \"Vérifier que le Cadre Traction, la Supervision et l’Astreinte ExF soient avisés\",\n      \"Réaliser l’état des lieux de la situation\",\n      \"Prendre les mesures conservatoires (OP522)\",\n      \"Recenser les personnes présentes et s’identifier auprès de l’OPJ et du COS\"\n    ]\n  },\n  {\n    \"ordre\": 6,\n    \"titre\": \"Assister les secours\",\n    \"description\": \"Coordonner avec le COS et l’OPJ pour faciliter l’intervention.\",\n    \"actions\": [\n      \"S’assurer que le dépistage du conducteur soit réalisé\",\n      \"Transmettre toutes les informations utiles au COS\",\n      \"Recueillir les témoignages\"\n    ]\n  },\n  {\n    \"ordre\": 7,\n    \"titre\": \"Avant reprise\",\n    \"description\": \"Vérifier les conditions obligatoires avant d'autoriser la reprise des circulations.\",\n    \"critique\": true,\n    \"actions\": [\n      \"Avoir l'autorisation de reprise du COS et de l'OPJ\",\n      \"S'assurer que le gabarit est dégagé\",\n      \"Vérifier que les installations de sécurité sont en fonctionnement\",\n      \"S'assurer du dégagement de tous les agents de la plateforme\",\n      \"Autoriser les AC à reprendre la circulation\",\n      \"Donner l'avis au COGC de la fin de l'intervention\"\n    ]\n  }\n]",
+    "references": "[\"OP522\"]",
+    "avisObligatoires": "[\"COGC\",\"CRC\",\"SUGE\",\"Secours 15/18/17\"]",
+    "contactIds": [
+      "crc-cil",
+      "suge",
+      "supervision"
+    ]
+  },
+  {
+    "id": "f03",
+    "slug": "accident-pn",
+    "numero": 3,
+    "titre": "Accident à un PN",
+    "categorie": "accident",
+    "priorite": "urgente",
+    "mnemonique": "FCCCA CCR SVPFE",
+    "resume": "Procédure à suivre en cas d'accident ou d'incident à un passage à niveau.",
+    "etapes": "[\n  {\n    \"ordre\": 1,\n    \"titre\": \"Avant de partir en intervention\",\n    \"description\": \"Préparer l'intervention et organiser les moyens nécessaires avant de se rendre sur les lieux.\",\n    \"actions\": [\n      \"Préparer le matériel CCLET : chasuble, clé, lampe, EPI, téléphone\",\n      \"Prévoir nourriture, eau, RCI et livret CIL\",\n      \"Estimer son délai d'arrivée et le transmettre au CRC\",\n      \"Organiser les personnes, le matériel et le point d'accès à la zone\"\n    ]\n  },\n  {\n    \"ordre\": 2,\n    \"titre\": \"Arrivée sur les lieux\",\n    \"description\": \"Se signaler et s'identifier auprès des acteurs présents et recueillir les premiers éléments.\",\n    \"actions\": [\n      \"S’identifier auprès des acteurs présents\",\n      \"Se déclarer CIL sur CMOBIL\",\n      \"Recueillir et transmettre les renseignements utiles\"\n    ]\n  },\n  {\n    \"ordre\": 3,\n    \"titre\": \"Protection de la voie\",\n    \"description\": \"Protéger immédiatement toutes les voies concernées et sécuriser la situation.\",\n    \"critique\": true,\n    \"actions\": [\n      \"Vérifier que la situation est figée, à défaut la figer\",\n      \"S'assurer que les mesures d'urgence locales sont en place\",\n      \"Avertir immédiatement le COGC\"\n    ]\n  },\n  {\n    \"ordre\": 4,\n    \"titre\": \"S’assurer que les secours ont été déclenchés\",\n    \"description\": \"Contacter les services de secours en précisant la localisation exacte.\",\n    \"critique\": true,\n    \"actions\": [\n      \"Appeler le 15 (SAMU) pour urgence médicale\",\n      \"Appeler le 18 (pompiers) si nécessaire\",\n      \"Contacter police, gendarmerie ou pompes funèbres si nécessaire\",\n      \"Donner la localisation précise : km, voie, commune\",\n      \"Rester en ligne avec les secours\"\n    ]\n  },\n  {\n    \"ordre\": 5,\n    \"titre\": \"Aviser la chaîne\",\n    \"description\": \"S'assurer que l'ensemble de la chaîne opérationnelle est informée de la situation.\",\n    \"actions\": [\n      \"Informer le COGC et le CRC\",\n      \"Informer la SUGE en cas d'atteinte aux personnes\",\n      \"Informer les astreintes compétentes : CTT, relevage, ExF\"\n    ]\n  },\n  {\n    \"ordre\": 6,\n    \"titre\": \"Constater les dégâts\",\n    \"description\": \"Réaliser les constatations nécessaires pour les suites d'enquête.\",\n    \"actions\": [\n      \"Prendre des photos des dégâts, de la signalisation et de l’environnement\",\n      \"Faire vérifier l’état du passage à niveau (signalisation routière et équipements)\",\n      \"Recueillir les témoignages\"\n    ]\n  },\n  {\n    \"ordre\": 7,\n    \"titre\": \"Reprise\",\n    \"description\": \"Vérifier les conditions obligatoires avant toute reprise de circulation.\",\n    \"critique\": true,\n    \"actions\": [\n      \"Avoir l'autorisation de reprise du COS et de l'OPJ\",\n      \"S'assurer que le gabarit est dégagé et que le passage à niveau est libre\",\n      \"Vérifier que les installations de sécurité sont en fonctionnement\",\n      \"S'assurer du dégagement de tous les agents de la plateforme\",\n      \"Autoriser les AC à reprendre la circulation\",\n      \"Donner l'avis au COGC de la fin de l'intervention\"\n    ]\n  }\n]",
+    "references": "[\"DC1503\"]",
+    "avisObligatoires": "[\"COGC\",\"CRC\",\"Gendarmerie locale\"]",
+    "contactIds": [
+      "crc-cil",
+      "supervision"
+    ]
+  },
+  {
+    "id": "f04",
+    "slug": "deraillement",
+    "numero": 4,
+    "titre": "Déraillement / Talonnage / Bi-voie",
+    "categorie": "accident",
+    "priorite": "urgente",
+    "mnemonique": "FIMERMO",
+    "resume": "Conduite à tenir en cas de déraillement, talonnage d'aiguille ou mise bi-voie d'un engin.",
+    "etapes": "[\n  {\n    \"ordre\": 1,\n    \"titre\": \"Avant de partir en intervention\",\n    \"description\": \"Préparer l'intervention et organiser les moyens nécessaires avant de se rendre sur les lieux.\",\n    \"actions\": [\n      \"Préparer le matériel CCLET : chasuble, clé, lampe, EPI, téléphone\",\n      \"Prévoir nourriture, eau, RCI et livret CIL\",\n      \"Estimer son délai d'arrivée et le transmettre au CRC\",\n      \"Organiser les personnes, le matériel et le point d'accès à la zone\"\n    ]\n  },\n  {\n    \"ordre\": 2,\n    \"titre\": \"Arrivée sur les lieux\",\n    \"description\": \"S'identifier, informer les acteurs et recueillir les premiers éléments de constat.\",\n    \"actions\": [\n      \"S’identifier auprès des acteurs présents\",\n      \"Se déclarer CIL sur CMOBIL\",\n      \"Aviser le CRC : désignation CIL, astreintes T/MT, postes encadrants, RSS\",\n      \"Recueillir et transmettre les renseignements utiles\",\n      \"Prendre les photos utiles : leviers, tables, PRS, carnets, matériel, traces, distance essieux-rails\",\n      \"Recenser les personnes présentes et s’identifier auprès de l’OPJ et du COS\"\n    ]\n  },\n  {\n    \"ordre\": 3,\n    \"titre\": \"Protection de la voie\",\n    \"description\": \"Protéger immédiatement toutes les voies concernées et sécuriser la situation.\",\n    \"critique\": true,\n    \"actions\": [\n      \"Vérifier que la situation est figée, à défaut la figer\",\n      \"S'assurer que les mesures d'urgence locales sont en place\",\n      \"Avertir immédiatement le COGC\",\n      \"Prendre les mesures conservatoires (OP522)\"\n    ]\n  },\n  {\n    \"ordre\": 4,\n    \"titre\": \"Aviser la chaîne\",\n    \"description\": \"S'assurer que l'ensemble de la chaîne opérationnelle est informée de la situation.\",\n    \"actions\": [\n      \"Informer le CRC et le DTO\",\n      \"Informer la SUGE en cas d'atteinte aux personnes\",\n      \"Informer les astreintes compétentes : CTT, relevage, ExF\"\n    ]\n  },\n  {\n    \"ordre\": 5,\n    \"titre\": \"Coordonner le relevage\",\n    \"description\": \"Coordonner les opérations de relevage avec les équipes M&T.\",\n    \"actions\": [\n      \"Attendre l'évaluation M&T avant toute action\",\n      \"Maintenir la protection de la voie\",\n      \"Anticiper les DFV pour autoriser le relevage\",\n      \"Informer régulièrement le COGC de l'évolution\"\n    ]\n  },\n  {\n    \"ordre\": 6,\n    \"titre\": \"Avant reprise\",\n    \"description\": \"Vérifier les conditions obligatoires avant d'autoriser la reprise de la circulation.\",\n    \"critique\": true,\n    \"actions\": [\n      \"Avoir l'autorisation de reprise des secours le cas échéant\",\n      \"S'assurer que le gabarit est dégagé ou repris sous DFV\",\n      \"Vérifier que les installations de sécurité sont en fonctionnement ou prises en charge sous DFV\",\n      \"S'assurer du dégagement de tous les agents de la plateforme ou pris en charge sous DV\",\n      \"Autoriser les AC à reprendre la circulation normale\",\n      \"Donner l'avis au COGC de la fin de l'intervention\"\n    ]\n  }\n]",
+    "references": "[\"OP522\"]",
+    "avisObligatoires": "[\"COGC\",\"CRC\",\"DTI\"]",
+    "contactIds": [
+      "crc-cil",
+      "dti",
+      "supervision"
+    ]
+  },
+  {
+    "id": "f05",
+    "slug": "colis-suspect",
+    "numero": 5,
+    "titre": "Colis suspect",
+    "categorie": "securite",
+    "priorite": "urgente",
+    "mnemonique": "FCCCA CCR SVPFE",
+    "resume": "Conduite à tenir face à un colis suspect ou un objet abandonné sur l'infrastructure ferroviaire.",
+    "etapes": "[{\"ordre\":1,\"titre\":\"Ne pas toucher\",\"description\":\"Ne jamais toucher, déplacer ou ouvrir le colis suspect.\",\"critique\":true},{\"ordre\":2,\"titre\":\"Évacuer la zone\",\"description\":\"Établir un périmètre de sécurité immédiatement.\",\"critique\":true},{\"ordre\":3,\"titre\":\"Aviser COGC et SUGE\",\"description\":\"Transmettre une description précise du colis et de sa localisation.\"},{\"ordre\":4,\"titre\":\"Attendre les autorités\",\"description\":\"Ne reprendre les circulations qu'après accord des autorités compétentes.\"}]",
+    "references": "[]",
+    "avisObligatoires": "[\"COGC\",\"SUGE\",\"Police/Gendarmerie\"]",
+    "contactIds": [
+      "suge",
+      "supervision"
+    ]
+  },
+  {
+    "id": "f06",
+    "slug": "incendie-abords-voies",
+    "numero": 6,
+    "titre": "Incendie aux abords des voies",
+    "categorie": "securite",
+    "priorite": "urgente",
+    "mnemonique": "FCCCA CCR SVPFE",
+    "resume": "Conduite à tenir en cas d'incendie à proximité ou sur l'infrastructure ferroviaire.",
+    "etapes": "[{\"ordre\":1,\"titre\":\"Évaluer le danger\",\"description\":\"Évaluer si l'incendie menace l'infrastructure ou les circulations.\",\"critique\":true},{\"ordre\":2,\"titre\":\"Aviser COGC\",\"description\":\"Aviser immédiatement le COGC avec localisation précise.\"},{\"ordre\":3,\"titre\":\"Déclencher les secours\",\"description\":\"Appeler le 18 (Pompiers).\",\"critique\":true},{\"ordre\":4,\"titre\":\"Protéger si nécessaire\",\"description\":\"Prendre les mesures de protection si l'incendie menace la voie.\"}]",
+    "references": "[]",
+    "avisObligatoires": "[\"COGC\",\"Pompiers 18\"]",
+    "contactIds": [
+      "crc-cil",
+      "supervision"
+    ]
+  },
+  {
+    "id": "f07",
+    "slug": "franchissement-signal",
+    "numero": 7,
+    "titre": "Franchissement signal",
+    "categorie": "incident",
+    "priorite": "urgente",
+    "mnemonique": "CAMMI CoCo RR",
+    "resume": "Procédure de gestion d'un franchissement de signal fermé (RSF, RSATC, etc.).",
+    "etapes": "[{\"ordre\":1,\"titre\":\"Figer la situation\",\"description\":\"Arrêter immédiatement toute circulation susceptible d'être en conflit.\",\"critique\":true},{\"ordre\":2,\"titre\":\"Localiser le train\",\"description\":\"Déterminer la position exacte du train concerné.\"},{\"ordre\":3,\"titre\":\"Aviser COGC et CRC\",\"description\":\"Transmettre tous les renseignements utiles.\",\"critique\":true},{\"ordre\":4,\"titre\":\"Désigner un DE si nécessaire\",\"description\":\"Si l'événement le justifie, le COGC désigne un Dirigeant d'enquête.\"}]",
+    "references": "[\"OP522\"]",
+    "avisObligatoires": "[\"COGC\",\"CRC\",\"DE si désigné\"]",
+    "contactIds": [
+      "crc-cil",
+      "supervision"
+    ]
+  },
+  {
+    "id": "f08",
+    "slug": "agression-agent",
+    "numero": 8,
+    "titre": "Agression d'un agent",
+    "categorie": "gestion-agent",
+    "priorite": "urgente",
+    "mnemonique": "FCCCA CCR SVPFE",
+    "resume": "Conduite à tenir en cas d'agression physique ou verbale grave d'un agent.",
+    "etapes": "[{\"ordre\":1,\"titre\":\"Sécuriser l'agent\",\"description\":\"Assurer la sécurité immédiate de l'agent agressé.\",\"critique\":true},{\"ordre\":2,\"titre\":\"Appeler les secours\",\"description\":\"15 si urgence médicale, 17 pour intervention police.\",\"critique\":true},{\"ordre\":3,\"titre\":\"Aviser SUGE et hiérarchie\",\"description\":\"Aviser la SUGE, le COGC et la hiérarchie.\"},{\"ordre\":4,\"titre\":\"Soutien psychologique\",\"description\":\"Proposer le soutien psychologique dès que possible.\"}]",
+    "references": "[]",
+    "avisObligatoires": "[\"COGC\",\"SUGE\",\"Hiérarchie\"]",
+    "contactIds": [
+      "soutien-psy",
+      "suge",
+      "supervision"
+    ]
+  },
+  {
+    "id": "f09",
+    "slug": "evacuation-train",
+    "numero": 9,
+    "titre": "Évacuation d'un train",
+    "categorie": "evacuation",
+    "priorite": "urgente",
+    "mnemonique": "FIMERMO + CARBEMI",
+    "resume": "Procédure d'évacuation d'un train en ligne ou en gare.",
+    "etapes": "[{\"ordre\":1,\"titre\":\"Évaluer la situation\",\"description\":\"Déterminer si l'évacuation est nécessaire et urgente.\",\"critique\":true},{\"ordre\":2,\"titre\":\"Coordonner avec l'EF\",\"description\":\"Coordonner l'évacuation avec le conducteur et l'EF.\"},{\"ordre\":3,\"titre\":\"Sécuriser le périmètre\",\"description\":\"Protéger les voies adjacentes avant évacuation.\",\"critique\":true},{\"ordre\":4,\"titre\":\"Guider les voyageurs\",\"description\":\"Organiser l'évacuation vers un lieu sûr.\"}]",
+    "references": "[]",
+    "avisObligatoires": "[\"COGC\",\"CRC\",\"EF\"]",
+    "contactIds": [
+      "crc-cil",
+      "supervision"
+    ]
+  },
+  {
+    "id": "f10",
+    "slug": "derangement-pn",
+    "numero": 10,
+    "titre": "Dérangement d'un PN",
+    "categorie": "incident",
+    "priorite": "urgente",
+    "mnemonique": "FCCCA CCR SVPFE",
+    "resume": "Procédure à appliquer lors d'un dérangement d'un passage à niveau (non-ouverture, non-fermeture, etc.).",
+    "etapes": "[{\"ordre\":1,\"titre\":\"Identifier le dérangement\",\"description\":\"Déterminer la nature précise du dérangement (non-fermeture, non-ouverture, blocage).\"},{\"ordre\":2,\"titre\":\"Protéger le PN\",\"description\":\"Prendre les mesures de protection réglementaires.\",\"critique\":true},{\"ordre\":3,\"titre\":\"Aviser la gendarmerie locale\",\"description\":\"Contacter la gendarmerie territorialement compétente.\"},{\"ordre\":4,\"titre\":\"Aviser COGC et maintenance\",\"description\":\"Aviser le COGC et demander l'intervention de la maintenance PN.\"}]",
+    "references": "[\"DC1503\"]",
+    "avisObligatoires": "[\"COGC\",\"CRC\",\"Gendarmerie locale\",\"Maintenance PN\"]",
+    "contactIds": [
+      "crc-cil",
+      "supervision"
+    ]
+  },
+  {
+    "id": "f11",
+    "slug": "obstacle-voie",
+    "numero": 11,
+    "titre": "Obstacle sur la voie",
+    "categorie": "securite",
+    "priorite": "urgente",
+    "mnemonique": "FCCCA CCR SVPFE",
+    "resume": "Conduite à tenir en présence d'un obstacle sur la voie ferrée.",
+    "etapes": "[{\"ordre\":1,\"titre\":\"Protéger immédiatement\",\"description\":\"Arrêter toute circulation susceptible de rencontrer l'obstacle.\",\"critique\":true},{\"ordre\":2,\"titre\":\"Identifier et localiser\",\"description\":\"Localiser précisément l'obstacle et en estimer les dimensions et la nature.\"},{\"ordre\":3,\"titre\":\"Aviser COGC\",\"description\":\"Transmettre tous les renseignements au COGC.\"},{\"ordre\":4,\"titre\":\"Dégager si possible\",\"description\":\"Si sans danger, faire dégager l'obstacle par un agent habilité.\"}]",
+    "references": "[]",
+    "avisObligatoires": "[\"COGC\",\"CRC\"]",
+    "contactIds": [
+      "crc-cil",
+      "supervision"
+    ]
+  },
+  {
+    "id": "f12",
+    "slug": "personne-voie",
+    "numero": 12,
+    "titre": "Personne sur la voie",
+    "categorie": "securite",
+    "priorite": "urgente",
+    "mnemonique": "FCCCA CCR SVPFE",
+    "resume": "Conduite à tenir en cas de présence d'une personne sur la voie ferrée.",
+    "etapes": "[{\"ordre\":1,\"titre\":\"Arrêter toute circulation\",\"description\":\"Figer immédiatement toutes les circulations en direction de la personne.\",\"critique\":true},{\"ordre\":2,\"titre\":\"Tenter le contact\",\"description\":\"Essayer d'entrer en contact verbal avec la personne si possible en sécurité.\"},{\"ordre\":3,\"titre\":\"Appeler les secours\",\"description\":\"15/18/17 selon la situation.\",\"critique\":true},{\"ordre\":4,\"titre\":\"Aviser COGC et SUGE\",\"description\":\"Transmettre la situation avec localisation précise.\"}]",
+    "references": "[]",
+    "avisObligatoires": "[\"COGC\",\"SUGE\",\"Secours\"]",
+    "contactIds": [
+      "crc-cil",
+      "suge",
+      "supervision"
+    ]
+  },
+  {
+    "id": "f13",
+    "slug": "incident-traction-electrique",
+    "numero": 13,
+    "titre": "Incident traction électrique",
+    "categorie": "incident",
+    "priorite": "urgente",
+    "mnemonique": "FCCCA CCR SVPFE",
+    "resume": "Conduite à tenir en cas d'incident sur l'alimentation électrique de traction.",
+    "etapes": "[{\"ordre\":1,\"titre\":\"Identifier la coupure\",\"description\":\"Identifier la zone impactée par la coupure ou le dérangement.\"},{\"ordre\":2,\"titre\":\"Aviser COGC et RSS\",\"description\":\"Aviser immédiatement COGC et le Régulateur Sous-Station.\",\"critique\":true},{\"ordre\":3,\"titre\":\"Mesures sur les circulations\",\"description\":\"Prendre les mesures nécessaires pour les circulations en ligne.\"},{\"ordre\":4,\"titre\":\"Suivre les instructions\",\"description\":\"Appliquer les instructions du COGC et du RSS.\"}]",
+    "references": "[]",
+    "avisObligatoires": "[\"COGC\",\"RSS\"]",
+    "contactIds": [
+      "crc-cil",
+      "supervision"
+    ]
+  },
+  {
+    "id": "f14",
+    "slug": "derangement-signalisation",
+    "numero": 14,
+    "titre": "Dérangement signalisation",
+    "categorie": "incident",
+    "priorite": "normale",
+    "mnemonique": "FCCCA CCR SVPFE",
+    "resume": "Procédure à appliquer lors d'un dérangement des installations de signalisation.",
+    "etapes": "[{\"ordre\":1,\"titre\":\"Identifier le dérangement\",\"description\":\"Identifier précisément quelle installation est défaillante.\"},{\"ordre\":2,\"titre\":\"Mesures de protection\",\"description\":\"Prendre les mesures réglementaires pour la sécurité des circulations.\",\"critique\":true},{\"ordre\":3,\"titre\":\"Aviser COGC et maintenance\",\"description\":\"Aviser le COGC et demander l'intervention de la maintenance signalisation.\"},{\"ordre\":4,\"titre\":\"Mesures d'exploitation\",\"description\":\"Appliquer les mesures d'exploitation adaptées (marche à vue, etc.).\"}]",
+    "references": "[]",
+    "avisObligatoires": "[\"COGC\",\"CRC\",\"Maintenance signalisation\"]",
+    "contactIds": [
+      "crc-cil",
+      "supervision"
+    ]
+  },
+  {
+    "id": "f15",
+    "slug": "alerte-meteo",
+    "numero": 15,
+    "titre": "Alerte météo",
+    "categorie": "securite",
+    "priorite": "normale",
+    "mnemonique": "FIMERMO",
+    "resume": "Conduite à tenir lors d'une alerte météorologique impactant l'infrastructure ferroviaire.",
+    "etapes": "[{\"ordre\":1,\"titre\":\"Prendre connaissance de l'alerte\",\"description\":\"Lire attentivement le bulletin météo et les instructions associées.\"},{\"ordre\":2,\"titre\":\"Renforcer la vigilance\",\"description\":\"Renforcer la surveillance des sections sensibles identifiées.\"},{\"ordre\":3,\"titre\":\"Appliquer les consignes\",\"description\":\"Appliquer strictement les consignes prévues dans la procédure météo.\"},{\"ordre\":4,\"titre\":\"Rendre compte\",\"description\":\"Rendre compte régulièrement au COGC de la situation.\"}]",
+    "references": "[\"EIC RA DC07066\"]",
+    "avisObligatoires": "[\"COGC\"]",
+    "contactIds": [
+      "crc-cil",
+      "supervision"
+    ]
+  },
+  {
+    "id": "f16",
+    "slug": "agent-incapacite",
+    "numero": 16,
+    "titre": "Agent en incapacité",
+    "categorie": "gestion-agent",
+    "priorite": "urgente",
+    "mnemonique": "CETRO ARSD",
+    "resume": "Procédure à suivre lorsqu'un agent en poste de sécurité présente des signes d'incapacité.",
+    "etapes": "[{\"ordre\":1,\"titre\":\"Évaluer l'état de l'agent\",\"description\":\"Observer discrètement l'agent et évaluer objectivement sa capacité à tenir son poste.\",\"critique\":true},{\"ordre\":2,\"titre\":\"Sécuriser les circulations\",\"description\":\"Prendre immédiatement les mesures nécessaires pour la sécurité.\",\"critique\":true},{\"ordre\":3,\"titre\":\"Appliquer CETRO ARSD\",\"description\":\"Dérouler le protocole CETRO ARSD.\"},{\"ordre\":4,\"titre\":\"Aviser la hiérarchie\",\"description\":\"Aviser DTO, DTI et RH selon les procédures.\"}]",
+    "references": "[]",
+    "avisObligatoires": "[\"COGC\",\"DTO\",\"DTI\"]",
+    "contactIds": [
+      "dti",
+      "dto",
+      "supervision"
+    ]
+  }
+]

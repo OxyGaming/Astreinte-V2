@@ -5,10 +5,12 @@ import { Play, Archive, Send, CheckSquare, Square, MessageSquare, Clock, User, C
 import type { Fiche, FicheSession, JournalEntry } from "@/lib/types";
 import type { SessionUser } from "@/lib/user-auth";
 import { useSpeechRecognition } from "@/hooks/useSpeechRecognition";
+import MicPermissionModal from "@/components/MicPermissionModal";
+import MicDiagnostic from "@/components/MicDiagnostic";
 
+// Erreurs remontées par SpeechRecognition après que le micro est accordé
 const SPEECH_ERRORS: Record<string, string> = {
   "not-supported": "La dictée vocale n'est pas disponible sur ce navigateur.",
-  "permission-denied": "Accès au microphone refusé. Vérifiez les permissions du navigateur.",
   "no-speech": "Aucune voix détectée. Réessayez.",
   "audio-capture": "Impossible d'accéder au microphone.",
   "network": "Erreur réseau lors de la dictée.",
@@ -52,6 +54,22 @@ export default function FicheSessionView({
   const journalRef = useRef<HTMLDivElement>(null);
 
   const speech = useSpeechRecognition((text) => setComment(text));
+  const [showMicModal, setShowMicModal] = useState(false);
+
+  /**
+   * Lance la dictée directement via SpeechRecognition.
+   * L'API gère sa propre permission nativement (popup navigateur si besoin).
+   * Réinitialise toujours l'état d'erreur à chaque clic — jamais d'état "refusé" persistant.
+   */
+  const handleMicClick = () => {
+    if (speech.isListening) {
+      speech.stop();
+      return;
+    }
+    // Reset systématique : permet de réessayer après avoir accordé la permission
+    speech.clearError();
+    speech.start(comment);
+  };
 
   const actionKey = (etapeOrdre: number, actionIndex: number) =>
     `etape_${etapeOrdre}_action_${actionIndex}`;
@@ -145,6 +163,11 @@ export default function FicheSessionView({
 
   return (
     <div className="space-y-4">
+
+      {/* Modal permission microphone */}
+      {showMicModal && (
+        <MicPermissionModal onClose={() => setShowMicModal(false)} />
+      )}
 
       {/* ── Session banner ── */}
       {!session ? (
@@ -363,11 +386,7 @@ export default function FicheSessionView({
                     {speech.isSupported && (
                       <button
                         type="button"
-                        onClick={() =>
-                          speech.isListening
-                            ? speech.stop()
-                            : speech.start(comment)
-                        }
+                        onClick={handleMicClick}
                         disabled={submittingComment}
                         title={speech.isListening ? "Arrêter la dictée" : "Dicter un commentaire (fr-FR)"}
                         className={`flex items-center justify-center w-9 h-9 rounded-lg transition-all flex-shrink-0 disabled:opacity-40 disabled:cursor-not-allowed ${
@@ -402,11 +421,22 @@ export default function FicheSessionView({
                     </div>
                   )}
 
-                  {/* Error message */}
+                  {/* Erreurs SpeechRecognition */}
                   {speech.error && !speech.isListening && (
-                    <p className="text-xs text-red-500 px-0.5">
-                      {SPEECH_ERRORS[speech.error] ?? SPEECH_ERRORS["unknown"]}
-                    </p>
+                    speech.error === "permission-denied" ? (
+                      // Micro refusé → lien vers modal d'instructions
+                      <button
+                        type="button"
+                        onClick={() => { speech.clearError(); setShowMicModal(true); }}
+                        className="text-xs text-blue-600 hover:underline px-0.5 text-left"
+                      >
+                        Micro refusé — Cliquez ici pour voir comment l&apos;autoriser
+                      </button>
+                    ) : (
+                      <p className="text-xs text-red-500 px-0.5">
+                        {SPEECH_ERRORS[speech.error] ?? SPEECH_ERRORS["unknown"]}
+                      </p>
+                    )
                   )}
 
                   {/* Browser not supported (shown once user tries) */}
@@ -421,6 +451,11 @@ export default function FicheSessionView({
           )}
         </div>
       )}
+
+      {/* ── Diagnostic microphone ── */}
+      <div className="px-4 lg:px-8 pb-4">
+        <MicDiagnostic />
+      </div>
     </div>
   );
 }

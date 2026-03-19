@@ -32,5 +32,8 @@ yarn-error.log*
 # Build artifacts
 tsconfig.tsbuildinfo
 
-# Duplicate DB in prisma folder
+# SQLite database files (ne pas versionner)
+dev.db
+dev.db-shm
+dev.db-wal
 prisma/dev.db

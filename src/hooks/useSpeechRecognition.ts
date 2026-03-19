@@ -65,11 +65,12 @@ export interface UseSpeechRecognitionReturn {
 export function useSpeechRecognition(
   onTranscript: (text: string) => void
 ): UseSpeechRecognitionReturn {
-  const [isSupported] = useState(
-    () =>
-      typeof window !== "undefined" &&
-      !!(window.SpeechRecognition || window.webkitSpeechRecognition)
-  );
+  // Démarre à false (même valeur côté serveur et client) pour éviter l'erreur d'hydratation.
+  // useEffect met à jour la valeur réelle après le montage côté client uniquement.
+  const [isSupported, setIsSupported] = useState(false);
+  useEffect(() => {
+    setIsSupported(!!(window.SpeechRecognition || window.webkitSpeechRecognition));
+  }, []);
   const [isListening, setIsListening] = useState(false);
   const [error, setError] = useState<SpeechError | null>(null);
 

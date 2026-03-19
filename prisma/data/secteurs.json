@@ -1,0 +1,68 @@
+[
+  {
+    "id": "s01",
+    "slug": "pierre-benite-badan",
+    "nom": "Pierre-Bénite / Badan",
+    "ligne": "750000",
+    "trajet": "Pierre-Bénite → Badan",
+    "description": "Section incluant les postes de Badan P1 et P2, la TVP de Vernaison, les PN 361 et 363.",
+    "pointsAcces": "[{\"nom\":\"Passerelle Irigny Yvours\",\"note\":\"Souterrain/passerelle — procédure DC07446 Fiche 2.2. En cas d'impraticabilité, aviser uniquement le COGC.\"},{\"nom\":\"TVP de Vernaison\",\"note\":\"Surveillance complémentaire par prestataire : lun-ven 15h30–20h30.\"},{\"nom\":\"Traversée des voies km 541,287\",\"note\":\"Voyant blanc = aucune circulation en approche. Voyant rouge = circulation en approche.\"},{\"nom\":\"Souterrain Grigny-Le-Sablon\",\"adresse\":\"76 avenue Marcelin Berthelot, 69500 Grigny\",\"note\":\"Procédure identique à la passerelle Irigny Yvours (DC07446 Fiche 2.2).\"}]",
+    "procedures": "[{\"titre\":\"C2314\",\"description\":\"Le signal C2314 est commandé par CCGOL.\"},{\"titre\":\"Particularité arrêt prolongé Vernaison (PL)\",\"description\":\"L'arrêt prolongé sur la voie 2 maintient le PN363 fermé.\",\"critique\":true},{\"titre\":\"Reprise et cessation P2 de Badan (DC7294)\",\"description\":\"L'aiguilleur cesse et reprend le service aux heures prévues.\",\"reference\":\"DC7294\"},{\"titre\":\"Fiches opératoires IS de Badan (OP56529)\",\"description\":\"Seules les voies 202, 204 et 216 du faisceau appartiennent au SGC.\",\"reference\":\"OP56529\",\"etapes\":[\"Du C3 ou du Cv4 vers voies 202, 204 ou 216\",\"Manœuvre voie 216 vers voie impasse B\",\"Cessation et reprise Badan P1 (DC7292)\"]},{\"titre\":\"Cessation du service Badan P1 (DC7292)\",\"description\":\"Conditions requises avant cessation : P2 doit avoir cessé.\",\"reference\":\"DC7292\",\"critique\":true,\"etapes\":[\"Aviser verbalement le Régulateur\",\"Mettre tous les leviers en position normale (+)\",\"Mettre les leviers 16, 30 et 53 en position renversée (-)\",\"Ouvrir les carrés V1 et V2\",\"Aviser par dépêche les postes encadrants\"]}]",
+    "pn": "[{\"numero\":\"PN 363\",\"axe\":\"Route D36 — axe fréquenté\",\"contact_urgence\":\"Gendarmerie Irigny : 04 78 50 30 33\",\"note\":\"Aviser la gendarmerie d'Irigny en plus des avis réglementaires.\"},{\"numero\":\"PN 361\",\"note\":\"Normalement fermé — Ouverture Sur Demande Préalable. Portails cadenassés.\"}]"
+  },
+  {
+    "id": "s02",
+    "slug": "givors-canal",
+    "nom": "Givors Canal",
+    "ligne": "750000",
+    "trajet": "Section Givors Canal",
+    "description": "Section Givors Canal avec accès particuliers spécifiques.",
+    "pointsAcces": "[{\"nom\":\"Accès côté avenue Marcelin Berthelot\",\"adresse\":\"76 avenue Marcelin Berthelot, 69500 Grigny\"},{\"nom\":\"Accès Tunnel de Givors côté Givors\",\"adresse\":\"35 rue de Pieroux, 69700 Givors\",\"gps\":\"45°34'54''N 4°46'12''E\"}]",
+    "procedures": "[]",
+    "pn": null
+  },
+  {
+    "id": "s03",
+    "slug": "givors-peyraud",
+    "nom": "Givors Canal / Peyraud",
+    "ligne": "800000",
+    "trajet": "Givors Canal → Peyraud",
+    "description": "Section Ligne 800000 incluant le Point A, Point S, la manœuvre de Condrieu et les PN 16/17/18/29.",
+    "pointsAcces": "[{\"nom\":\"Point A — km 541,8\",\"adresse\":\"543 RD 386, Saint Romain En Gal\"},{\"nom\":\"Point S — km 538,4\",\"adresse\":\"Saint Romain En Gal (69560)\",\"gps\":\"45.5476641, 4.8261883\"},{\"nom\":\"Point de manœuvre Condrieu\",\"adresse\":\"Condrieu\"}]",
+    "procedures": "[{\"titre\":\"Compagnie Nationale du Rhône (CNR)\",\"description\":\"Les voies CNR à Condrieu appartiennent à la CNR. Contact : 04 74 78 38 80.\"},{\"titre\":\"Manœuvres de Condrieu (OP54721)\",\"description\":\"Trois types de manœuvres possibles.\",\"reference\":\"OP54721\",\"etapes\":[\"Du Cv31 vers Voie 4\",\"Du C41 vers Voie A Tiroir\",\"Du Cv31 vers Voie A Tiroir via aiguille B\"]}]",
+    "pn": "[{\"numero\":\"PN 16\",\"axe\":\"RN 86 à Condrieu\",\"contact_urgence\":\"Gendarmerie Ampuis : 04 74 56 10 26\"},{\"numero\":\"PN 17\",\"axe\":\"RN 86 à Condrieu\",\"contact_urgence\":\"Gendarmerie Ampuis : 04 74 56 10 26\"},{\"numero\":\"PN 18\",\"axe\":\"RN 86 à Condrieu\",\"contact_urgence\":\"Gendarmerie Ampuis : 04 74 56 10 26\"},{\"numero\":\"PN 29\",\"axe\":\"RN 86 à Limony\",\"contact_urgence\":\"Gendarmerie Serrières : 04 75 34 02 02\"}]"
+  },
+  {
+    "id": "s04",
+    "slug": "peyraud",
+    "nom": "Peyraud",
+    "ligne": "800000",
+    "trajet": "Section Peyraud",
+    "description": "Section terminale ligne 800000 incluant le Point F et le PN 37.",
+    "pointsAcces": "[{\"nom\":\"Accès Peyraud\",\"note\":\"Le chemin longe le RAC Nord.\"}]",
+    "procedures": "[{\"titre\":\"Manœuvre Point F\",\"description\":\"Manœuvres possibles au Point F.\",\"etapes\":[\"Du Cv12 vers VP\",\"Du Cv12 vers voies 3 et 5\"]}]",
+    "pn": "[{\"numero\":\"PN 35\",\"axe\":\"Section Peyraud\",\"note\":\"En cas d'arrêt au carré 578,7 : PN 35 maintenu fermé.\"},{\"numero\":\"PN 37\",\"axe\":\"RN 86 à Andance\",\"contact_urgence\":\"Gendarmerie Andance : 04 75 34 21 44\"}]"
+  },
+  {
+    "id": "s05",
+    "slug": "givors-ville-treves-burel",
+    "nom": "Givors Ville / Trèves-Burel",
+    "ligne": "750000",
+    "trajet": "Givors Ville → Trèves-Burel",
+    "description": "Section incluant l'EP Couzon, la commande locale de Trèves-Burel et les détecteurs de chute de rochers.",
+    "pointsAcces": "[{\"nom\":\"EP Couzon\",\"adresse\":\"Route des étangs, 42800 Chateauneuf\",\"gps\":\"45.538259, 4.644833\"},{\"nom\":\"Poste de Trèves-Burel\",\"adresse\":\"km 528,775 — Ligne 750000\",\"gps\":\"45.545420, 4.670380\",\"note\":\"Clé d'accès au poste à récupérer à Givors Ville.\"}]",
+    "procedures": "[{\"titre\":\"Reprise en commandes locales de Trèves-Burel\",\"description\":\"Procédure de reprise en commandes locales depuis le poste de Trèves-Burel.\",\"critique\":true,\"etapes\":[\"Récupérer la clé d'accès à Givors Ville\",\"Allumer le TCO : interrupteur sur côté droit du PRS\",\"Givors Ville télécommande Trèves-Burel dans ce mode\"]},{\"titre\":\"Détecteurs de chute de rochers\",\"description\":\"Descriptions et procédures dans la consigne EIC RA DC 7441.\",\"reference\":\"EIC RA DC 7441\"}]",
+    "pn": null
+  },
+  {
+    "id": "s06",
+    "slug": "rive-de-gier-chateaucreux",
+    "nom": "Rive De Gier / Châteaucreux P2",
+    "ligne": "750000",
+    "trajet": "Rive De Gier → Châteaucreux P2",
+    "description": "Section incluant Châteaucreux P2, Pont de l'Ane P2, Tunnel de Terrenoire, Souterrain de St Chamond et Rive De Gier.",
+    "pointsAcces": "[{\"nom\":\"Châteaucreux P2\",\"adresse\":\"Rue Achille Haubtmann, St Etienne\"},{\"nom\":\"Pont de l'Ane P2 — Clé extérieure\",\"note\":\"CODE : 3842\",\"code\":\"3842\"},{\"nom\":\"Tunnel de Terrenoire — côté Lyon\",\"adresse\":\"Rue Bertrand Russel, Terrenoire\",\"gps\":\"45.434856, 4.442631\"},{\"nom\":\"Aiguille 1 Rive De Gier\",\"adresse\":\"Impasse de Château, 42800 Rive De Gier\"}]",
+    "procedures": "[{\"titre\":\"Souterrain de St Chamond — Impraticabilité\",\"description\":\"En cas d'impraticabilité du souterrain, appliquer EIC RA DC7441 et DC1503.\",\"reference\":\"EIC RA DC7441 + DC1503\"},{\"titre\":\"Orage violent — Pont de l'Ane P2 (DC07066)\",\"description\":\"En cas d'orages et pluies importantes, alerter immédiatement via le centre de supervision.\",\"reference\":\"EIC RA DC07066\",\"critique\":true}]",
+    "pn": null
+  }
+]
