@@ -48,12 +48,13 @@ export async function adminLoginAction(
   // Connexion réussie → on réinitialise le compteur
   resetRateLimit(rateLimitKey);
 
-  const isProduction = process.env.NODE_ENV === "production";
+  const proto = headersList.get("x-forwarded-proto") || "";
+  const isHttps = proto === "https" || proto.split(",")[0].trim() === "https";
   const token = createAdminToken(user.id);
   const cookieStore = await cookies();
   cookieStore.set(ADMIN_COOKIE, token, {
     httpOnly: true,
-    secure: isProduction,
+    secure: isHttps,
     sameSite: "strict",
     maxAge: ADMIN_COOKIE_MAX_AGE,
     path: "/",

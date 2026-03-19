@@ -52,11 +52,12 @@ export async function loginAction(
   resetRateLimit(rateLimitKey);
   const user = result.user;
 
-  const isProduction = process.env.NODE_ENV === "production";
+  const proto = headersList.get("x-forwarded-proto") || "";
+  const isHttps = proto === "https" || proto.split(",")[0].trim() === "https";
   const cookieStore = await cookies();
   cookieStore.set(COOKIE_NAME, createUserToken(user.id), {
     httpOnly: true,
-    secure: isProduction,
+    secure: isHttps,
     sameSite: "strict",
     path: "/",
     maxAge: COOKIE_MAX_AGE,
