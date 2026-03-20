@@ -1,6 +1,6 @@
 import { requireAdminSession } from "@/lib/admin-auth";
 import Link from "next/link";
-import { FileSpreadsheet, MapPinned, ArrowRight, Upload } from "lucide-react";
+import { FileSpreadsheet, MapPinned, ArrowRight, Upload, Database } from "lucide-react";
 
 export default async function AdminImportPage() {
   await requireAdminSession();
@@ -14,7 +14,7 @@ export default async function AdminImportPage() {
         </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-3xl">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-5xl">
         {/* Import Fiches Excel */}
         <Link
           href="/admin/import/fiches"
@@ -62,10 +62,34 @@ export default async function AdminImportPage() {
             </div>
           </div>
         </Link>
+
+        {/* Import Données de référence */}
+        <Link
+          href="/admin/import/donnees"
+          className="group bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:border-purple-300 hover:shadow-md transition-all"
+        >
+          <div className="flex items-start gap-4">
+            <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center flex-shrink-0 group-hover:bg-purple-200 transition-colors">
+              <Database size={24} className="text-purple-700" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <h2 className="font-semibold text-gray-900 text-base mb-1">
+                Données de référence (Excel)
+              </h2>
+              <p className="text-sm text-gray-500 leading-relaxed">
+                Importez ou exportez les contacts, mnémoniques, abréviations,
+                points d&apos;accès et référentiels de postes.
+              </p>
+              <div className="mt-4 flex items-center gap-1 text-sm font-medium text-purple-600 group-hover:gap-2 transition-all">
+                Accéder à l&apos;import / export <ArrowRight size={14} />
+              </div>
+            </div>
+          </div>
+        </Link>
       </div>
 
       {/* Info box */}
-      <div className="mt-8 max-w-3xl bg-gray-50 border border-gray-200 rounded-xl p-5">
+      <div className="mt-8 max-w-5xl bg-gray-50 border border-gray-200 rounded-xl p-5">
         <div className="flex items-start gap-3">
           <Upload size={18} className="text-gray-400 mt-0.5 flex-shrink-0" />
           <div>
@@ -73,6 +97,7 @@ export default async function AdminImportPage() {
             <ul className="text-sm text-gray-500 space-y-1">
               <li>• <strong>Fiches Excel</strong> : téléchargez le modèle → remplissez les onglets → importez</li>
               <li>• <strong>Points KML</strong> : exportez depuis votre logiciel SIG → importez directement</li>
+              <li>• <strong>Données de référence</strong> : téléchargez le modèle → modifiez contacts, mnémoniques, abréviations, points d&apos;accès, postes → importez par onglet</li>
               <li>• Les données existantes ne sont jamais écrasées sans confirmation</li>
             </ul>
           </div>
