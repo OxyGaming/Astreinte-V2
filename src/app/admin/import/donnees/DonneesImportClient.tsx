@@ -227,14 +227,25 @@ export default function DonneesImportClient() {
 
     setImporting((prev) => ({ ...prev, [tabId]: true }));
     try {
-      const res = await fetch(ENDPOINTS[tabId], {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ [BODY_KEYS[tabId]]: valid, mode }),
-      });
-      const result = await res.json();
-      if (!res.ok) throw new Error(result.error || "Erreur lors de l'import.");
-      setResults((prev) => ({ ...prev, [tabId]: result }));
+      const BATCH_SIZE = 500;
+      const aggregated: ImportResult = { created: 0, updated: 0, rejected: 0, details: [] };
+
+      for (let i = 0; i < valid.length; i += BATCH_SIZE) {
+        const batch = valid.slice(i, i + BATCH_SIZE);
+        const res = await fetch(ENDPOINTS[tabId], {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ [BODY_KEYS[tabId]]: batch, mode }),
+        });
+        const result: ImportResult = await res.json();
+        if (!res.ok) throw new Error((result as unknown as { error: string }).error || "Erreur lors de l'import.");
+        aggregated.created += result.created;
+        aggregated.updated += result.updated;
+        aggregated.rejected += result.rejected;
+        aggregated.details.push(...result.details);
+      }
+
+      setResults((prev) => ({ ...prev, [tabId]: aggregated }));
     } catch (e: unknown) {
       setParseError(e instanceof Error ? e.message : "Erreur serveur.");
     } finally {
