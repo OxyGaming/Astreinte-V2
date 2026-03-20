@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 
 interface PosteData {
@@ -105,6 +106,9 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    revalidatePath("/postes");
+    revalidatePath("/postes/[slug]", "page");
+    revalidatePath("/recherche");
     return NextResponse.json({ created, updated, rejected, details });
   } catch {
     return NextResponse.json({ error: "Erreur serveur lors de l'import des postes." }, { status: 500 });

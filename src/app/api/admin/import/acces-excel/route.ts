@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 
 interface AccesData {
@@ -102,6 +103,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    revalidatePath("/acces");
     return NextResponse.json({ created, updated, rejected, details });
   } catch {
     return NextResponse.json({ error: "Erreur serveur lors de l'import des points d'accès." }, { status: 500 });

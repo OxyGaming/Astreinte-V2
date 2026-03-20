@@ -1,4 +1,6 @@
 import { getAllContacts } from "@/lib/db";
+
+export const dynamic = "force-dynamic";
 import PhoneButton from "@/components/PhoneButton";
 import { AlertCircle, Shield, Users, Building2 } from "lucide-react";
 

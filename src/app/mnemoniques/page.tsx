@@ -1,4 +1,6 @@
 import { getAllMnemoniques } from "@/lib/db";
+
+export const dynamic = "force-dynamic";
 import MnemoniquesClient from "./MnemoniquesClient";
 
 export default async function MnemoniquesPage() {

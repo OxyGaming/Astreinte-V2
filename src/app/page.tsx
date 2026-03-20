@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import Link from "next/link";
 import { Shield, Phone, FileText, MapPin, AlignLeft, AlertTriangle, ChevronRight } from "lucide-react";
 import SearchBar from "@/components/SearchBar";

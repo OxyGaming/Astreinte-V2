@@ -1,4 +1,6 @@
 import { getAllFiches, getAllContacts, getAllSecteurs, getAllMnemoniques } from "@/lib/db";
+
+export const dynamic = "force-dynamic";
 import SearchPageClient from "./SearchPageClient";
 
 export default async function RecherchePage() {

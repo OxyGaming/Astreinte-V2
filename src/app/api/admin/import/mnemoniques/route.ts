@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 
 interface LettreData {
@@ -87,6 +88,9 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    revalidatePath("/mnemoniques");
+    revalidatePath("/");
+    revalidatePath("/recherche");
     return NextResponse.json({ created, updated, rejected, details });
   } catch {
     return NextResponse.json({ error: "Erreur serveur lors de l'import des mnémoniques." }, { status: 500 });

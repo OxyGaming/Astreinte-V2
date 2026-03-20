@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 
 interface AbreviationData {
@@ -58,6 +59,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    revalidatePath("/recherche");
     return NextResponse.json({ created, updated, rejected, details });
   } catch {
     return NextResponse.json({ error: "Erreur serveur lors de l'import des abréviations." }, { status: 500 });
