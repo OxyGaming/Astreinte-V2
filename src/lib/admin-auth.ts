@@ -2,6 +2,7 @@
 import { cookies } from "next/headers";
 import { prisma } from "./prisma";
 import bcrypt from "bcryptjs";
+import { COOKIE_NAME, isValidToken, getUserIdFromToken } from "./auth-edge";
 
 export const ADMIN_COOKIE = "astreinte-admin";
 export const ADMIN_COOKIE_MAX_AGE = 60 * 60 * 8; // 8h
@@ -54,11 +55,52 @@ export async function getAdminSession(): Promise<boolean> {
   return isValidAdminToken(token);
 }
 
-/** Exige une session admin valide — redirige sinon (Server Component helper) */
+/**
+ * Vérifie si l'utilisateur front-office connecté a le rôle ADMIN en base de données.
+ * Cette fonction requête la DB — elle ne fait pas confiance au rôle dans le token seul.
+ * Retourne true si l'utilisateur est ADMIN, actif et approuvé.
+ */
+async function isFrontOfficeAdmin(): Promise<boolean> {
+  const cookieStore = await cookies();
+  const token = cookieStore.get(COOKIE_NAME)?.value;
+
+  if (!isValidToken(token)) return false;
+
+  const userId = getUserIdFromToken(token!);
+  if (!userId) return false;
+
+  // Vérification en DB : source de vérité pour le rôle
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { role: true, actif: true, status: true },
+  });
+
+  return (
+    user?.role === "ADMIN" &&
+    user.actif === true &&
+    user.status === "approved"
+  );
+}
+
+/**
+ * Exige une session admin valide — redirige sinon (Server Component helper).
+ *
+ * Deux mécanismes acceptés (par ordre de priorité) :
+ *   1. Cookie "astreinte-admin" valide (compte AdminUser dédié)
+ *   2. Cookie "astreinte-auth" d'un utilisateur front-office avec role=ADMIN,
+ *      actif=true, status="approved" (vérifié en DB — autorité finale)
+ *
+ * Cette double vérification est la garde côté serveur qui complète le middleware.
+ * Elle est appelée dans chaque page et Server Action admin.
+ */
 export async function requireAdminSession(): Promise<void> {
-  const valid = await getAdminSession();
-  if (!valid) {
-    const { redirect } = await import("next/navigation");
-    redirect("/admin/login");
-  }
+  // Priorité 1 : cookie admin classique (AdminUser)
+  if (await getAdminSession()) return;
+
+  // Priorité 2 : utilisateur front-office ADMIN (vérification DB)
+  if (await isFrontOfficeAdmin()) return;
+
+  // Accès refusé → redirection
+  const { redirect } = await import("next/navigation");
+  redirect("/admin/login");
 }

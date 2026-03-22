@@ -55,7 +55,9 @@ export async function loginAction(
   const proto = headersList.get("x-forwarded-proto") || "";
   const isHttps = proto === "https" || proto.split(",")[0].trim() === "https";
   const cookieStore = await cookies();
-  cookieStore.set(COOKIE_NAME, createUserToken(user.id), {
+  // On embarque le rôle dans le token pour permettre au middleware (Edge)
+  // de vérifier l'accès admin sans requête DB.
+  cookieStore.set(COOKIE_NAME, createUserToken(user.id, user.role), {
     httpOnly: true,
     secure: isHttps,
     sameSite: "strict",
