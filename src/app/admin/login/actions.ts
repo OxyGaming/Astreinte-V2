@@ -9,7 +9,7 @@ import {
   ADMIN_COOKIE_MAX_AGE,
 } from "@/lib/admin-auth";
 import { checkRateLimit, resetRateLimit } from "@/lib/rate-limit";
-import { validateLoginInput } from "@/lib/validate";
+import { validateAdminLoginInput } from "@/lib/validate";
 
 export async function adminLoginAction(
   _prevState: { error?: string } | null,
@@ -19,7 +19,7 @@ export async function adminLoginAction(
   const password = formData.get("password");
 
   // Validation basique des entrées
-  const input = validateLoginInput(username, password);
+  const input = validateAdminLoginInput(username, password);
   if (!input) {
     return { error: "Identifiants requis" };
   }

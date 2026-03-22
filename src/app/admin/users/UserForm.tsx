@@ -21,6 +21,7 @@ export default function UserForm({ user }: Props) {
   const [nom, setNom] = useState(user?.nom ?? "");
   const [prenom, setPrenom] = useState(user?.prenom ?? "");
   const [username, setUsername] = useState(user?.username ?? "");
+  const [email, setEmail] = useState(user?.email ?? "");
   const [password, setPassword] = useState("");
   const [role, setRole] = useState<string>(user?.role ?? "USER");
   const [actif, setActif] = useState(user?.actif ?? true);
@@ -33,7 +34,7 @@ export default function UserForm({ user }: Props) {
     setLoading(true);
     setError(null);
 
-    const payload: Record<string, unknown> = { nom, prenom, username, role, actif };
+    const payload: Record<string, unknown> = { nom, prenom, username, email: email.trim() || null, role, actif };
     if (password) payload.password = password;
     if (!isEdit) {
       if (!password) { setError("Le mot de passe est requis."); setLoading(false); return; }
@@ -102,7 +103,19 @@ export default function UserForm({ user }: Props) {
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1.5">Identifiant de connexion</label>
+        <label className="block text-sm font-medium text-gray-700 mb-1.5">Adresse e-mail (identifiant de connexion)</label>
+        <input
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          placeholder="prenom.nom@example.fr"
+        />
+        <p className="text-xs text-gray-400 mt-1">Requis pour que l&apos;utilisateur puisse se connecter.</p>
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1.5">Identifiant interne</label>
         <input
           type="text"
           value={username}
@@ -110,7 +123,7 @@ export default function UserForm({ user }: Props) {
           required
           autoCapitalize="none"
           className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500"
-          placeholder="jessie.achille"
+          placeholder="prenom.nom"
         />
       </div>
 

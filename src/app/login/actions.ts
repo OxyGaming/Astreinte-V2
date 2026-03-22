@@ -11,14 +11,14 @@ export async function loginAction(
   _prevState: { error?: string } | null,
   formData: FormData
 ): Promise<{ error: string }> {
-  const username = formData.get("username");
+  const email = formData.get("email");
   const password = formData.get("password");
   const from = (formData.get("from") as string) || "/";
 
   // Validation basique des entrées
-  const input = validateLoginInput(username, password);
+  const input = validateLoginInput(email, password);
   if (!input) {
-    return { error: "Identifiant ou mot de passe incorrect." };
+    return { error: "Adresse e-mail ou mot de passe incorrect." };
   }
 
   // Rate limiting basé sur l'IP source
@@ -37,7 +37,7 @@ export async function loginAction(
     };
   }
 
-  const result = await verifyUserCredentials(input.username, input.password);
+  const result = await verifyUserCredentials(input.email, input.password);
   if (result.error === "pending") {
     return { error: "Votre compte est en attente de validation par un administrateur." };
   }

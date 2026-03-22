@@ -18,10 +18,10 @@ export type CredentialResult =
 
 /** Vérifie les identifiants et retourne l'utilisateur ou une raison de refus */
 export async function verifyUserCredentials(
-  username: string,
+  email: string,
   password: string
 ): Promise<CredentialResult> {
-  const user = await prisma.user.findUnique({ where: { username } });
+  const user = await prisma.user.findUnique({ where: { email } });
   if (!user) return { user: null, error: "invalid" };
 
   // Vérifier le mot de passe en premier (évite l'énumération de comptes via timing)

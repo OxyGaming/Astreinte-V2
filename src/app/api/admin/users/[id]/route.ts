@@ -20,13 +20,22 @@ export async function GET(_req: NextRequest, { params }: Params) {
 // PUT /api/admin/users/[id]
 export async function PUT(req: NextRequest, { params }: Params) {
   const { id } = await params;
-  const { username, password, nom, prenom, role, actif, status } = await req.json();
+  const { username, email, password, nom, prenom, role, actif, status } = await req.json();
 
   const data: Record<string, unknown> = {};
   if (username !== undefined) {
     const clash = await prisma.user.findFirst({ where: { username, NOT: { id } } });
     if (clash) return NextResponse.json({ error: "Identifiant déjà utilisé" }, { status: 409 });
     data.username = username;
+  }
+  if (email !== undefined) {
+    if (email !== null && email !== "") {
+      const clash = await prisma.user.findFirst({ where: { email, NOT: { id } } });
+      if (clash) return NextResponse.json({ error: "Adresse e-mail déjà utilisée" }, { status: 409 });
+      data.email = email;
+    } else {
+      data.email = null;
+    }
   }
   if (nom !== undefined) data.nom = nom;
   if (prenom !== undefined) data.prenom = prenom;
