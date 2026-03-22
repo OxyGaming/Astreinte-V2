@@ -39,7 +39,6 @@ async function main() {
   await prisma.secteur.deleteMany();
   await prisma.mnemonique.deleteMany();
   await prisma.abreviation.deleteMany();
-  await prisma.adminUser.deleteMany();
   console.log("  ✓ Tables vidées");
 
   // Contacts
@@ -92,21 +91,15 @@ async function main() {
   }
   console.log(`  ✓ ${abreviationsData.length} abréviations insérées`);
 
-  // Compte admin back-office (hardcodé — ne pas exporter)
-  const adminPassword = process.env.ADMIN_PASSWORD || "admin2025";
-  const hash = await bcrypt.hash(adminPassword, 12);
-  await prisma.adminUser.create({ data: { username: "admin", password: hash } });
-  console.log("  ✓ Compte admin créé (user: admin, pass: variable ADMIN_PASSWORD ou 'admin2025')");
-
-  // Utilisateurs front-office (hardcodés — ne pas exporter)
+  // Utilisateurs (front-office et back-office unifiés)
   const usersData = [
-    { username: "admin.system", password: process.env.ADMIN_PASSWORD || "admin2025", nom: "Système", prenom: "Admin", role: "ADMIN" },
+    { username: "admin.system", email: "admin@astreinte.local", password: process.env.ADMIN_PASSWORD || "admin2025", nom: "Système", prenom: "Admin", role: "ADMIN" },
     { username: "jessie.achille", password: "astreinte2025", nom: "Achille", prenom: "Jessie", role: "USER" },
     { username: "editeur", password: "editeur2025", nom: "Éditeur", prenom: "Compte", role: "EDITOR" },
   ];
   for (const u of usersData) {
     const h = await bcrypt.hash(u.password, 12);
-    await prisma.user.create({ data: { username: u.username, password: h, nom: u.nom, prenom: u.prenom, role: u.role } });
+    await prisma.user.create({ data: { username: u.username, email: (u as { email?: string }).email ?? null, password: h, nom: u.nom, prenom: u.prenom, role: u.role } });
   }
   console.log(`  ✓ ${usersData.length} utilisateurs front-office créés`);
   console.log("    → admin.system / admin2025 (ADMIN)");

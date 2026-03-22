@@ -143,17 +143,7 @@ model AccesRail {
   @@index([pk])
 }
 
-// ─── Administrateur back-office ────────────────────────────────────────────────
-
-model AdminUser {
-  id        String   @id @default(cuid())
-  username  String   @unique
-  password  String   // bcrypt hash
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
-// ─── Utilisateurs front-office ─────────────────────────────────────────────────
+// ─── Utilisateurs (front-office et back-office) ────────────────────────────────
 
 model User {
   id        String   @id @default(cuid())

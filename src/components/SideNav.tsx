@@ -58,7 +58,7 @@ export default function SideNav() {
       <div className="p-4 border-t border-blue-800 space-y-2">
         <LogoutButton variant="sidebar" />
         <Link
-          href="/admin/login"
+          href="/admin"
           className="flex items-center gap-2 w-full px-3 py-2 rounded-lg text-blue-300 hover:text-white hover:bg-blue-800/60 transition-all text-xs font-medium"
           title="Back-office administration"
         >
