@@ -24,8 +24,8 @@ export function proxy(request: NextRequest) {
   const token = request.cookies.get(COOKIE_NAME)?.value;
   const isAuthenticated = isValidToken(token);
 
-  // Routes /api/admin/** → 401 si non connecté
-  if (pathname.startsWith("/api/admin")) {
+  // Routes /api/** → 401 si non connecté (pas de redirect, c'est une API)
+  if (pathname.startsWith("/api/")) {
     if (isAuthenticated) return NextResponse.next();
     return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
   }

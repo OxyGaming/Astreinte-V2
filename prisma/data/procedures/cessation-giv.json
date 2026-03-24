@@ -1,0 +1,257 @@
+{
+  "slug": "cessation-giv",
+  "titre": "Cessation de service — Givors Ville",
+  "typeProcedure": "cessation",
+  "description": "Vérifications préalables à la cessation du poste de Givors Ville (GIV). Procédure EIC RA DC 7291.",
+  "version": "1.0",
+  "etapes": [
+    {
+      "id": "e1",
+      "titre": "Signaux et tracé",
+      "ordre": 1,
+      "icone": "Eye",
+      "actions": [
+        {
+          "id": "signaux-ouverts",
+          "type": "question_oui_non",
+          "label": "Les signaux sont-ils ouverts sur VP ?",
+          "description": "Vérifier que les signaux des voies principales sont bien en position ouverte.",
+          "reponseAttendue": true,
+          "niveau": "bloquant",
+          "obligatoire": true,
+          "verifiable": false,
+          "note": "Fermeture de la cessation impossible si signaux fermés sur VP."
+        },
+        {
+          "id": "trace-permanent",
+          "type": "question_oui_non",
+          "label": "Le poste est-il équipé en tracé permanent ?",
+          "reponseAttendue": true,
+          "niveau": "informatif",
+          "obligatoire": true,
+          "verifiable": false
+        },
+        {
+          "id": "pancartage-pn",
+          "type": "question_oui_non",
+          "label": "Un pancartage PN est-il en cours ?",
+          "reponseAttendue": false,
+          "niveau": "bloquant",
+          "obligatoire": true,
+          "verifiable": false,
+          "note": "La cessation est impossible si un pancartage PN est actif."
+        },
+        {
+          "id": "report-mat",
+          "type": "question_oui_non",
+          "label": "Un report du MAT est-il en cours ?",
+          "reponseAttendue": false,
+          "niveau": "alerte",
+          "obligatoire": true,
+          "verifiable": false
+        },
+        {
+          "id": "stem",
+          "type": "question_oui_non",
+          "label": "STEM obligatoire (POR P1) ?",
+          "reponseAttendue": false,
+          "niveau": "informatif",
+          "obligatoire": true,
+          "verifiable": false
+        }
+      ]
+    },
+    {
+      "id": "e2",
+      "titre": "Trains en cours",
+      "ordre": 2,
+      "icone": "Train",
+      "actions": [
+        {
+          "id": "trains-origines",
+          "type": "question_oui_non",
+          "label": "Y a-t-il des trains origine/terminus (TER, FRET, VIS, SE…) ?",
+          "reponseAttendue": false,
+          "niveau": "alerte",
+          "obligatoire": true,
+          "verifiable": false,
+          "note": "Les trains origines/terminus deviennent impossibles à gérer si le poste cesse."
+        },
+        {
+          "id": "trains-detail",
+          "type": "saisie_texte",
+          "label": "Préciser les trains concernés et les mesures prises",
+          "description": "Indiquer les numéros de train et les dispositions prises.",
+          "niveau": "bloquant",
+          "obligatoire": true,
+          "verifiable": false,
+          "conditionAffichage": {
+            "actionId": "trains-origines",
+            "operateur": "eq",
+            "valeur": true
+          }
+        },
+        {
+          "id": "plan-transport",
+          "type": "question_oui_non",
+          "label": "Un plan de transport adapté est-il disponible pour la fermeture du poste ?",
+          "description": "Vérifier notamment le W du matin pour les origines GIV à supprimer.",
+          "reponseAttendue": true,
+          "niveau": "alerte",
+          "obligatoire": true,
+          "verifiable": false,
+          "note": "W du matin pour origine GIV à supprimer si applicable."
+        },
+        {
+          "id": "ate",
+          "type": "question_oui_non",
+          "label": "La fermeture pourrait-elle nécessiter une réétude d'ATE (Avis Transport Exceptionnel) ?",
+          "reponseAttendue": false,
+          "niveau": "alerte",
+          "obligatoire": true,
+          "verifiable": false
+        }
+      ]
+    },
+    {
+      "id": "e3",
+      "titre": "Coordination agents",
+      "ordre": 3,
+      "icone": "Users",
+      "actions": [
+        {
+          "id": "rac",
+          "type": "question_oui_non",
+          "label": "Des RAC sont-ils en cours ou prévus (BAD, GIC, PEY…) ?",
+          "description": "Penser aux avis pour les RAC concernés.",
+          "reponseAttendue": false,
+          "niveau": "alerte",
+          "obligatoire": true,
+          "verifiable": false
+        },
+        {
+          "id": "releve-adc",
+          "type": "question_oui_non",
+          "label": "La fermeture rendrait-elle impossible des relèves ADC (LTE, LVO, POR…) ?",
+          "reponseAttendue": false,
+          "niveau": "alerte",
+          "obligatoire": true,
+          "verifiable": false
+        },
+        {
+          "id": "travaux",
+          "type": "question_oui_non",
+          "label": "La cessation pourrait-elle impacter des travaux en cours ou prévus ?",
+          "reponseAttendue": false,
+          "niveau": "alerte",
+          "obligatoire": true,
+          "verifiable": false
+        },
+        {
+          "id": "depot-essence",
+          "type": "question_oui_non",
+          "label": "Y a-t-il une opération dépôt / plein essence en cours ?",
+          "reponseAttendue": false,
+          "niveau": "informatif",
+          "obligatoire": true,
+          "verifiable": false
+        },
+        {
+          "id": "changement-voies",
+          "type": "question_oui_non",
+          "label": "Un changement de voies TER (CATI TER) est-il à prévoir ?",
+          "reponseAttendue": false,
+          "niveau": "alerte",
+          "obligatoire": true,
+          "verifiable": false
+        },
+        {
+          "id": "derouillage",
+          "type": "question_oui_non",
+          "label": "La fermeture nécessiterait-elle la surveillance du dérouillage des voies ?",
+          "reponseAttendue": false,
+          "niveau": "informatif",
+          "obligatoire": true,
+          "verifiable": false
+        }
+      ]
+    },
+    {
+      "id": "e4",
+      "titre": "Particularités GIV",
+      "ordre": 4,
+      "icone": "AlertTriangle",
+      "actions": [
+        {
+          "id": "info-particularites",
+          "type": "information",
+          "label": "Points de vigilance spécifiques au poste Givors Ville",
+          "description": "IMPOSSIBLE de cesser si GIC cesse (renvoi des PN). Attention si zone de filets : circulation sur voie 1 impossible jusqu'à avis de l'agent mainteneur. Voie CIR inutilisable. IPCS entre RdG et GIV inutilisables.",
+          "niveau": "bloquant",
+          "obligatoire": false,
+          "verifiable": false
+        },
+        {
+          "id": "2-agents-1",
+          "type": "question_oui_non",
+          "label": "Passage de 2 agents à 1 agent (PTA) nécessaire ?",
+          "description": "Vérifier si l'adaptation de la charge de travail est requise.",
+          "reponseAttendue": false,
+          "niveau": "alerte",
+          "obligatoire": true,
+          "verifiable": false
+        },
+        {
+          "id": "gic-cessation",
+          "type": "question_oui_non",
+          "label": "Le poste GIC est-il en activité normale (non cédé) ?",
+          "description": "Si GIC cesse, la cessation de GIV est IMPOSSIBLE (renvoi des PN).",
+          "reponseAttendue": true,
+          "niveau": "bloquant",
+          "obligatoire": true,
+          "verifiable": false,
+          "note": "Bloquant absolu : vérifier que GIC est opérationnel avant toute cessation GIV."
+        }
+      ]
+    },
+    {
+      "id": "e5",
+      "titre": "Avis et consignes",
+      "ordre": 5,
+      "icone": "BookOpen",
+      "actions": [
+        {
+          "id": "type-avis",
+          "type": "question_choix",
+          "label": "Type d'avis S2A applicable",
+          "reponsesDisponibles": ["S2A n°5", "S2A n°6", "Aucun"],
+          "reponseAttendue": "S2A n°5",
+          "niveau": "alerte",
+          "obligatoire": true,
+          "verifiable": false,
+          "note": "Avis S2A n°5 pour GIV dans la majorité des cas."
+        },
+        {
+          "id": "appel-supervision",
+          "type": "confirmation",
+          "label": "Aviser la supervision",
+          "description": "Contacter la supervision avant cessation.",
+          "niveau": "bloquant",
+          "obligatoire": true,
+          "verifiable": false,
+          "contactId": "supervision"
+        },
+        {
+          "id": "consigne-cessation",
+          "type": "confirmation",
+          "label": "Appliquer la consigne de cessation EIC RA DC 7291",
+          "description": "Consulter et appliquer l'intégralité de la procédure.",
+          "niveau": "bloquant",
+          "obligatoire": true,
+          "verifiable": false,
+          "referenceDoc": "EIC RA DC 7291"
+        }
+      ]
+    }
+  ]
+}

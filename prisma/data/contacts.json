@@ -168,5 +168,115 @@
     "telephoneAlt": null,
     "note": null,
     "disponibilite": "24/24"
+  },
+  {
+    "id": "poste-giv",
+    "nom": "Poste Givors Ville",
+    "role": "Agent Circulation — Poste GIV",
+    "categorie": "urgence",
+    "telephone": "04 37 60 13 08",
+    "telephoneAlt": null,
+    "note": "Contact direct du poste 25 de Givors Ville",
+    "disponibilite": "24h/24"
+  },
+  {
+    "id": "dpx-giv",
+    "nom": "Laurent NIEL",
+    "role": "DPX — Givors Ville",
+    "categorie": "encadrement",
+    "telephone": "07 77 16 26 74",
+    "telephoneAlt": null,
+    "note": null,
+    "disponibilite": "Astreinte"
+  },
+  {
+    "id": "adpx-giv",
+    "nom": "MASSON Erwan",
+    "role": "Ass. DPX — Givors Ville",
+    "categorie": "encadrement",
+    "telephone": "06 16 67 01 02",
+    "telephoneAlt": null,
+    "note": null,
+    "disponibilite": "Astreinte"
+  },
+  {
+    "id": "cps-giv",
+    "nom": "Marine KARA RICCI",
+    "role": "Agent CPS — Givors Ville",
+    "categorie": "externe",
+    "telephone": "06 15 52 78 05",
+    "telephoneAlt": null,
+    "note": "cps@eicral.fr",
+    "disponibilite": null
+  },
+  {
+    "id": "supervision-giv",
+    "nom": "Supervision GIV",
+    "role": "Centre de supervision — Givors Ville",
+    "categorie": "urgence",
+    "telephone": "708406",
+    "telephoneAlt": null,
+    "note": "Numéro interne supervision poste GIV",
+    "disponibilite": "24h/24"
+  },
+  {
+    "id": "poste-pan",
+    "nom": "Poste Pont de l'Ane P2",
+    "role": "Agent Circulation — Poste PAN P2",
+    "categorie": "urgence",
+    "telephone": "04 77 47 42 38",
+    "telephoneAlt": null,
+    "note": "Contact direct du poste 2 de St Etienne Pont de l'Ane",
+    "disponibilite": "24h/24"
+  },
+  {
+    "id": "cps-pan",
+    "nom": "Nathalie TIERCE",
+    "role": "Agent CPS — Pont de l'Ane P2",
+    "categorie": "externe",
+    "telephone": "06 21 06 75 45",
+    "telephoneAlt": null,
+    "note": "cps@eicral.fr — cellulesuo@eicral.fr — dii@eicral.fr",
+    "disponibilite": null
+  },
+  {
+    "id": "giv-portable",
+    "nom": "Poste GIV (portable)",
+    "role": "Agent Circulation — Givors Ville (mobile)",
+    "categorie": "urgence",
+    "telephone": "06 21 70 71 02",
+    "telephoneAlt": null,
+    "note": "Portable de l'AC de Givors Ville",
+    "disponibilite": "24h/24"
+  },
+  {
+    "id": "poste-se2",
+    "nom": "Poste Chateaucreux P2",
+    "role": "Agent Circulation — SE Chateaucreux P2",
+    "categorie": "urgence",
+    "telephone": "04 77 47 46 09",
+    "telephoneAlt": null,
+    "note": "Contact direct du poste 2 de St Etienne Chateaucreux",
+    "disponibilite": "24h/24"
+  },
+  {
+    "id": "poste-se1",
+    "nom": "Poste Chateaucreux P1",
+    "role": "Agent Circulation — SE Chateaucreux P1",
+    "categorie": "urgence",
+    "telephone": "04 77 47 46 08",
+    "telephoneAlt": null,
+    "note": "Poste encadrant de Chateaucreux P2",
+    "disponibilite": "24h/24"
+  },
+  {
+    "id": "cps-se2",
+    "nom": "Claude JOUVE",
+    "role": "Agent CPS — Chateaucreux P2",
+    "categorie": "externe",
+    "telephone": "06 19 24 59 24",
+    "telephoneAlt": null,
+    "note": "cps@eicral.fr",
+    "disponibilite": null
   }
 ]

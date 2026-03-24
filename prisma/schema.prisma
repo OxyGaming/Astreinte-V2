@@ -120,6 +120,62 @@ model Poste {
   secteur         Secteur? @relation(fields: [secteurId], references: [id])
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
+
+  proceduresMetier PosteProcedure[]
+  sessionsMetier   SessionProcedure[]
+}
+
+// ─── Moteur de procédure métier ────────────────────────────────────────────────
+
+model Procedure {
+  id            String   @id @default(cuid())
+  slug          String   @unique
+  titre         String
+  typeProcedure String   // cessation | reprise | incident | travaux | autre
+  description   String?
+  version       String   @default("1.0")
+  etapes        String   // JSON: EtapeMetier[]
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  postes   PosteProcedure[]
+  sessions SessionProcedure[]
+}
+
+// Association N-N Poste ↔ Procedure
+model PosteProcedure {
+  id          String @id @default(cuid())
+  posteId     String
+  procedureId String
+  ordre       Int    @default(0)
+
+  poste     Poste     @relation(fields: [posteId], references: [id], onDelete: Cascade)
+  procedure Procedure @relation(fields: [procedureId], references: [id], onDelete: Cascade)
+
+  @@unique([posteId, procedureId])
+}
+
+// Session d'exécution d'une procédure
+model SessionProcedure {
+  id                String    @id @default(cuid())
+  procedureId       String
+  procedureVersion  String
+  procedureSnapshot String    // JSON: Procedure snapshot immuable au démarrage
+  posteId           String
+  posteSlug         String    // dénormalisé pour requêtes rapides
+  agentNom          String?
+  statut            String    @default("en_cours") // en_cours | terminee | abandonnee
+  etapeIndex        Int       @default(0)
+  etat              String    @default("{\"etapes\":{}}") // JSON: EtatSession
+  synthese          String?   // JSON: Synthese — null jusqu'à la clôture
+  startedAt         DateTime  @default(now())
+  completedAt       DateTime?
+
+  procedure Procedure @relation(fields: [procedureId], references: [id])
+  poste     Poste     @relation(fields: [posteId], references: [id])
+
+  @@index([posteSlug])
+  @@index([statut])
 }
 
 // ─── Points d'accès ferroviaires (KML + back-office) ──────────────────────────

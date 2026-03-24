@@ -1,4 +1,5 @@
 import { getAllPostes, getPosteBySlug } from "@/lib/db";
+import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import {
@@ -14,8 +15,19 @@ import {
   Zap,
   Users,
   Thermometer,
+  ClipboardCheck,
+  CheckCircle2,
+  Wrench,
 } from "lucide-react";
 import PhoneButton from "@/components/PhoneButton";
+
+const TYPE_PROCEDURE_META: Record<string, { label: string; sublabel: string; icon: React.ElementType; bg: string; iconColor: string }> = {
+  cessation: { label: "Cessation de service", sublabel: "Lancer la procédure guidée", icon: ClipboardCheck, bg: "bg-blue-700 hover:bg-blue-800", iconColor: "text-amber-400" },
+  reprise:   { label: "Reprise de service",   sublabel: "Lancer la procédure guidée", icon: CheckCircle2,  bg: "bg-green-700 hover:bg-green-800", iconColor: "text-white" },
+  incident:  { label: "Gestion d'incident",   sublabel: "Lancer la procédure guidée", icon: AlertTriangle, bg: "bg-amber-600 hover:bg-amber-700", iconColor: "text-white" },
+  travaux:   { label: "Travaux",              sublabel: "Lancer la procédure guidée", icon: Wrench,        bg: "bg-orange-600 hover:bg-orange-700", iconColor: "text-white" },
+  autre:     { label: "Procédures",           sublabel: "Lancer la procédure guidée", icon: BookOpen,      bg: "bg-slate-700 hover:bg-slate-800", iconColor: "text-white" },
+};
 
 export async function generateStaticParams() {
   const postes = await getAllPostes();
@@ -28,7 +40,13 @@ export default async function PosteDetailPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const poste = await getPosteBySlug(slug);
+  const [poste, procedureTypes] = await Promise.all([
+    getPosteBySlug(slug),
+    prisma.posteProcedure.findMany({
+      where: { poste: { slug } },
+      include: { procedure: { select: { typeProcedure: true } } },
+    }).then((rows) => [...new Set(rows.map((r) => r.procedure.typeProcedure))]),
+  ]);
   if (!poste) notFound();
 
   return (
@@ -85,6 +103,28 @@ export default async function PosteDetailPage({
           </div>
         </div>
       </div>
+
+      {/* Procédures guidées — bouton d'entrée générique */}
+      {procedureTypes.length > 0 && (
+        <Link
+          href={`/postes/${slug}/procedures`}
+          className="flex items-center justify-between bg-blue-700 hover:bg-blue-800 text-white rounded-xl px-4 py-3.5 transition-colors"
+        >
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-blue-600 rounded-lg">
+              <ClipboardCheck size={18} className="text-amber-400" />
+            </div>
+            <div>
+              <p className="text-sm font-bold">Procédures associées au poste</p>
+              <p className="text-xs text-blue-300 mt-0.5">
+                Choisissez et lancez une procédure
+                {procedureTypes.length > 1 && ` · ${procedureTypes.length} types disponibles`}
+              </p>
+            </div>
+          </div>
+          <ChevronLeft size={18} className="text-blue-300 rotate-180" />
+        </Link>
+      )}
 
       {/* Annuaire */}
       <section>

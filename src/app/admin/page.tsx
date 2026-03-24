@@ -1,12 +1,12 @@
 import { requireAdminSession } from "@/lib/admin-auth";
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
-import { FileText, Users, MapPin, BookOpen, AlignLeft, Plus, TrendingUp, Building2, MapPinned } from "lucide-react";
+import { FileText, Users, MapPin, BookOpen, AlignLeft, Plus, TrendingUp, Building2, MapPinned, ClipboardList } from "lucide-react";
 
 export default async function AdminDashboard() {
   await requireAdminSession();
 
-  const [fichesCount, contactsCount, secteursCount, postesCount, accesCount, mnemoniquesCount, abreviationsCount] =
+  const [fichesCount, contactsCount, secteursCount, postesCount, accesCount, mnemoniquesCount, abreviationsCount, proceduresCount] =
     await Promise.all([
       prisma.fiche.count(),
       prisma.contact.count(),
@@ -15,6 +15,7 @@ export default async function AdminDashboard() {
       prisma.accesRail.count(),
       prisma.mnemonique.count(),
       prisma.abreviation.count(),
+      prisma.procedure.count(),
     ]);
 
   const recentFiches = await prisma.fiche.findMany({
@@ -36,6 +37,7 @@ export default async function AdminDashboard() {
     { label: "Postes", count: postesCount, icon: Building2, href: "/admin/postes", color: "bg-cyan-500" },
     { label: "Mnémoniques", count: mnemoniquesCount, icon: BookOpen, href: "/admin/mnemoniques", color: "bg-purple-500" },
     { label: "Abréviations", count: abreviationsCount, icon: AlignLeft, href: "/admin/abreviations", color: "bg-gray-500" },
+    { label: "Procédures guidées", count: proceduresCount, icon: ClipboardList, href: "/admin/procedures", color: "bg-indigo-500" },
   ];
 
   const quickActions = [
