@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ChevronLeft, ClipboardCheck, CheckCircle2, AlertTriangle, Wrench, BookOpen, Loader2, User } from "lucide-react";
+import { ChevronLeft, ClipboardCheck, CheckCircle2, AlertTriangle, Wrench, BookOpen, Loader2 } from "lucide-react";
 
 interface PosteInfo { id: string; nom: string; slug: string }
 interface ProcedureInfo { id: string; slug: string; titre: string; description: string | null; version: string }
@@ -26,7 +26,6 @@ export default function ProcedureTypePage({
   const [type, setType] = useState("");
   const [poste, setPoste] = useState<PosteInfo | null>(null);
   const [procedures, setProcedures] = useState<ProcedureInfo[]>([]);
-  const [agentNom, setAgentNom] = useState("");
   const [starting, setStarting] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -50,7 +49,7 @@ export default function ProcedureTypePage({
       const res = await fetch(`/api/procedures/${procedure.slug}/sessions`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ posteId: poste.id, agentNom: agentNom.trim() || undefined }),
+        body: JSON.stringify({ posteId: poste.id }),
       });
       if (!res.ok) {
         const data = await res.json();
@@ -87,20 +86,6 @@ export default function ProcedureTypePage({
             {poste && <p className="text-white/60 text-sm mt-0.5">{poste.nom}</p>}
           </div>
         </div>
-      </div>
-
-      <div className="bg-white rounded-xl border border-slate-200 p-4">
-        <label className="flex items-center gap-2 text-sm font-semibold text-slate-700 mb-2">
-          <User size={16} className="text-slate-400" />
-          Votre nom (optionnel)
-        </label>
-        <input
-          type="text"
-          value={agentNom}
-          onChange={(e) => setAgentNom(e.target.value)}
-          placeholder="Ex : Dupont Martin"
-          className="w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-        />
       </div>
 
       {procedures.length > 0 ? (

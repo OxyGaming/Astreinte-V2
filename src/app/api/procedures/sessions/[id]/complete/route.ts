@@ -1,6 +1,7 @@
 /**
  * POST /api/procedures/sessions/[id]/complete
  * Clôture une session : calcule la synthèse, la persiste, marque terminée.
+ * Écrit l'événement session_completee dans la même transaction.
  */
 import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/user-auth";
@@ -29,21 +30,45 @@ export async function POST(_req: NextRequest, { params }: Params) {
     etapes: snapshot.etapes as EtapeMetier[],
   };
   const etat: EtatSession = JSON.parse(session.etat);
-
   const synthese = calculerSynthese(procedure, etat);
+  const actorNom = `${user.prenom} ${user.nom}`.trim() || user.username;
+  const completedAt = new Date();
 
-  const updated = await prisma.sessionProcedure.update({
-    where: { id },
-    data: {
-      statut: "terminee",
-      synthese: JSON.stringify(synthese),
-      completedAt: new Date(),
-    },
+  const updated = await prisma.$transaction(async (tx) => {
+    const result = await tx.sessionProcedure.update({
+      where: { id },
+      data: {
+        statut:      "terminee",
+        synthese:    JSON.stringify(synthese),
+        completedAt,
+      },
+    });
+
+    // Séquence suivante — dans la transaction, sûr avec SQLite mono-writer
+    const last = await tx.sessionProcedureEvent.findFirst({
+      where:   { sessionId: id },
+      orderBy: { sequence: "desc" },
+      select:  { sequence: true },
+    });
+    const seq = (last?.sequence ?? 0) + 1;
+
+    await tx.sessionProcedureEvent.create({
+      data: {
+        sessionId: id,
+        sequence:  seq,
+        type:      "session_completee",
+        // Payload allégé : la synthèse complète est déjà dans SessionProcedure.synthese
+        payload:   JSON.stringify({ syntheseStatut: synthese.statut }),
+        actorNom,
+      },
+    });
+
+    return result;
   });
 
   return NextResponse.json({
-    sessionId: updated.id,
-    statut: updated.statut,
+    sessionId:   updated.id,
+    statut:      updated.statut,
     synthese,
     completedAt: updated.completedAt?.toISOString(),
   });

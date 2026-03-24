@@ -14,6 +14,7 @@ import {
   UserCog,
   Upload,
   ClipboardList,
+  History,
 } from "lucide-react";
 import { adminLogoutAction } from "./login/actions";
 import AdminMobileNav from "@/components/AdminMobileNav";
@@ -26,6 +27,7 @@ const navItems = [
   { href: "/admin/acces", label: "Points d'accès", icon: MapPinned },
   { href: "/admin/postes", label: "Postes", icon: Building2 },
   { href: "/admin/procedures", label: "Procédures guidées", icon: ClipboardList },
+  { href: "/admin/procedures/sessions", label: "Sessions procédures", icon: History },
   { href: "/admin/mnemoniques", label: "Mnémoniques", icon: BookOpen },
   { href: "/admin/abreviations", label: "Abréviations", icon: AlignLeft },
   { href: "/admin/users", label: "Utilisateurs", icon: UserCog },

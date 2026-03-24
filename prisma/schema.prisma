@@ -170,12 +170,60 @@ model SessionProcedure {
   synthese          String?   // JSON: Synthese — null jusqu'à la clôture
   startedAt         DateTime  @default(now())
   completedAt       DateTime?
+  eventsArchived    Boolean   @default(false)   // true ssi aucun event actif ne subsiste après archivage
+  eventsArchivedAt  DateTime?                   // horodatage du dernier archivage complet
 
-  procedure Procedure @relation(fields: [procedureId], references: [id])
-  poste     Poste     @relation(fields: [posteId], references: [id])
+  procedure Procedure              @relation(fields: [procedureId], references: [id])
+  poste     Poste                  @relation(fields: [posteId], references: [id])
+  events    SessionProcedureEvent[]
 
   @@index([posteSlug])
   @@index([statut])
+  @@index([eventsArchived, statut, completedAt]) // index du batch d'archivage
+}
+
+// Journal append-only des événements d'une session
+model SessionProcedureEvent {
+  id         String   @id @default(cuid())
+  sessionId  String
+  sequence   Int      // position dans la session, assignée par l'application
+  type       String   // session_started | reponse_enregistree | etape_avancee
+                      // | session_completee | session_abandonnee
+  // Colonnes dénormalisées pour requêtes fréquentes (non null selon type)
+  etapeId    String?
+  actionId   String?
+  valeur     String?  // réponse sérialisée en string ("true", "false", texte libre, choix)
+  // Données complètes — source of truth
+  payload    String   // JSON: snapshot complet de l'événement
+  actorNom   String?  // dénormalisé au moment de l'event
+  occurredAt DateTime @default(now())
+
+  session SessionProcedure @relation(fields: [sessionId], references: [id], onDelete: Restrict)
+
+  @@unique([sessionId, sequence])
+  @@index([sessionId, occurredAt])
+  @@index([type, occurredAt])
+  @@index([actionId])
+}
+
+// Archive immuable des événements des sessions clôturées et anciennes
+model SessionProcedureEventArchive {
+  id         String   @id           // même id que l'original — garantit l'idempotence
+  sessionId  String
+  sequence   Int
+  type       String
+  etapeId    String?
+  actionId   String?
+  valeur     String?
+  payload    String
+  actorNom   String?
+  occurredAt DateTime
+  archivedAt DateTime @default(now()) // horodatage de la migration vers l'archive
+
+  @@unique([sessionId, sequence])
+  @@index([sessionId])
+  @@index([occurredAt])
+  @@index([actionId])
 }
 
 // ─── Points d'accès ferroviaires (KML + back-office) ──────────────────────────

@@ -2,6 +2,7 @@
  * POST /api/procedures/[slug]/sessions
  * Démarre une nouvelle session d'exécution pour une procédure donnée.
  * Capture le snapshot immuable de la procédure au moment du démarrage.
+ * Écrit l'événement session_started (sequence = 1) dans la même transaction.
  */
 import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/user-auth";
@@ -17,7 +18,7 @@ export async function POST(req: NextRequest, { params }: Params) {
 
   const { slug } = await params;
 
-  let body: { posteId?: string; agentNom?: string } = {};
+  let body: { posteId?: string } = {};
   try {
     body = await req.json();
   } catch {
@@ -59,19 +60,40 @@ export async function POST(req: NextRequest, { params }: Params) {
 
   // Initialiser l'état de session
   const etatInitial = initialiserEtatSession(snapshot);
+  const actorNom = `${user.prenom} ${user.nom}`.trim() || user.username;
 
-  const session = await prisma.sessionProcedure.create({
-    data: {
-      procedureId: proc.id,
-      procedureVersion: proc.version,
-      procedureSnapshot: JSON.stringify(snapshot),
-      posteId: body.posteId,
-      posteSlug: poste.slug,
-      agentNom: body.agentNom ?? null,
-      statut: "en_cours",
-      etapeIndex: 0,
-      etat: JSON.stringify(etatInitial),
-    },
+  // Création session + événement session_started dans la même transaction
+  const session = await prisma.$transaction(async (tx) => {
+    const created = await tx.sessionProcedure.create({
+      data: {
+        procedureId:       proc.id,
+        procedureVersion:  proc.version,
+        procedureSnapshot: JSON.stringify(snapshot),
+        posteId:           body.posteId!,
+        posteSlug:         poste.slug,
+        agentNom:          actorNom,   // nom de l'utilisateur connecté
+        statut:            "en_cours",
+        etapeIndex:        0,
+        etat:              JSON.stringify(etatInitial),
+      },
+    });
+
+    await tx.sessionProcedureEvent.create({
+      data: {
+        sessionId: created.id,
+        sequence:  1,   // premier événement — pas besoin de calculer MAX
+        type:      "session_started",
+        payload:   JSON.stringify({
+          procedureId:      proc.id,
+          procedureVersion: proc.version,
+          posteSlug:        poste.slug,
+          agentNom:         actorNom,
+        }),
+        actorNom,
+      },
+    });
+
+    return created;
   });
 
   return NextResponse.json({ sessionId: session.id }, { status: 201 });
