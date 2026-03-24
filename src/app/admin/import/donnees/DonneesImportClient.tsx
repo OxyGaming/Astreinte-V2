@@ -4,7 +4,7 @@ import { useState, useRef } from "react";
 import Link from "next/link";
 import {
   ChevronLeft, Download, Upload, Loader2, CheckCircle2, AlertTriangle,
-  X, Info, FileX, Phone, BookOpen, Hash, MapPin, Building2,
+  X, Info, FileX, Phone, BookOpen, Hash, MapPin, Building2, ClipboardList,
 } from "lucide-react";
 
 // ─── Types de données ───────────────────────────────────────────────────────
@@ -14,6 +14,7 @@ interface MnemoniqueRow { acronyme: string; titre: string; description: string; 
 interface AbreviationRow { sigle: string; definition: string; errors: string[]; warnings: string[] }
 interface AccesRow { ligne: string; pk: string; type?: string; identifiant?: string; nomAffiche: string; nomComplet: string; latitude: number; longitude: number; description?: string; errors: string[]; warnings: string[] }
 interface PosteRow { slug: string; nom: string; typePoste: string; lignes: string[]; adresse: string; horaires: string; electrification: string; systemeBlock: string; secteur_slug?: string; particularites: string[]; errors: string[]; warnings: string[] }
+interface ProcedureRow { slug: string; titre: string; typeProcedure: string; description?: string; version: string; etapes_json: string; postes_slugs?: string; errors: string[]; warnings: string[] }
 
 interface ParsedData {
   contacts: ContactRow[];
@@ -21,6 +22,7 @@ interface ParsedData {
   abreviations: AbreviationRow[];
   acces: AccesRow[];
   postes: PosteRow[];
+  procedures: ProcedureRow[];
 }
 
 interface ImportResult {
@@ -30,7 +32,7 @@ interface ImportResult {
   details: { status: string; reason?: string }[];
 }
 
-type TabId = "contacts" | "mnemoniques" | "abreviations" | "acces" | "postes";
+type TabId = "contacts" | "mnemoniques" | "abreviations" | "acces" | "postes" | "procedures";
 
 const TABS: { id: TabId; label: string; icon: React.ReactNode; color: string }[] = [
   { id: "contacts", label: "Numéros utiles", icon: <Phone size={15} />, color: "blue" },
@@ -38,6 +40,7 @@ const TABS: { id: TabId; label: string; icon: React.ReactNode; color: string }[]
   { id: "abreviations", label: "Abréviations", icon: <Hash size={15} />, color: "purple" },
   { id: "acces", label: "Points d'accès", icon: <MapPin size={15} />, color: "green" },
   { id: "postes", label: "Postes", icon: <Building2 size={15} />, color: "orange" },
+  { id: "procedures", label: "Procédures", icon: <ClipboardList size={15} />, color: "blue" },
 ];
 
 const CONTACT_CATEGORIES = ["urgence", "astreinte", "encadrement", "externe"];
@@ -149,7 +152,35 @@ async function parseFile(file: File): Promise<ParsedData> {
     return { slug, nom, typePoste, lignes, adresse: String(r.adresse || "").trim(), horaires: String(r.horaires || "").trim(), electrification: String(r.electrification || "").trim(), systemeBlock: String(r.systemeBlock || "").trim(), secteur_slug: String(r.secteur_slug || "").trim() || undefined, particularites, errors, warnings };
   });
 
-  return { contacts, mnemoniques, abreviations, acces, postes };
+  // ── Procédures ──
+  const VALID_TYPES = ["cessation", "reprise", "incident", "travaux", "autre"];
+  const proceduresRaws = getSheet<Record<string, string>>("Procedures");
+  const procedures: ProcedureRow[] = proceduresRaws.map((r) => {
+    const errors: string[] = [];
+    const warnings: string[] = [];
+    const slug = String(r.slug || "").trim();
+    const titre = String(r.titre || "").trim();
+    const typeProcedure = String(r.typeProcedure || "").trim().toLowerCase();
+    const version = String(r.version || "").trim() || "1.0";
+    const etapes_json = String(r.etapes_json || "").trim();
+    if (!slug) errors.push("Slug manquant");
+    if (!titre) errors.push("Titre manquant");
+    if (!VALID_TYPES.includes(typeProcedure)) errors.push(`Type invalide "${typeProcedure}" (cessation|reprise|incident|travaux|autre)`);
+    if (!etapes_json) {
+      errors.push("etapes_json manquant");
+    } else {
+      try {
+        const parsed = JSON.parse(etapes_json);
+        if (!Array.isArray(parsed)) errors.push("etapes_json doit être un tableau JSON");
+      } catch {
+        errors.push("etapes_json invalide (JSON malformé)");
+      }
+    }
+    const postes_slugs = String(r.postes_slugs || "").trim() || undefined;
+    return { slug, titre, typeProcedure, description: String(r.description || "").trim() || undefined, version, etapes_json, postes_slugs, errors, warnings };
+  });
+
+  return { contacts, mnemoniques, abreviations, acces, postes, procedures };
 }
 
 // ─── Composant principal ────────────────────────────────────────────────────
@@ -216,6 +247,7 @@ export default function DonneesImportClient() {
       abreviations: "/api/admin/import/abreviations",
       acces: "/api/admin/import/acces-excel",
       postes: "/api/admin/import/postes",
+      procedures: "/api/admin/import/procedures",
     };
     const BODY_KEYS: Record<TabId, string> = {
       contacts: "contacts",
@@ -223,6 +255,7 @@ export default function DonneesImportClient() {
       abreviations: "abreviations",
       acces: "points",
       postes: "postes",
+      procedures: "procedures",
     };
 
     setImporting((prev) => ({ ...prev, [tabId]: true }));
@@ -260,6 +293,7 @@ export default function DonneesImportClient() {
         abreviations: data.abreviations.length,
         acces: data.acces.length,
         postes: data.postes.length,
+        procedures: data.procedures.length,
       }
     : null;
 
@@ -283,7 +317,7 @@ export default function DonneesImportClient() {
           <div className="flex-1">
             <p className="font-semibold text-gray-800 mb-1">Téléchargez le modèle Excel</p>
             <p className="text-sm text-gray-500 mb-3">
-              Ce fichier contient toutes les données actuelles : contacts, mnémoniques, abréviations, points d&apos;accès et postes.
+              Ce fichier contient toutes les données actuelles : contacts, mnémoniques, abréviations, points d&apos;accès, postes et procédures guidées.
               Modifiez ou complétez les onglets, puis réimportez.
             </p>
             <a
@@ -309,6 +343,7 @@ export default function DonneesImportClient() {
             <li>• Onglet <strong>Abreviations</strong> : sigles et définitions</li>
             <li>• Onglet <strong>Acces_Rail</strong> : points d&apos;accès ferroviaires (coordonnées GPS requises)</li>
             <li>• Onglet <strong>Postes</strong> : référentiels de postes (champs principaux)</li>
+            <li>• Onglet <strong>Procedures</strong> : procédures guidées (JSON des étapes exporté automatiquement)</li>
           </ul>
         </div>
       </div>
@@ -506,6 +541,7 @@ function TabContent({
         {tabId === "abreviations" && <AbreviationsTable rows={data.abreviations} />}
         {tabId === "acces" && <AccesTable rows={data.acces} />}
         {tabId === "postes" && <PostesTable rows={data.postes} />}
+        {tabId === "procedures" && <ProceduresTable rows={data.procedures} />}
       </div>
 
       {/* Bouton d'import */}
@@ -684,6 +720,43 @@ function PostesTable({ rows }: { rows: PosteRow[] }) {
             <td className="px-3 py-2"><RowStatus errors={r.errors} warnings={r.warnings} /></td>
           </tr>
         ))}
+      </tbody>
+    </table>
+  );
+}
+
+function ProceduresTable({ rows }: { rows: ProcedureRow[] }) {
+  return (
+    <table className="w-full text-sm">
+      <thead className="bg-gray-50 border-b border-gray-200">
+        <tr>
+          <th className="text-left px-3 py-2.5 font-medium text-gray-600">Titre</th>
+          <th className="text-left px-3 py-2.5 font-medium text-gray-600 w-32">Slug</th>
+          <th className="text-left px-3 py-2.5 font-medium text-gray-600 w-24">Type</th>
+          <th className="text-left px-3 py-2.5 font-medium text-gray-600 w-14">Version</th>
+          <th className="text-left px-3 py-2.5 font-medium text-gray-600 w-28">Postes</th>
+          <th className="text-left px-3 py-2.5 font-medium text-gray-600">Statut</th>
+        </tr>
+      </thead>
+      <tbody className="divide-y divide-gray-50">
+        {rows.map((r, i) => {
+          let etapeCount = 0;
+          try { etapeCount = (JSON.parse(r.etapes_json) as unknown[]).length; } catch { /* ignore */ }
+          return (
+            <tr key={i} className={r.errors.length > 0 ? "bg-red-50/40" : "hover:bg-gray-50/60"}>
+              <td className="px-3 py-2 font-medium text-gray-800 truncate max-w-[180px]">{r.titre || <span className="text-red-400 italic">—</span>}</td>
+              <td className="px-3 py-2 font-mono text-xs text-gray-500 truncate">{r.slug || <span className="text-red-400 italic">—</span>}</td>
+              <td className="px-3 py-2"><span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">{r.typeProcedure || "—"}</span></td>
+              <td className="px-3 py-2 text-xs text-gray-600 font-mono">{r.version}</td>
+              <td className="px-3 py-2 text-xs text-gray-600">
+                {r.errors.length === 0 ? (
+                  <span title={r.postes_slugs || ""}>{etapeCount} étape{etapeCount > 1 ? "s" : ""}{r.postes_slugs ? ` · ${r.postes_slugs.split("|").length} poste(s)` : ""}</span>
+                ) : "—"}
+              </td>
+              <td className="px-3 py-2"><RowStatus errors={r.errors} warnings={r.warnings} /></td>
+            </tr>
+          );
+        })}
       </tbody>
     </table>
   );

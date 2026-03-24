@@ -10,7 +10,7 @@ interface LettreAcronyme {
 
 export async function GET() {
   try {
-    const [contacts, mnemoniques, abreviations, acces, postes, secteurs] =
+    const [contacts, mnemoniques, abreviations, acces, postes, secteurs, procedures] =
       await Promise.all([
         prisma.contact.findMany({ orderBy: { nom: "asc" } }),
         prisma.mnemonique.findMany({ orderBy: { acronyme: "asc" } }),
@@ -18,6 +18,10 @@ export async function GET() {
         prisma.accesRail.findMany({ orderBy: [{ ligne: "asc" }, { pk: "asc" }] }),
         prisma.poste.findMany({ orderBy: { nom: "asc" }, include: { secteur: { select: { slug: true } } } }),
         prisma.secteur.findMany({ select: { slug: true, nom: true } }),
+        prisma.procedure.findMany({
+          orderBy: { titre: "asc" },
+          include: { postes: { include: { poste: { select: { slug: true } } } } },
+        }),
       ]);
 
     const wb = XLSX.utils.book_new();
@@ -84,6 +88,16 @@ export async function GET() {
       ["systemeBlock", "Système de block", "OUI", "BEM | BAPR | BAL"],
       ["secteur_slug", "Slug du secteur associé (optionnel)", "NON", "givors-canal"],
       ["particularites", "Particularités séparées par | (optionnel)", "NON", "Zone ATEX|Tunnel long"],
+      [""],
+      ["═══ ONGLET PROCEDURES (procédures guidées) ═════════════════════════════════"],
+      ["Colonne", "Description", "Obligatoire", "Exemples"],
+      ["slug", "Identifiant URL unique", "OUI", "cessation-service-givors"],
+      ["titre", "Titre de la procédure", "OUI", "Cessation de service — Givors Canal"],
+      ["typeProcedure", "Type de procédure", "OUI", "cessation | reprise | incident | travaux | autre"],
+      ["description", "Description courte (optionnel)", "NON", "Procédure standard de cessation de service"],
+      ["version", "Numéro de version", "OUI", "1.0"],
+      ["etapes_json", "JSON complet des étapes (ne pas modifier à la main)", "OUI", "[{\"id\":\"...\",\"titre\":\"...\"}]"],
+      ["postes_slugs", "Slugs des postes associés, séparés par | (optionnel)", "NON", "givors-canal|saint-fons"],
       [""],
       ["IMPORTANT : Ne supprimez pas et ne renommez pas les onglets."],
       ["IMPORTANT : La ligne d'en-tête (première ligne) ne doit pas être modifiée."],
@@ -204,6 +218,28 @@ export async function GET() {
       { wch: 22 }, { wch: 18 }, { wch: 22 }, { wch: 40 },
     ];
     XLSX.utils.book_append_sheet(wb, wsPostes, "Postes");
+
+    // ─── Onglet PROCEDURES ──────────────────────────────────────────────────────
+    const proceduresRows: unknown[][] = [
+      ["slug", "titre", "typeProcedure", "description", "version", "etapes_json", "postes_slugs"],
+    ];
+    for (const p of procedures) {
+      const postesSlugs = p.postes.map((pp) => pp.poste.slug).join("|");
+      proceduresRows.push([
+        p.slug,
+        p.titre,
+        p.typeProcedure,
+        p.description || "",
+        p.version,
+        p.etapes,
+        postesSlugs,
+      ]);
+    }
+    const wsProcedures = XLSX.utils.aoa_to_sheet(proceduresRows);
+    wsProcedures["!cols"] = [
+      { wch: 30 }, { wch: 40 }, { wch: 16 }, { wch: 40 }, { wch: 8 }, { wch: 80 }, { wch: 40 },
+    ];
+    XLSX.utils.book_append_sheet(wb, wsProcedures, "Procedures");
 
     // ─── Générer le fichier ─────────────────────────────────────────────────────
     const buffer: Buffer = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
