@@ -15,9 +15,12 @@ export default function ActionConfirmation({ action, valeur, onChange, contactTe
   const checked = valeur === true;
 
   return (
-    <button
+    <div
+      role="button"
+      tabIndex={0}
       onClick={() => onChange(!checked)}
-      className={`w-full flex items-start gap-3 p-4 rounded-xl border-2 text-left transition-all ${
+      onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && onChange(!checked)}
+      className={`w-full flex items-start gap-3 p-4 rounded-xl border-2 text-left transition-all cursor-pointer ${
         checked
           ? "border-green-500 bg-green-50"
           : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50"
@@ -51,6 +54,6 @@ export default function ActionConfirmation({ action, valeur, onChange, contactTe
           </div>
         )}
       </div>
-    </button>
+    </div>
   );
 }

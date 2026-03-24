@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import { requireAdminSession } from "@/lib/admin-auth";
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";

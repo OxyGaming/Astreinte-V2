@@ -3,6 +3,8 @@
  * Page du wizard : charge le poste + les contacts nécessaires (pour les enrichissements UI),
  * puis passe la main au composant client ProcedureWizard.
  */
+
+export const dynamic = "force-dynamic";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import ProcedureWizard from "@/components/procedure/ProcedureWizard";
