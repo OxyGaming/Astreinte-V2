@@ -130,24 +130,33 @@ export async function archiveSingleSession(sessionId: string): Promise<ArchiveOu
   let outcome: ArchiveOutcome = "partial";
 
   await prisma.$transaction(async (tx) => {
-    // 4a. Copie vers l'archive — idempotente grâce à skipDuplicates.
+    // 4a. Copie vers l'archive — idempotente : on filtre les IDs déjà archivés.
+    //     SQLite ne supporte pas skipDuplicates, donc on exclut manuellement.
     //     Une relance après crash entre cette étape et la suivante est sûre.
-    await tx.sessionProcedureEventArchive.createMany({
-      data: events.map(e => ({
-        id:         e.id,
-        sessionId:  e.sessionId,
-        sequence:   e.sequence,
-        type:       e.type,
-        etapeId:    e.etapeId,
-        actionId:   e.actionId,
-        valeur:     e.valeur,
-        payload:    e.payload,
-        actorNom:   e.actorNom,
-        occurredAt: e.occurredAt,
-        archivedAt: new Date(),
-      })),
-      skipDuplicates: true,
+    const alreadyArchived = await tx.sessionProcedureEventArchive.findMany({
+      where: { id: { in: eventIds } },
+      select: { id: true },
     });
+    const alreadyArchivedIds = new Set(alreadyArchived.map(e => e.id));
+    const eventsToArchive = events.filter(e => !alreadyArchivedIds.has(e.id));
+
+    if (eventsToArchive.length > 0) {
+      await tx.sessionProcedureEventArchive.createMany({
+        data: eventsToArchive.map(e => ({
+          id:         e.id,
+          sessionId:  e.sessionId,
+          sequence:   e.sequence,
+          type:       e.type,
+          etapeId:    e.etapeId,
+          actionId:   e.actionId,
+          valeur:     e.valeur,
+          payload:    e.payload,
+          actorNom:   e.actorNom,
+          occurredAt: e.occurredAt,
+          archivedAt: new Date(),
+        })),
+      });
+    }
 
     // 4b. Suppression sur les IDs de la liste close uniquement.
     //     Un événement arrivé après l'étape 2 ne sera pas supprimé.
