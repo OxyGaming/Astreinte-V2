@@ -1,0 +1,21 @@
+[
+  {
+    "id": "id-unique",
+    "slug": "nom-du-poste",
+    "nom": "Nom du Poste",
+    "typePoste": "Poste à leviers individuels",
+    "lignes": "[\"000000\"]",
+    "adresse": "Adresse complète",
+    "horaires": "3×8 : 5h–13h / 13h–21h / 21h–5h",
+    "electrification": "1500V CC",
+    "systemeBlock": "BAL",
+    "annuaire": "[{\"titre\":\"Gares encadrantes\",\"contacts\":[{\"nom\":\"Poste X\",\"telephone\":\"0X XX XX XX XX\"}]},{\"titre\":\"Régulation\",\"contacts\":[{\"nom\":\"Régul\",\"telephone\":\"0X XX XX XX XX\"}]}]",
+    "circuitsVoie": "[{\"designation\":\"CXX/V1\",\"voie\":\"Voie 1\",\"delai_max\":\"72h\",\"note\":\"Passage toutes les 72h\"}]",
+    "pnSensibles": "[{\"numero\":\"000\",\"contact\":\"Gendarmerie\",\"telephone\":\"0X XX XX XX XX\"}]",
+    "particularites": "[\"Particularité locale à documenter\"]",
+    "proceduresCles": "[{\"titre\":\"Titre procédure\",\"description\":\"Description.\",\"reference\":\"REF000\"}]",
+    "dbc": null,
+    "rex": null,
+    "secteurId": "s01"
+  }
+]

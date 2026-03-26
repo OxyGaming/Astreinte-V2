@@ -1,0 +1,13 @@
+[
+  {
+    "id": "s01",
+    "slug": "nom-du-secteur",
+    "nom": "Nom du secteur",
+    "ligne": "000000",
+    "trajet": "Origine → Destination",
+    "description": "Description courte du secteur.",
+    "pointsAcces": "[{\"nom\":\"Point d'accès 1\",\"adresse\":\"Adresse\",\"note\":\"Remarque optionnelle\"}]",
+    "procedures": "[{\"titre\":\"Titre procédure\",\"description\":\"Description.\",\"reference\":\"REF000\",\"critique\":false}]",
+    "pn": null
+  }
+]

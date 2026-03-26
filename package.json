@@ -15,8 +15,8 @@
     "db:seed-giv": "tsx prisma/seed-giv.ts",
     "db:seed-acces": "tsx prisma/seed-acces.ts",
     "db:seed-procedures": "tsx prisma/seed-procedures.ts",
-    "db:export": "tsx prisma/export.ts",
-    "db:reset": "prisma migrate reset --force && tsx prisma/seed.ts && tsx prisma/seed-postes.ts && tsx prisma/seed-acces.ts && tsx prisma/seed-procedures.ts",
+    "db:backup": "tsx prisma/backup-data.ts",
+    "db:reset": "npm run db:backup && prisma migrate reset --force && tsx prisma/seed.ts && tsx prisma/seed-postes.ts && tsx prisma/seed-acces.ts && tsx prisma/seed-procedures.ts",
     "db:studio": "prisma studio",
     "test": "vitest run",
     "test:watch": "vitest"

@@ -1,0 +1,12 @@
+[
+  {
+    "id": "id-unique-cuid-ou-autre",
+    "sigle": "AC",
+    "definition": "Agent Circulation"
+  },
+  {
+    "id": "id-unique-cuid-ou-autre-2",
+    "sigle": "CIL",
+    "definition": "Chef Incident Local"
+  }
+]

@@ -1,0 +1,16 @@
+[
+  {
+    "id": "f01",
+    "slug": "titre-de-la-fiche",
+    "numero": 1,
+    "titre": "Titre de la fiche",
+    "categorie": "incident",
+    "priorite": "urgente",
+    "mnemonique": "ACRONYME",
+    "resume": "Résumé court de la procédure guidée.",
+    "etapes": "[{\"ordre\":1,\"titre\":\"Titre étape\",\"description\":\"Description de l'étape.\",\"critique\":false,\"actions\":[\"Action 1\",\"Action 2\"]},{\"ordre\":2,\"titre\":\"Étape critique\",\"description\":\"Action à fort enjeu.\",\"critique\":true,\"actions\":[\"Action obligatoire\"]}]",
+    "references": "[\"REF001\"]",
+    "avisObligatoires": "[\"COGC\",\"CRC\"]",
+    "contactIds": ["exemple-contact"]
+  }
+]

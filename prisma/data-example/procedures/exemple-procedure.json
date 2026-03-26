@@ -1,0 +1,21 @@
+{
+  "id": "proc-exemple",
+  "ficheSlug": "titre-de-la-fiche",
+  "titre": "Titre de la procédure guidée",
+  "etapes": [
+    {
+      "ordre": 1,
+      "titre": "Première étape",
+      "description": "Description de l'étape.",
+      "critique": false,
+      "actions": ["Action 1", "Action 2"]
+    },
+    {
+      "ordre": 2,
+      "titre": "Étape critique",
+      "description": "Action à fort enjeu de sécurité.",
+      "critique": true,
+      "actions": ["Action obligatoire avant de continuer"]
+    }
+  ]
+}

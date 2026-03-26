@@ -1,0 +1,11 @@
+[
+  {
+    "id": "exemple-mnemo",
+    "acronyme": "ACRONYME",
+    "titre": "Titre du mnémonique",
+    "description": "Description globale de ce que représente l'acronyme.",
+    "lettres": "[{\"lettre\":\"A\",\"signification\":\"Action\",\"detail\":\"Détail de l'action A.\"},{\"lettre\":\"B\",\"signification\":\"Bilan\",\"detail\":\"Établir un bilan.\"}]",
+    "contexte": "Contexte d'application optionnel.",
+    "couleur": "blue"
+  }
+]

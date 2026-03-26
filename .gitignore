@@ -41,6 +41,8 @@ prisma/dev.db
 
 # Données métier sensibles (contacts réels, postes, procédures opérationnelles)
 prisma/data/
+# Sauvegardes horodatées (générées par npm run db:backup)
+prisma/data-backup/
 
 # Scripts d'injection/export one-shot (données internes, hors périmètre du repo)
 prisma/inject_*.py

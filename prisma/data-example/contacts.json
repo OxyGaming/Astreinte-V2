@@ -1,0 +1,12 @@
+[
+  {
+    "id": "exemple-contact",
+    "nom": "NOM ORGANISME",
+    "role": "Rôle ou fonction",
+    "categorie": "urgence",
+    "telephone": "0X XX XX XX XX",
+    "telephoneAlt": "numéro court ou null",
+    "note": "Précision optionnelle",
+    "disponibilite": "24h/24"
+  }
+]
