@@ -92,19 +92,27 @@ async function main() {
   console.log(`  ✓ ${abreviationsData.length} abréviations insérées`);
 
   // Utilisateurs (front-office et back-office unifiés)
+  const adminPassword   = process.env.SEED_ADMIN_PASSWORD;
+  const userPassword    = process.env.SEED_USER_PASSWORD;
+  const editorPassword  = process.env.SEED_EDITOR_PASSWORD;
+  if (!adminPassword || !userPassword || !editorPassword) {
+    throw new Error(
+      "Variables manquantes : SEED_ADMIN_PASSWORD, SEED_USER_PASSWORD et SEED_EDITOR_PASSWORD doivent être définies dans .env"
+    );
+  }
   const usersData = [
-    { username: "admin.system", email: "admin@astreinte.local", password: process.env.ADMIN_PASSWORD || "admin2025", nom: "Système", prenom: "Admin", role: "ADMIN" },
-    { username: "jessie.achille", password: "astreinte2025", nom: "Achille", prenom: "Jessie", role: "USER" },
-    { username: "editeur", password: "editeur2025", nom: "Éditeur", prenom: "Compte", role: "EDITOR" },
+    { username: "admin.system", email: "admin@astreinte.local", password: adminPassword,  nom: "Système", prenom: "Admin",   role: "ADMIN"  },
+    { username: "jessie.achille",                               password: userPassword,   nom: "Achille", prenom: "Jessie",  role: "USER"   },
+    { username: "editeur",                                      password: editorPassword, nom: "Éditeur", prenom: "Compte",  role: "EDITOR" },
   ];
   for (const u of usersData) {
     const h = await bcrypt.hash(u.password, 12);
     await prisma.user.create({ data: { username: u.username, email: (u as { email?: string }).email ?? null, password: h, nom: u.nom, prenom: u.prenom, role: u.role } });
   }
   console.log(`  ✓ ${usersData.length} utilisateurs front-office créés`);
-  console.log("    → admin.system / admin2025 (ADMIN)");
-  console.log("    → jessie.achille / astreinte2025 (USER)");
-  console.log("    → editeur / editeur2025 (EDITOR)");
+  console.log("    → admin.system (ADMIN)");
+  console.log("    → jessie.achille (USER)");
+  console.log("    → editeur (EDITOR)");
 
   console.log("\n✅ Seed terminé avec succès !");
 }

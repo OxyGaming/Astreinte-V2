@@ -33,7 +33,20 @@ yarn-error.log*
 tsconfig.tsbuildinfo
 
 # SQLite database files (ne pas versionner)
-dev.db
-dev.db-shm
-dev.db-wal
+*.db
+*.db-shm
+*.db-wal
+*.db-journal
 prisma/dev.db
+
+# Données métier sensibles (contacts réels, postes, procédures opérationnelles)
+prisma/data/
+
+# Scripts d'injection/export one-shot (données internes, hors périmètre du repo)
+prisma/inject_*.py
+prisma/export.ts
+prisma/scan_annuaires.ts
+
+# Fichiers uploadés temporairement (imports admin)
+uploads/
+tmp/
