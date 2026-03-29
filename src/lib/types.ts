@@ -27,6 +27,7 @@ export interface Fiche {
   contacts_lies?: string[];
   references?: string[];
   avis_obligatoires?: string[];
+  featured?: boolean;
 }
 
 export interface Contact {

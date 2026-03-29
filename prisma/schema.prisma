@@ -53,6 +53,7 @@ model Fiche {
   etapes           String   // JSON: Etape[]
   references       String?  // JSON: string[]
   avisObligatoires String?  // JSON: string[]
+  featured         Boolean  @default(false)
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 

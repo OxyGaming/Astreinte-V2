@@ -19,6 +19,7 @@ interface Fiche {
   etapes?: string;
   references?: string | null;
   avisObligatoires?: string | null;
+  featured?: boolean;
   contacts?: { contactId: string; contact: Contact }[];
   secteurs?: { secteurId: string; secteur: Secteur }[];
 }
@@ -47,6 +48,7 @@ export default function FicheForm({ fiche, contacts, secteurs, mode }: Props) {
     etapes: fiche?.etapes ? (typeof fiche.etapes === "string" ? fiche.etapes : JSON.stringify(fiche.etapes, null, 2)) : "[]",
     references: fiche?.references ? (typeof fiche.references === "string" ? JSON.parse(fiche.references).join("\n") : "") : "",
     avisObligatoires: fiche?.avisObligatoires ? (typeof fiche.avisObligatoires === "string" ? JSON.parse(fiche.avisObligatoires).join("\n") : "") : "",
+    featured: fiche?.featured ?? false,
     contactIds: (fiche?.contacts || []).map((c) => c.contactId),
     secteurIds: (fiche?.secteurs || []).map((s) => s.secteurId),
   });
@@ -181,6 +183,13 @@ export default function FicheForm({ fiche, contacts, secteurs, mode }: Props) {
             <input type="text" value={form.mnemonique} onChange={(e) => update("mnemonique", e.target.value)}
               placeholder="ex: CAMMI CoCo RR"
               className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          </div>
+          <div className="col-span-2">
+            <label className="flex items-center gap-3 cursor-pointer">
+              <input type="checkbox" checked={form.featured} onChange={(e) => update("featured", e.target.checked)}
+                className="w-4 h-4 rounded border-gray-300 text-blue-600" />
+              <span className="text-sm font-medium text-gray-700">Afficher en accueil (fiche courante)</span>
+            </label>
           </div>
           <div className="col-span-2">
             <label className="block text-sm font-medium text-gray-700 mb-1.5">Résumé *</label>

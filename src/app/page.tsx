@@ -6,14 +6,13 @@ import SearchBar from "@/components/SearchBar";
 import PhoneButton from "@/components/PhoneButton";
 import { getAllContacts, getAllFiches, getAllMnemoniques } from "@/lib/db";
 
-const fichesCourantes = [
-  { slug: "accident-personne", label: "Accident de personne", color: "bg-red-600" },
-  { slug: "accident-pn", label: "Accident à un PN", color: "bg-red-600" },
-  { slug: "deraillement-talonnage", label: "Déraillement / Talonnage", color: "bg-orange-600" },
-  { slug: "colis-suspect", label: "Colis suspect", color: "bg-orange-600" },
-  { slug: "franchissement-signal", label: "Franchissement signal", color: "bg-amber-600" },
-  { slug: "agression-agent", label: "Agression d'un agent", color: "bg-red-600" },
-];
+const CATEGORIE_COLOR: Record<string, string> = {
+  accident: "bg-red-600",
+  incident: "bg-orange-600",
+  securite: "bg-amber-600",
+  "gestion-agent": "bg-blue-600",
+  evacuation: "bg-orange-600",
+};
 
 export default async function Home() {
   const [fiches, contacts, mnemoniques] = await Promise.all([
@@ -86,14 +85,14 @@ export default async function Home() {
             </Link>
           </div>
           <div className="grid grid-cols-2 gap-2 lg:grid-cols-3">
-            {fichesCourantes.map(({ slug, label, color }) => (
+            {fiches.filter((f) => f.featured).map((f) => (
               <Link
-                key={slug}
-                href={`/fiches/${slug}`}
+                key={f.slug}
+                href={`/fiches/${f.slug}`}
                 className="card p-4 hover:shadow-md transition-shadow active:scale-95"
               >
-                <div className={`w-2 h-2 rounded-full ${color} mb-2`} />
-                <p className="text-sm font-semibold text-slate-800 leading-tight">{label}</p>
+                <div className={`w-2 h-2 rounded-full ${CATEGORIE_COLOR[f.categorie] ?? "bg-slate-500"} mb-2`} />
+                <p className="text-sm font-semibold text-slate-800 leading-tight">{f.titre}</p>
                 <div className="flex items-center gap-1 mt-2 text-blue-700">
                   <span className="text-xs font-medium">Ouvrir</span>
                   <ChevronRight size={12} />

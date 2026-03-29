@@ -14,7 +14,7 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   const body = await req.json();
-  const { slug, numero, titre, categorie, priorite, mnemonique, resume, etapes, references, avisObligatoires, contactIds, secteurIds } = body;
+  const { slug, numero, titre, categorie, priorite, mnemonique, resume, etapes, references, avisObligatoires, featured, contactIds, secteurIds } = body;
 
   if (!slug || !numero || !titre || !categorie || !priorite || !resume || !etapes) {
     return NextResponse.json({ error: "Champs obligatoires manquants" }, { status: 400 });
@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
   const fiche = await prisma.fiche.create({
     data: {
       slug, numero: Number(numero), titre, categorie, priorite,
-      mnemonique: mnemonique || null, resume,
+      mnemonique: mnemonique || null, resume, featured: featured === true,
       etapes: typeof etapes === "string" ? etapes : JSON.stringify(etapes),
       references: references ? (typeof references === "string" ? references : JSON.stringify(references)) : null,
       avisObligatoires: avisObligatoires ? (typeof avisObligatoires === "string" ? avisObligatoires : JSON.stringify(avisObligatoires)) : null,

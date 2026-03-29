@@ -83,7 +83,7 @@ export async function getFicheBySlug(slug: string): Promise<Fiche | null> {
 function dbToFiche(row: {
   id: string; slug: string; numero: number; titre: string; categorie: string; priorite: string;
   mnemonique: string | null; resume: string; etapes: string; references: string | null;
-  avisObligatoires: string | null; contacts: { contactId: string }[];
+  avisObligatoires: string | null; featured: boolean; contacts: { contactId: string }[];
 }): Fiche {
   return {
     id: row.id, slug: row.slug, numero: row.numero, titre: row.titre,
@@ -95,6 +95,7 @@ function dbToFiche(row: {
     contacts_lies: row.contacts.map((c) => c.contactId),
     references: parseJson<string[]>(row.references, []),
     avis_obligatoires: parseJson<string[]>(row.avisObligatoires, []),
+    featured: row.featured,
   };
 }
 

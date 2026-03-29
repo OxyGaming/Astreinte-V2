@@ -19,7 +19,7 @@ export async function GET(_req: NextRequest, { params }: Params) {
 export async function PUT(req: NextRequest, { params }: Params) {
   const { id } = await params;
   const body = await req.json();
-  const { slug, numero, titre, categorie, priorite, mnemonique, resume, etapes, references, avisObligatoires, contactIds, secteurIds } = body;
+  const { slug, numero, titre, categorie, priorite, mnemonique, resume, etapes, references, avisObligatoires, featured, contactIds, secteurIds } = body;
 
   // Mettre à jour les relations en cascade
   await prisma.ficheContact.deleteMany({ where: { ficheId: id } });
@@ -29,7 +29,7 @@ export async function PUT(req: NextRequest, { params }: Params) {
     where: { id },
     data: {
       slug, numero: Number(numero), titre, categorie, priorite,
-      mnemonique: mnemonique || null, resume,
+      mnemonique: mnemonique || null, resume, featured: featured === true,
       etapes: typeof etapes === "string" ? etapes : JSON.stringify(etapes),
       references: references ? (typeof references === "string" ? references : JSON.stringify(references)) : null,
       avisObligatoires: avisObligatoires ? (typeof avisObligatoires === "string" ? avisObligatoires : JSON.stringify(avisObligatoires)) : null,
