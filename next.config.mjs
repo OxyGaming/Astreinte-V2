@@ -16,7 +16,7 @@ const nextConfig = {
           // Désactive les fonctionnalités navigateur inutiles
           {
             key: "Permissions-Policy",
-            value: "camera=(), microphone=(), geolocation=(), payment=()",
+            value: "camera=(), microphone=(self), geolocation=(self), payment=()",
           },
           // Content Security Policy — strict pour une app interne sans CDN externe
           {
