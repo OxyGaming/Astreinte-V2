@@ -2,6 +2,7 @@
  * Couche d'accès aux données — source unique de vérité (DB Prisma/SQLite)
  * Remplace les imports directs depuis src/data/*.ts dans le front-office.
  */
+import { cache } from "react";
 import { prisma } from "./prisma";
 import type { Fiche, Contact, Secteur, Mnemonique, Abréviation, Etape, PointAcces, Procedure, PassageNiveau, LettreAcronyme, AccesRail, User, FicheSession, JournalEntry } from "./types";
 
@@ -14,10 +15,10 @@ function parseJson<T>(value: string | null | undefined, fallback: T): T {
 
 // ─── Contacts ─────────────────────────────────────────────────────────────────
 
-export async function getAllContacts(): Promise<Contact[]> {
+export const getAllContacts = cache(async (): Promise<Contact[]> => {
   const rows = await prisma.contact.findMany({ orderBy: [{ categorie: "asc" }, { nom: "asc" }] });
   return rows.map(dbToContact);
-}
+});
 
 export async function getContactById(id: string): Promise<Contact | null> {
   const row = await prisma.contact.findUnique({ where: { id } });
@@ -40,10 +41,10 @@ function dbToContact(row: {
 
 // ─── Secteurs ─────────────────────────────────────────────────────────────────
 
-export async function getAllSecteurs(): Promise<Secteur[]> {
+export const getAllSecteurs = cache(async (): Promise<Secteur[]> => {
   const rows = await prisma.secteur.findMany({ orderBy: { nom: "asc" } });
   return rows.map(dbToSecteur);
-}
+});
 
 export async function getSecteurBySlug(slug: string): Promise<Secteur | null> {
   const row = await prisma.secteur.findUnique({ where: { slug } });
@@ -64,21 +65,21 @@ function dbToSecteur(row: {
 
 // ─── Fiches ────────────────────────────────────────────────────────────────────
 
-export async function getAllFiches(): Promise<Fiche[]> {
+export const getAllFiches = cache(async (): Promise<Fiche[]> => {
   const rows = await prisma.fiche.findMany({
     orderBy: { numero: "asc" },
     include: { contacts: { select: { contactId: true } } },
   });
   return rows.map(dbToFiche);
-}
+});
 
-export async function getFicheBySlug(slug: string): Promise<Fiche | null> {
+export const getFicheBySlug = cache(async (slug: string): Promise<Fiche | null> => {
   const row = await prisma.fiche.findUnique({
     where: { slug },
     include: { contacts: { select: { contactId: true } } },
   });
   return row ? dbToFiche(row) : null;
-}
+});
 
 function dbToFiche(row: {
   id: string; slug: string; numero: number; titre: string; categorie: string; priorite: string;
@@ -101,10 +102,10 @@ function dbToFiche(row: {
 
 // ─── Mnémoniques ──────────────────────────────────────────────────────────────
 
-export async function getAllMnemoniques(): Promise<Mnemonique[]> {
+export const getAllMnemoniques = cache(async (): Promise<Mnemonique[]> => {
   const rows = await prisma.mnemonique.findMany({ orderBy: { acronyme: "asc" } });
   return rows.map(dbToMnemonique);
-}
+});
 
 function dbToMnemonique(row: {
   id: string; acronyme: string; titre: string; description: string;
@@ -120,10 +121,10 @@ function dbToMnemonique(row: {
 
 // ─── Abréviations ─────────────────────────────────────────────────────────────
 
-export async function getAllAbreviations(): Promise<Abréviation[]> {
+export const getAllAbreviations = cache(async (): Promise<Abréviation[]> => {
   const rows = await prisma.abreviation.findMany({ orderBy: { sigle: "asc" } });
   return rows.map((r) => ({ sigle: r.sigle, definition: r.definition }));
-}
+});
 
 // ─── Postes ────────────────────────────────────────────────────────────────────
 

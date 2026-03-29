@@ -1,4 +1,5 @@
 // Utilisé par le middleware (Edge Runtime) — pas de modules Node.js
+// Tokens signés HMAC-SHA256 avec expiration — Web Crypto API uniquement
 
 export const COOKIE_NAME = "astreinte-auth";
 export const COOKIE_MAX_AGE = 60 * 60 * 24 * 7; // 7 jours
@@ -16,71 +17,112 @@ const getSecret = (): string => {
   return secret;
 };
 
-/**
- * Crée un token de session encodant l'userId et le rôle.
- * Format : btoa("secret:userId:role")
- * Compatible Edge Runtime (utilise btoa).
- */
-export function createUserToken(userId: string, role: string): string {
-  return btoa(`${getSecret()}:${userId}:${role}`);
+// ─── Helpers base64url ─────────────────────────────────────────────────────────
+
+function toBase64Url(str: string): string {
+  return btoa(str).replace(/\+/g, "-").replace(/\//g, "_").replace(/=/g, "");
 }
 
+function fromBase64Url(str: string): string {
+  const base64 = str.replace(/-/g, "+").replace(/_/g, "/");
+  const padded = base64 + "=".repeat((4 - (base64.length % 4)) % 4);
+  return atob(padded);
+}
+
+async function signHmac(payload: string): Promise<string> {
+  const key = await crypto.subtle.importKey(
+    "raw",
+    new TextEncoder().encode(getSecret()),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"]
+  );
+  const sig = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(payload));
+  const bytes = new Uint8Array(sig);
+  let binary = "";
+  for (const b of bytes) binary += String.fromCharCode(b);
+  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=/g, "");
+}
+
+async function verifyHmac(payload: string, signature: string): Promise<boolean> {
+  try {
+    const key = await crypto.subtle.importKey(
+      "raw",
+      new TextEncoder().encode(getSecret()),
+      { name: "HMAC", hash: "SHA-256" },
+      false,
+      ["verify"]
+    );
+    const base64 = signature.replace(/-/g, "+").replace(/_/g, "/");
+    const padded = base64 + "=".repeat((4 - (base64.length % 4)) % 4);
+    const binary = atob(padded);
+    const sigBytes = Uint8Array.from(binary, (c) => c.charCodeAt(0));
+    return await crypto.subtle.verify("HMAC", key, sigBytes, new TextEncoder().encode(payload));
+  } catch {
+    return false;
+  }
+}
+
+// ─── API publique ──────────────────────────────────────────────────────────────
+
 /**
- * Valide le format du token (sans accès DB).
- * Accepte l'ancien format (secret:userId) et le nouveau (secret:userId:role).
+ * Crée un token signé HMAC-SHA256 avec expiration.
+ * Format : base64url(userId:role:exp).hmac_base64url
  */
-export function isValidToken(token: string | undefined): boolean {
+export async function createUserToken(userId: string, role: string): Promise<string> {
+  const exp = Math.floor(Date.now() / 1000) + COOKIE_MAX_AGE;
+  const payload = toBase64Url(`${userId}:${role}:${exp}`);
+  const sig = await signHmac(payload);
+  return `${payload}.${sig}`;
+}
+
+/** Vérifie la signature HMAC et l'expiration du token (sans accès DB). */
+export async function isValidToken(token: string | undefined): Promise<boolean> {
   if (!token) return false;
   try {
-    const decoded = atob(token);
-    return decoded.startsWith(`${getSecret()}:`);
+    const dotIndex = token.lastIndexOf(".");
+    if (dotIndex < 0) return false;
+    const payload = token.slice(0, dotIndex);
+    const sig = token.slice(dotIndex + 1);
+    if (!(await verifyHmac(payload, sig))) return false;
+    const decoded = fromBase64Url(payload);
+    const parts = decoded.split(":");
+    if (parts.length < 3) return false;
+    const exp = parseInt(parts[2], 10);
+    return !isNaN(exp) && Date.now() / 1000 < exp;
   } catch {
     return false;
   }
 }
 
 /**
- * Extrait l'userId depuis un token valide.
- * Gère les deux formats : secret:userId (ancien) et secret:userId:role (nouveau).
+ * Extrait l'userId depuis un token.
+ * Appeler uniquement après isValidToken — ne re-vérifie pas la signature.
  */
 export function getUserIdFromToken(token: string): string | null {
   try {
-    const decoded = atob(token);
-    const parts = decoded.split(":");
-    // Format minimum : secret + userId = 2 parties
-    if (parts.length < 2) return null;
-    if (parts[0] !== getSecret()) return null;
-    // parts[1] = userId (les UUIDs ne contiennent pas de ":")
-    return parts[1] || null;
+    const payload = token.slice(0, token.lastIndexOf("."));
+    return fromBase64Url(payload).split(":")[0] || null;
   } catch {
     return null;
   }
 }
 
 /**
- * Extrait le rôle depuis un token valide.
- * Retourne null si le token est au format ancien (sans rôle).
+ * Extrait le rôle depuis un token.
+ * Appeler uniquement après isValidToken — ne re-vérifie pas la signature.
  */
 export function getRoleFromToken(token: string): string | null {
   try {
-    const decoded = atob(token);
-    const parts = decoded.split(":");
-    // Format nouveau : secret:userId:role = 3 parties minimum
-    if (parts.length < 3) return null;
-    if (parts[0] !== getSecret()) return null;
-    return parts[2] || null;
+    const payload = token.slice(0, token.lastIndexOf("."));
+    return fromBase64Url(payload).split(":")[1] || null;
   } catch {
     return null;
   }
 }
 
-/**
- * Vérifie si un token front-office correspond à un utilisateur ADMIN.
- * Utilisé par le middleware pour autoriser l'accès aux routes /admin
- * sans cookie admin séparé.
- * Note : la vérification DB reste effectuée côté serveur dans requireAdminSession().
- */
-export function isAdminUserToken(token: string | undefined): boolean {
+/** Vérifie si un token appartient à un ADMIN — pour le middleware Edge. */
+export async function isAdminUserToken(token: string | undefined): Promise<boolean> {
   if (!token) return false;
-  return isValidToken(token) && getRoleFromToken(token) === "ADMIN";
+  return (await isValidToken(token)) && getRoleFromToken(token) === "ADMIN";
 }

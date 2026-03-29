@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getCurrentUser } from "@/lib/user-auth";
+import { logAdminAction } from "@/lib/audit";
 
 export async function GET() {
   const fiches = await prisma.fiche.findMany({
@@ -13,6 +15,11 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
+  const user = await getCurrentUser();
+  if (!user || user.role !== "ADMIN") {
+    return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
+  }
+
   const body = await req.json();
   const { slug, numero, titre, categorie, priorite, mnemonique, resume, etapes, references, avisObligatoires, featured, contactIds, secteurIds } = body;
 
@@ -20,7 +27,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Champs obligatoires manquants" }, { status: 400 });
   }
 
-  // Vérifier unicité slug et numero
   const existing = await prisma.fiche.findFirst({ where: { OR: [{ slug }, { numero: Number(numero) }] } });
   if (existing) return NextResponse.json({ error: "Slug ou numéro déjà utilisé" }, { status: 409 });
 
@@ -44,5 +50,6 @@ export async function POST(req: NextRequest) {
     },
   });
 
+  await logAdminAction(user.id, `${user.prenom} ${user.nom}`, "CREATE", "fiche", fiche.id, `titre: ${titre}`);
   return NextResponse.json(fiche, { status: 201 });
 }

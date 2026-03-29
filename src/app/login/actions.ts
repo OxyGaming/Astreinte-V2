@@ -57,7 +57,7 @@ export async function loginAction(
   const cookieStore = await cookies();
   // On embarque le rôle dans le token pour permettre au middleware (Edge)
   // de vérifier l'accès admin sans requête DB.
-  cookieStore.set(COOKIE_NAME, createUserToken(user.id, user.role), {
+  cookieStore.set(COOKIE_NAME, await createUserToken(user.id, user.role), {
     httpOnly: true,
     secure: isHttps,
     sameSite: "strict",

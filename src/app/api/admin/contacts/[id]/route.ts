@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getCurrentUser } from "@/lib/user-auth";
+import { logAdminAction } from "@/lib/audit";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -14,6 +16,10 @@ export async function GET(_req: NextRequest, { params }: Params) {
 }
 
 export async function PUT(req: NextRequest, { params }: Params) {
+  const user = await getCurrentUser();
+  if (!user || user.role !== "ADMIN") {
+    return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
+  }
   const { id } = await params;
   const body = await req.json();
   const { nom, role, categorie, telephone, telephoneAlt, note, disponibilite } = body;
@@ -21,13 +27,18 @@ export async function PUT(req: NextRequest, { params }: Params) {
     where: { id },
     data: { nom, role, categorie, telephone, telephoneAlt: telephoneAlt || null, note: note || null, disponibilite: disponibilite || null },
   });
+  await logAdminAction(user.id, `${user.prenom} ${user.nom}`, "UPDATE", "contact", id, `nom: ${nom}`);
   return NextResponse.json(contact);
 }
 
 export async function DELETE(_req: NextRequest, { params }: Params) {
+  const user = await getCurrentUser();
+  if (!user || user.role !== "ADMIN") {
+    return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
+  }
   const { id } = await params;
-  // Supprimer les jonctions avant de supprimer le contact
   await prisma.ficheContact.deleteMany({ where: { contactId: id } });
   await prisma.contact.delete({ where: { id } });
+  await logAdminAction(user.id, `${user.prenom} ${user.nom}`, "DELETE", "contact", id);
   return NextResponse.json({ success: true });
 }

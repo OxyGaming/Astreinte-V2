@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getCurrentUser } from "@/lib/user-auth";
+import { logAdminAction } from "@/lib/audit";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -17,11 +19,14 @@ export async function GET(_req: NextRequest, { params }: Params) {
 }
 
 export async function PUT(req: NextRequest, { params }: Params) {
+  const user = await getCurrentUser();
+  if (!user || user.role !== "ADMIN") {
+    return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
+  }
   const { id } = await params;
   const body = await req.json();
   const { slug, numero, titre, categorie, priorite, mnemonique, resume, etapes, references, avisObligatoires, featured, contactIds, secteurIds } = body;
 
-  // Mettre à jour les relations en cascade
   await prisma.ficheContact.deleteMany({ where: { ficheId: id } });
   await prisma.ficheSecteur.deleteMany({ where: { ficheId: id } });
 
@@ -46,13 +51,19 @@ export async function PUT(req: NextRequest, { params }: Params) {
     },
   });
 
+  await logAdminAction(user.id, `${user.prenom} ${user.nom}`, "UPDATE", "fiche", id, `titre: ${titre}`);
   return NextResponse.json(fiche);
 }
 
 export async function DELETE(_req: NextRequest, { params }: Params) {
+  const user = await getCurrentUser();
+  if (!user || user.role !== "ADMIN") {
+    return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
+  }
   const { id } = await params;
   await prisma.ficheContact.deleteMany({ where: { ficheId: id } });
   await prisma.ficheSecteur.deleteMany({ where: { ficheId: id } });
   await prisma.fiche.delete({ where: { id } });
+  await logAdminAction(user.id, `${user.prenom} ${user.nom}`, "DELETE", "fiche", id);
   return NextResponse.json({ success: true });
 }

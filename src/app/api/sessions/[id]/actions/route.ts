@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/user-auth";
-import { getSessionById, addActionLog } from "@/lib/db";
+import { getSessionById, addActionLog, getSessionJournal } from "@/lib/db";
 import { validateActionLog } from "@/lib/validate";
 
 interface Params {
@@ -40,5 +40,6 @@ export async function POST(req: NextRequest, { params }: Params) {
     user.id,
     data.type
   );
-  return NextResponse.json({ ok: true }, { status: 201 });
+  const journal = await getSessionJournal(id);
+  return NextResponse.json({ ok: true, journal }, { status: 201 });
 }

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/user-auth";
-import { getSessionById, addCommentLog } from "@/lib/db";
+import { getSessionById, addCommentLog, getSessionJournal } from "@/lib/db";
 import { validateComment } from "@/lib/validate";
 
 interface Params {
@@ -35,5 +35,6 @@ export async function POST(req: NextRequest, { params }: Params) {
   }
 
   await addCommentLog(id, session.ficheSlug, user.id, data.message);
-  return NextResponse.json({ ok: true }, { status: 201 });
+  const journal = await getSessionJournal(id);
+  return NextResponse.json({ ok: true, journal }, { status: 201 });
 }

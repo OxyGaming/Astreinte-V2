@@ -14,10 +14,12 @@ interface Props {
 
 export default async function FicheDetailPage({ params }: Props) {
   const { slug } = await params;
-  const [fiche, user] = await Promise.all([getFicheBySlug(slug), getCurrentUser()]);
+  const [fiche, user, allContacts] = await Promise.all([
+    getFicheBySlug(slug),
+    getCurrentUser(),
+    getAllContacts(),
+  ]);
   if (!fiche) notFound();
-
-  const allContacts = await getAllContacts();
   const contactsLies = fiche.contacts_lies
     ? allContacts.filter((c) => fiche.contacts_lies!.includes(c.id))
     : [];

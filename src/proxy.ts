@@ -13,7 +13,7 @@ const PUBLIC_PREFIXES = [
   "/icons",
 ];
 
-export function proxy(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Routes publiques — passe directement
@@ -22,7 +22,7 @@ export function proxy(request: NextRequest) {
   }
 
   const token = request.cookies.get(COOKIE_NAME)?.value;
-  const isAuthenticated = isValidToken(token);
+  const isAuthenticated = await isValidToken(token);
 
   // Routes /api/** → 401 si non connecté (pas de redirect, c'est une API)
   if (pathname.startsWith("/api/")) {

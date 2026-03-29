@@ -52,6 +52,8 @@ export default function FicheSessionView({
   const [submittingComment, setSubmittingComment] = useState(false);
   const [showJournal, setShowJournal] = useState(true);
   const journalRef = useRef<HTMLDivElement>(null);
+  // Clés des actions en cours de fetch — empêche les doubles clics d'envoyer plusieurs requêtes
+  const pendingKeys = useRef<Set<string>>(new Set());
 
   const speech = useSpeechRecognition((text) => setComment(text));
   const [showMicModal, setShowMicModal] = useState(false);
@@ -93,29 +95,35 @@ export default function FicheSessionView({
     async (etapeOrdre: number, actionIndex: number, label: string, currentlyChecked: boolean) => {
       if (!session || session.status === "archived") return;
       const key = actionKey(etapeOrdre, actionIndex);
-      const newType = currentlyChecked ? "unchecked" : "checked";
+      if (pendingKeys.current.has(key)) return; // dédup : ignore si déjà en cours
+      pendingKeys.current.add(key);
 
       // Optimistic update
       setChecked((prev) => ({ ...prev, [key]: !currentlyChecked }));
 
-      const res = await fetch(`/api/sessions/${session.id}/actions`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ etapeOrdre, actionIndex, actionLabel: label, type: newType }),
-      });
+      try {
+        const res = await fetch(`/api/sessions/${session.id}/actions`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            etapeOrdre,
+            actionIndex,
+            actionLabel: label,
+            type: currentlyChecked ? "unchecked" : "checked",
+          }),
+        });
 
-      if (res.ok) {
-        // Refresh journal
-        const journalRes = await fetch(`/api/sessions/${session.id}`);
-        const data = await journalRes.json();
-        setJournal(data.journal ?? []);
-        // Scroll journal to bottom
-        setTimeout(() => {
-          journalRef.current?.scrollTo({ top: journalRef.current.scrollHeight, behavior: "smooth" });
-        }, 100);
-      } else {
-        // Rollback
-        setChecked((prev) => ({ ...prev, [key]: currentlyChecked }));
+        if (res.ok) {
+          const data = await res.json();
+          setJournal(data.journal ?? []);
+          setTimeout(() => {
+            journalRef.current?.scrollTo({ top: journalRef.current.scrollHeight, behavior: "smooth" });
+          }, 100);
+        } else {
+          setChecked((prev) => ({ ...prev, [key]: currentlyChecked }));
+        }
+      } finally {
+        pendingKeys.current.delete(key);
       }
     },
     [session]
@@ -131,9 +139,8 @@ export default function FicheSessionView({
         body: JSON.stringify({ message: comment.trim() }),
       });
       if (res.ok) {
+        const data = await res.json();
         setComment("");
-        const journalRes = await fetch(`/api/sessions/${session.id}`);
-        const data = await journalRes.json();
         setJournal(data.journal ?? []);
         setTimeout(() => {
           journalRef.current?.scrollTo({ top: journalRef.current.scrollHeight, behavior: "smooth" });

@@ -41,11 +41,11 @@ export async function verifyUserCredentials(
   };
 }
 
-/** Lit le cookie et retourne l'utilisateur courant, ou null */
+/** Lit le cookie et retourne l'utilisateur courant, ou null. */
 export async function getCurrentUser(): Promise<SessionUser | null> {
   const cookieStore = await cookies();
   const token = cookieStore.get(COOKIE_NAME)?.value;
-  if (!isValidToken(token)) return null;
+  if (!(await isValidToken(token))) return null;
   const userId = getUserIdFromToken(token!);
   if (!userId) return null;
   const user = await prisma.user.findUnique({

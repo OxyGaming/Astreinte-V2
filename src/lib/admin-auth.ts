@@ -11,7 +11,7 @@ export async function isFrontOfficeAdmin(): Promise<boolean> {
   const cookieStore = await cookies();
   const token = cookieStore.get(COOKIE_NAME)?.value;
 
-  if (!isValidToken(token)) return false;
+  if (!(await isValidToken(token))) return false;
 
   const userId = getUserIdFromToken(token!);
   if (!userId) return false;

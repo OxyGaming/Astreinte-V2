@@ -31,6 +31,11 @@ interface Props {
   mode: "create" | "edit";
 }
 
+function safeParseArray(json: string | null | undefined): string[] {
+  if (!json) return [];
+  try { return JSON.parse(json) as string[]; } catch { return []; }
+}
+
 export default function FicheForm({ fiche, contacts, secteurs, mode }: Props) {
   const router = useRouter();
   const [saving, setSaving] = useState(false);
@@ -46,8 +51,8 @@ export default function FicheForm({ fiche, contacts, secteurs, mode }: Props) {
     mnemonique: fiche?.mnemonique || "",
     resume: fiche?.resume || "",
     etapes: fiche?.etapes ? (typeof fiche.etapes === "string" ? fiche.etapes : JSON.stringify(fiche.etapes, null, 2)) : "[]",
-    references: fiche?.references ? (typeof fiche.references === "string" ? JSON.parse(fiche.references).join("\n") : "") : "",
-    avisObligatoires: fiche?.avisObligatoires ? (typeof fiche.avisObligatoires === "string" ? JSON.parse(fiche.avisObligatoires).join("\n") : "") : "",
+    references: safeParseArray(fiche?.references).join("\n"),
+    avisObligatoires: safeParseArray(fiche?.avisObligatoires).join("\n"),
     featured: fiche?.featured ?? false,
     contactIds: (fiche?.contacts || []).map((c) => c.contactId),
     secteurIds: (fiche?.secteurs || []).map((s) => s.secteurId),
