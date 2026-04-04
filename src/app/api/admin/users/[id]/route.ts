@@ -30,9 +30,10 @@ export async function PUT(req: NextRequest, { params }: Params) {
   }
   if (email !== undefined) {
     if (email !== null && email !== "") {
-      const clash = await prisma.user.findFirst({ where: { email, NOT: { id } } });
+      const normalizedEmail = email.trim().toLowerCase();
+      const clash = await prisma.user.findFirst({ where: { email: normalizedEmail, NOT: { id } } });
       if (clash) return NextResponse.json({ error: "Adresse e-mail déjà utilisée" }, { status: 409 });
-      data.email = email;
+      data.email = normalizedEmail;
     } else {
       data.email = null;
     }

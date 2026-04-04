@@ -39,9 +39,13 @@ export async function loginAction(
 
   const result = await verifyUserCredentials(input.email, input.password);
   if (result.error === "pending") {
+    // Mot de passe correct mais compte pas encore validé : ne pas consommer de slot rate-limit
+    resetRateLimit(rateLimitKey);
     return { error: "Votre compte est en attente de validation par un administrateur." };
   }
   if (result.error === "rejected") {
+    // Idem : ne pas pénaliser un compte refusé (mot de passe vérifié avant ce point)
+    resetRateLimit(rateLimitKey);
     return { error: "Votre demande d'inscription a été refusée. Contactez un administrateur." };
   }
   if (result.error !== null) {
