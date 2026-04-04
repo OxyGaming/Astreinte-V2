@@ -101,9 +101,9 @@ async function main() {
     );
   }
   const usersData = [
-    { username: "admin.system", email: "admin@astreinte.local", password: adminPassword,  nom: "Système", prenom: "Admin",   role: "ADMIN"  },
-    { username: "jessie.achille",                               password: userPassword,   nom: "Achille", prenom: "Jessie",  role: "USER"   },
-    { username: "editeur",                                      password: editorPassword, nom: "Éditeur", prenom: "Compte",  role: "EDITOR" },
+    { username: "admin.system",   email: "admin@astreinte.local",    password: adminPassword,  nom: "Système", prenom: "Admin",  role: "ADMIN"  },
+    { username: "jessie.achille", email: "jessie.achille@astreinte.local", password: userPassword,   nom: "Achille", prenom: "Jessie", role: "USER"   },
+    { username: "editeur",        email: "editeur@astreinte.local",  password: editorPassword, nom: "Éditeur", prenom: "Compte", role: "EDITOR" },
   ];
   for (const u of usersData) {
     const h = await bcrypt.hash(u.password, 12);

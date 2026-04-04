@@ -108,10 +108,11 @@ export default function UserForm({ user }: Props) {
           type="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
+          required={!isEdit}
           className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
           placeholder="prenom.nom@example.fr"
         />
-        <p className="text-xs text-gray-400 mt-1">Requis pour que l&apos;utilisateur puisse se connecter.</p>
+        {!isEdit && <p className="text-xs text-gray-400 mt-1">Requis — l&apos;utilisateur se connecte avec cet e-mail.</p>}
       </div>
 
       <div>
