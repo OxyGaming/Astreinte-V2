@@ -293,3 +293,18 @@ model FicheCommentLog {
   user      User         @relation(fields: [userId], references: [id])
   session   FicheSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
 }
+
+model AdminAuditLog {
+  id         String   @id @default(cuid())
+  userId     String
+  userNom    String
+  action     String
+  resource   String
+  resourceId String
+  detail     String?
+  timestamp  DateTime @default(now())
+
+  @@index([resource, resourceId])
+  @@index([userId])
+  @@index([timestamp])
+}
