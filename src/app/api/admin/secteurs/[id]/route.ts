@@ -16,16 +16,13 @@ export async function GET(_req: NextRequest, { params }: Params) {
 export async function PUT(req: NextRequest, { params }: Params) {
   const { id } = await params;
   const body = await req.json();
-  const { slug, nom, ligne, trajet, description, pointsAcces, procedures, pn } = body;
+  // Seuls les champs scalaires restent ici.
+  // Exclus (routes dédiées) : pointsAcces, procedures, pn
+  const { slug, nom, ligne, trajet, description } = body;
 
   const secteur = await prisma.secteur.update({
     where: { id },
-    data: {
-      slug, nom, ligne, trajet, description,
-      pointsAcces: typeof pointsAcces === "string" ? pointsAcces : JSON.stringify(pointsAcces || []),
-      procedures: typeof procedures === "string" ? procedures : JSON.stringify(procedures || []),
-      pn: pn ? (typeof pn === "string" ? pn : JSON.stringify(pn)) : null,
-    },
+    data: { slug, nom, ligne, trajet, description },
   });
   return NextResponse.json(secteur);
 }
@@ -34,7 +31,7 @@ export async function DELETE(_req: NextRequest, { params }: Params) {
   const { id } = await params;
   // Vérifier si des fiches ou postes référencent ce secteur
   const fichesCount = await prisma.ficheSecteur.count({ where: { secteurId: id } });
-  const postesCount = await prisma.poste.count({ where: { secteurId: id } });
+  const postesCount = await prisma.posteSecteur.count({ where: { secteurId: id } });
   if (fichesCount > 0 || postesCount > 0) {
     return NextResponse.json({
       error: `Impossible de supprimer : ${fichesCount} fiche(s) et ${postesCount} poste(s) référencent ce secteur.`,

@@ -20,7 +20,8 @@ type PosteRow = {
   slug: string; nom: string; typePoste: string; lignes: string;
   adresse: string; horaires: string; electrification: string; systemeBlock: string;
   annuaire: string; circuitsVoie: string; pnSensibles: string; particularites: string;
-  proceduresCles: string; dbc: string | null; rex: string | null; secteurId: string | null;
+  proceduresCles: string; dbc: string | null; rex: string | null;
+  secteurIds?: string[];
 };
 
 async function main() {
@@ -36,18 +37,24 @@ async function main() {
       update: {
         nom: p.nom, typePoste: p.typePoste, lignes: p.lignes,
         adresse: p.adresse, horaires: p.horaires, electrification: p.electrification,
-        systemeBlock: p.systemeBlock, secteurId: p.secteurId,
+        systemeBlock: p.systemeBlock,
         annuaire: p.annuaire, circuitsVoie: p.circuitsVoie,
         pnSensibles: p.pnSensibles, particularites: p.particularites,
         proceduresCles: p.proceduresCles, dbc: p.dbc, rex: p.rex,
+        secteurs: p.secteurIds?.length
+          ? { deleteMany: {}, create: p.secteurIds.map((id) => ({ secteurId: id })) }
+          : { deleteMany: {} },
       },
       create: {
         slug: p.slug, nom: p.nom, typePoste: p.typePoste, lignes: p.lignes,
         adresse: p.adresse, horaires: p.horaires, electrification: p.electrification,
-        systemeBlock: p.systemeBlock, secteurId: p.secteurId,
+        systemeBlock: p.systemeBlock,
         annuaire: p.annuaire, circuitsVoie: p.circuitsVoie,
         pnSensibles: p.pnSensibles, particularites: p.particularites,
         proceduresCles: p.proceduresCles, dbc: p.dbc, rex: p.rex,
+        secteurs: p.secteurIds?.length
+          ? { create: p.secteurIds.map((id) => ({ secteurId: id })) }
+          : undefined,
       },
     });
     console.log(`  ✓ ${p.nom}`);

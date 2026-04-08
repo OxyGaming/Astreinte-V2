@@ -12,6 +12,34 @@ interface ProcedureInput {
 }
 
 const VALID_TYPES = ["cessation", "reprise", "incident", "travaux", "autre"];
+const VALID_ACTION_TYPES = ["information", "question_oui_non", "question_choix", "saisie_texte", "confirmation"];
+const VALID_NIVEAUX = ["informatif", "alerte", "bloquant"];
+
+function validateEtapesStructure(etapes: unknown[]): string[] {
+  const errors: string[] = [];
+  etapes.forEach((etape, ei) => {
+    const e = etape as Record<string, unknown>;
+    const prefix = `Étape ${ei + 1}`;
+    if (!e.id || typeof e.id !== "string") errors.push(`${prefix} : champ "id" manquant ou invalide`);
+    if (!e.titre || typeof e.titre !== "string") errors.push(`${prefix} : champ "titre" manquant`);
+    if (typeof e.ordre !== "number") errors.push(`${prefix} : champ "ordre" manquant ou non numérique`);
+    if (!Array.isArray(e.actions)) {
+      errors.push(`${prefix} : champ "actions" manquant ou non-tableau`);
+      return;
+    }
+    (e.actions as unknown[]).forEach((action, ai) => {
+      const a = action as Record<string, unknown>;
+      const aPrefix = `${prefix} action ${ai + 1}`;
+      if (!a.id || typeof a.id !== "string") errors.push(`${aPrefix} : "id" manquant`);
+      if (!a.label || typeof a.label !== "string") errors.push(`${aPrefix} : "label" manquant`);
+      if (!VALID_ACTION_TYPES.includes(a.type as string)) errors.push(`${aPrefix} : type "${a.type}" invalide`);
+      if (typeof a.obligatoire !== "boolean") errors.push(`${aPrefix} : "obligatoire" doit être un booléen`);
+      if (typeof a.verifiable !== "boolean") errors.push(`${aPrefix} : "verifiable" doit être un booléen`);
+      if (!VALID_NIVEAUX.includes(a.niveau as string)) errors.push(`${aPrefix} : niveau "${a.niveau}" invalide`);
+    });
+  });
+  return errors;
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -39,15 +67,21 @@ export async function POST(req: NextRequest) {
         if (!VALID_TYPES.includes(p.typeProcedure)) { rejected++; details.push({ status: "rejected", reason: `${p.slug} : typeProcedure invalide "${p.typeProcedure}"` }); continue; }
         if (!p.etapes_json) { rejected++; details.push({ status: "rejected", reason: `${p.slug} : etapes_json manquant` }); continue; }
 
-        // Valider le JSON des étapes
+        // Valider le JSON des étapes — syntaxe + structure
         let etapesJson: string;
         try {
           const parsed = JSON.parse(p.etapes_json);
           if (!Array.isArray(parsed)) throw new Error("Pas un tableau");
+          const structErrors = validateEtapesStructure(parsed);
+          if (structErrors.length > 0) {
+            rejected++;
+            details.push({ status: "rejected", reason: `${p.slug} : structure etapes_json invalide — ${structErrors.slice(0, 3).join("; ")}${structErrors.length > 3 ? ` (+ ${structErrors.length - 3} autres)` : ""}` });
+            continue;
+          }
           etapesJson = JSON.stringify(parsed);
-        } catch {
+        } catch (e) {
           rejected++;
-          details.push({ status: "rejected", reason: `${p.slug} : etapes_json invalide (JSON malformé ou non-tableau)` });
+          details.push({ status: "rejected", reason: `${p.slug} : etapes_json invalide — ${e instanceof Error ? e.message : "JSON malformé"}` });
           continue;
         }
 

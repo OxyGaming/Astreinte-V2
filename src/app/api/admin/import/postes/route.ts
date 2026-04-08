@@ -13,6 +13,23 @@ interface PosteData {
   systemeBlock: string;
   secteur_slug?: string;
   particularites: string[];
+  annuaire_json?: string;
+  circuitsVoie_json?: string;
+  pnSensibles_json?: string;
+  proceduresCles_json?: string;
+  dbc_json?: string;
+  rex_json?: string;
+}
+
+function parseJsonField(raw: string | undefined, fallback: string): { value: string; error?: string } {
+  if (!raw?.trim()) return { value: fallback };
+  try {
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return { value: fallback, error: `Doit être un tableau JSON` };
+    return { value: raw.trim() };
+  } catch {
+    return { value: fallback, error: `JSON malformé` };
+  }
 }
 
 export async function POST(req: NextRequest) {
@@ -42,20 +59,39 @@ export async function POST(req: NextRequest) {
           continue;
         }
 
-        const secteurId = p.secteur_slug?.trim()
-          ? (secteurMap.get(p.secteur_slug.trim()) ?? null)
-          : null;
+        // secteur_slug peut contenir plusieurs slugs séparés par "|" (ex: "givors-canal|peyraud")
+        const secteurSlugs = p.secteur_slug?.trim()
+          ? p.secteur_slug.trim().split("|").map((s) => s.trim()).filter(Boolean)
+          : [];
 
-        if (p.secteur_slug?.trim() && !secteurId) {
+        const resolvedSecteurIds: string[] = [];
+        let secteurError: string | null = null;
+        for (const slug of secteurSlugs) {
+          const id = secteurMap.get(slug);
+          if (!id) { secteurError = `Secteur introuvable : "${slug}"`; break; }
+          resolvedSecteurIds.push(id);
+        }
+
+        if (secteurError) {
           rejected++;
-          details.push({ slug: p.slug, status: "rejected", reason: `Secteur introuvable : "${p.secteur_slug}"` });
+          details.push({ slug: p.slug, status: "rejected", reason: secteurError });
           continue;
         }
 
         const existing = await prisma.poste.findUnique({ where: { slug: p.slug.trim() } });
 
-        // Pour un poste existant, on préserve les champs JSON complexes (annuaire, circuits, etc.)
-        // et on ne met à jour que les champs plats fournis dans le tableur
+        // Valider les champs JSON optionnels
+        const jsonWarnings: string[] = [];
+        const annuaire = parseJsonField(p.annuaire_json, existing?.annuaire ?? "[]");
+        const circuitsVoie = parseJsonField(p.circuitsVoie_json, existing?.circuitsVoie ?? "[]");
+        const pnSensibles = parseJsonField(p.pnSensibles_json, existing?.pnSensibles ?? "[]");
+        const proceduresCles = parseJsonField(p.proceduresCles_json, existing?.proceduresCles ?? "[]");
+        const dbc = parseJsonField(p.dbc_json, existing?.dbc ?? "[]");
+        const rex = parseJsonField(p.rex_json, existing?.rex ?? "[]");
+        for (const [field, result] of [["annuaire_json", annuaire], ["circuitsVoie_json", circuitsVoie], ["pnSensibles_json", pnSensibles], ["proceduresCles_json", proceduresCles], ["dbc_json", dbc], ["rex_json", rex]] as [string, ReturnType<typeof parseJsonField>][]) {
+          if (result.error) jsonWarnings.push(`${field}: ${result.error} (valeur ignorée)`);
+        }
+
         if (existing) {
           if (mode === "create") {
             rejected++;
@@ -73,11 +109,19 @@ export async function POST(req: NextRequest) {
               electrification: p.electrification?.trim() || existing.electrification,
               systemeBlock: p.systemeBlock?.trim() || existing.systemeBlock,
               particularites: JSON.stringify(p.particularites || []),
-              secteurId: secteurId ?? existing.secteurId,
+              annuaire: annuaire.value,
+              circuitsVoie: circuitsVoie.value,
+              pnSensibles: pnSensibles.value,
+              proceduresCles: proceduresCles.value,
+              dbc: dbc.value,
+              rex: rex.value,
+              secteurs: secteurSlugs.length > 0
+                ? { deleteMany: {}, create: resolvedSecteurIds.map((secteurId) => ({ secteurId })) }
+                : { deleteMany: {} },
             },
           });
           updated++;
-          details.push({ slug: p.slug, status: "updated" });
+          details.push({ slug: p.slug, status: "updated", ...(jsonWarnings.length ? { reason: jsonWarnings.join("; ") } : {}) });
         } else {
           await prisma.poste.create({
             data: {
@@ -89,16 +133,20 @@ export async function POST(req: NextRequest) {
               horaires: p.horaires?.trim() || "",
               electrification: p.electrification?.trim() || "",
               systemeBlock: p.systemeBlock?.trim() || "",
-              annuaire: "[]",
-              circuitsVoie: "[]",
-              pnSensibles: "[]",
+              annuaire: annuaire.value,
+              circuitsVoie: circuitsVoie.value,
+              pnSensibles: pnSensibles.value,
               particularites: JSON.stringify(p.particularites || []),
-              proceduresCles: "[]",
-              secteurId: secteurId ?? null,
+              proceduresCles: proceduresCles.value,
+              dbc: dbc.value || undefined,
+              rex: rex.value || undefined,
+              secteurs: resolvedSecteurIds.length > 0
+                ? { create: resolvedSecteurIds.map((secteurId) => ({ secteurId })) }
+                : undefined,
             },
           });
           created++;
-          details.push({ slug: p.slug, status: "created" });
+          details.push({ slug: p.slug, status: "created", ...(jsonWarnings.length ? { reason: jsonWarnings.join("; ") } : {}) });
         }
       } catch (e: unknown) {
         rejected++;

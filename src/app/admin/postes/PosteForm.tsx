@@ -27,7 +27,7 @@ interface PosteRaw {
   proceduresCles: string;// JSON string
   dbc: string | null;    // JSON string
   rex: string | null;    // JSON string
-  secteurId: string | null;
+  secteurs?: { secteur: { id: string; slug: string; nom: string } }[];
 }
 
 interface Props {
@@ -41,56 +41,13 @@ function isValidJson(s: string) {
   try { JSON.parse(s); return true; } catch { return false; }
 }
 
+// "annuaire" est intentionnellement absent : géré par PosteAnnuaireEditor
 const JSON_FIELDS: { key: keyof PosteRaw; label: string; required: boolean; hint: string; rows: number }[] = [
-  {
-    key: "annuaire",
-    label: "Annuaire téléphonique (JSON)",
-    required: true,
-    hint: '[{"titre":"Gares encadrantes","contacts":[{"nom":"...","role":"...","telephone":"...","note":"..."}]}]',
-    rows: 10,
-  },
-  {
-    key: "circuitsVoie",
-    label: "Circuits de voie à surveiller (JSON)",
-    required: true,
-    hint: '[{"designation":"...","voie":"...","delai_max":"72h","note":"..."}]',
-    rows: 6,
-  },
-  {
-    key: "pnSensibles",
-    label: "PN sensibles (JSON)",
-    required: true,
-    hint: '[{"numero":"363","contact":"Gendarmerie Irigny","telephone":"04 78 50 30 33","note":"..."}]',
-    rows: 6,
-  },
-  {
-    key: "particularites",
-    label: "Particularités et vigilances (JSON — tableau de chaînes)",
-    required: true,
-    hint: '["Particularité 1","Particularité 2"]',
-    rows: 6,
-  },
-  {
-    key: "proceduresCles",
-    label: "Procédures clés (JSON)",
-    required: true,
-    hint: '[{"titre":"...","description":"...","reference":"EIC RA DC07446"}]',
-    rows: 8,
-  },
-  {
-    key: "dbc",
-    label: "Détecteurs de Boîte Chaude — DBC (JSON — optionnel)",
-    required: false,
-    hint: '[{"designation":"DBC Andance V2","voie":"Voie 2","note":"Surveillance obligatoire"}]',
-    rows: 4,
-  },
-  {
-    key: "rex",
-    label: "Retours d'expérience — REX (JSON — optionnel, tableau de chaînes)",
-    required: false,
-    hint: '["DFV avec aiguilles mal disposées : risque de talonnage"]',
-    rows: 4,
-  },
+  // "circuitsVoie" est intentionnellement absent : géré par PosteCircuitsVoieEditor
+  // "pnSensibles" est intentionnellement absent : géré par PostePNSensiblesEditor
+  // "particularites" est intentionnellement absent : géré par PosteParticularitesEditor
+  // "proceduresCles" est intentionnellement absent : géré par PosteProceduresClesEditor
+  // "dbc" et "rex" sont intentionnellement absents : gérés par PosteDbcEditor / PosteRexEditor
 ];
 
 export default function PosteForm({ poste, secteurs, mode }: Props) {
@@ -113,15 +70,16 @@ export default function PosteForm({ poste, secteurs, mode }: Props) {
     horaires: poste?.horaires || "",
     electrification: poste?.electrification || "1500V CC",
     systemeBlock: poste?.systemeBlock || "BAL",
-    annuaire: poste?.annuaire || "[]",
-    circuitsVoie: poste?.circuitsVoie || "[]",
-    pnSensibles: poste?.pnSensibles || "[]",
-    particularites: poste?.particularites || "[]",
-    proceduresCles: poste?.proceduresCles || "[]",
-    dbc: poste?.dbc || "",
-    rex: poste?.rex || "",
-    secteurId: poste?.secteurId || "",
+    // circuitsVoie géré par PosteCircuitsVoieEditor
+    // pnSensibles géré par PostePNSensiblesEditor
+    // particularites géré par PosteParticularitesEditor
+    // proceduresCles géré par PosteProceduresClesEditor
+    // dbc et rex gérés par PosteDbcEditor / PosteRexEditor
   });
+
+  const [secteurIds, setSecteurIds] = useState<string[]>(
+    poste?.secteurs?.map((ps) => ps.secteur.id) ?? []
+  );
 
   function update(field: string, value: string) {
     setForm((p) => ({ ...p, [field]: value }));
@@ -130,15 +88,13 @@ export default function PosteForm({ poste, secteurs, mode }: Props) {
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
 
-    // Valider les champs JSON
+    // Valider les champs JSON (annuaire exclu — géré par PosteAnnuaireEditor)
     const jsonFieldsToValidate: { key: string; label: string; required: boolean }[] = [
-      { key: "annuaire", label: "Annuaire", required: true },
-      { key: "circuitsVoie", label: "Circuits de voie", required: true },
-      { key: "pnSensibles", label: "PN sensibles", required: true },
-      { key: "particularites", label: "Particularités", required: true },
-      { key: "proceduresCles", label: "Procédures clés", required: true },
-      { key: "dbc", label: "DBC", required: false },
-      { key: "rex", label: "REX", required: false },
+      // circuitsVoie géré par PosteCircuitsVoieEditor
+      // pnSensibles géré par PostePNSensiblesEditor
+      // particularites géré par PosteParticularitesEditor
+      // proceduresCles géré par PosteProceduresClesEditor
+      // dbc et rex gérés par PosteDbcEditor / PosteRexEditor
     ];
 
     for (const f of jsonFieldsToValidate) {
@@ -164,9 +120,7 @@ export default function PosteForm({ poste, secteurs, mode }: Props) {
     const payload = {
       ...form,
       lignes: lignesJson,
-      dbc: form.dbc.trim() || null,
-      rex: form.rex.trim() || null,
-      secteurId: form.secteurId || null,
+      secteurIds,
     };
 
     try {
@@ -241,14 +195,27 @@ export default function PosteForm({ poste, secteurs, mode }: Props) {
             <p className="text-xs text-gray-400 mt-1">Séparer par des virgules</p>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">Secteur associé</label>
-            <select value={form.secteurId} onChange={(e) => update("secteurId", e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-              <option value="">— Aucun —</option>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">Secteurs associés</label>
+            <div className="border border-gray-300 rounded-lg px-3 py-2 space-y-1.5 max-h-40 overflow-y-auto">
+              {secteurs.length === 0 && (
+                <p className="text-xs text-gray-400 py-1">Aucun secteur disponible</p>
+              )}
               {secteurs.map((s) => (
-                <option key={s.id} value={s.id}>{s.nom}</option>
+                <label key={s.id} className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={secteurIds.includes(s.id)}
+                    onChange={(e) =>
+                      setSecteurIds((prev) =>
+                        e.target.checked ? [...prev, s.id] : prev.filter((id) => id !== s.id)
+                      )
+                    }
+                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  />
+                  <span className="text-sm text-gray-700">{s.nom}</span>
+                </label>
               ))}
-            </select>
+            </div>
           </div>
           <div className="col-span-2">
             <label className="block text-sm font-medium text-gray-700 mb-1.5">Adresse *</label>

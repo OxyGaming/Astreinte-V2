@@ -113,7 +113,7 @@ export const postes: Poste[] = [
     rex: [
       "DAA V2 : l'appui sur le bouton poussoir entraîne la fermeture du carré 342 au km 544,420 voie 2",
     ],
-    secteur_slug: "pierre-benite-badan",
+    secteur_slugs: ["pierre-benite-badan"],
   },
   {
     id: "p02",
@@ -265,7 +265,7 @@ export const postes: Poste[] = [
         reference: "DC01503 fiche 10.4",
       },
     ],
-    secteur_slug: "givors-canal",
+    secteur_slugs: ["givors-canal"],
   },
   {
     id: "p03",
@@ -419,6 +419,6 @@ export const postes: Poste[] = [
       "DFV avec aiguilles mal disposées : risque de talonnage — vérifier systématiquement la position des aiguilles avant tout mouvement",
       "DFV accord SI sans vérification préalable : ne jamais accorder un signal d'installation sans avoir effectué les vérifications requises",
     ],
-    secteur_slug: "peyraud",
+    secteur_slugs: ["peyraud"],
   },
 ];

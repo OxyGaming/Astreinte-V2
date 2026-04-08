@@ -110,6 +110,16 @@ export interface AnnuaireSection {
   contacts: ContactPoste[];
 }
 
+export interface AnnuaireEntry {
+  section?: string;
+  ordre: number;
+  nom: string;
+  fonction?: string;
+  telephone?: string;
+  email?: string;
+  note?: string;
+}
+
 export interface CircuitVoie {
   designation: string;
   voie?: string;
@@ -153,7 +163,7 @@ export interface Poste {
   procedures_cles: ProcedureCle[];
   dbc?: Dbc[];
   rex?: string[];
-  secteur_slug?: string;
+  secteur_slugs: string[];
 }
 
 // ─── Points d'accès ferroviaires (GPS) ────────────────────────────────────────

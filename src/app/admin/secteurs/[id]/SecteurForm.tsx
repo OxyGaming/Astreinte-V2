@@ -26,9 +26,9 @@ export default function SecteurForm({ secteur, fichesLiees = [], mode }: Props) 
     ligne: secteur?.ligne || "",
     trajet: secteur?.trajet || "",
     description: secteur?.description || "",
-    pointsAcces: secteur?.pointsAcces || "[]",
-    procedures: secteur?.procedures || "[]",
-    pn: secteur?.pn || "",
+    // pointsAcces géré par SecteurPointsAccesEditor
+    // procedures géré par SecteurProceduresEditor
+    // pn géré par SecteurPNEditor
   });
 
   function update(field: string, value: string) { setForm((p) => ({ ...p, [field]: value })); }
@@ -37,9 +37,7 @@ export default function SecteurForm({ secteur, fichesLiees = [], mode }: Props) 
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
-    if (!isValidJson(form.pointsAcces)) { setError("JSON Points d'accès invalide"); return; }
-    if (!isValidJson(form.procedures)) { setError("JSON Procédures invalide"); return; }
-    if (form.pn && !isValidJson(form.pn)) { setError("JSON Passages à niveau invalide"); return; }
+    // pointsAcces, procedures, pn gérés par leurs éditeurs dédiés
     setSaving(true);
     setError(null);
     try {
@@ -48,7 +46,7 @@ export default function SecteurForm({ secteur, fichesLiees = [], mode }: Props) 
       const res = await fetch(url, {
         method,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...form, pn: form.pn || null }),
+        body: JSON.stringify(form),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Erreur sauvegarde");
@@ -112,11 +110,8 @@ export default function SecteurForm({ secteur, fichesLiees = [], mode }: Props) 
         </div>
       </div>
 
-      {[
-        { key: "pointsAcces", label: "Points d'accès (JSON)", hint: '[{"nom":"...","adresse":"...","gps":"...","note":"...","code":"..."}]' },
-        { key: "procedures", label: "Procédures locales (JSON)", hint: '[{"titre":"...","description":"...","critique":false,"etapes":[],"reference":"..."}]' },
-        { key: "pn", label: "Passages à niveau (JSON — optionnel)", hint: '[{"numero":"PN X","axe":"...","contact_urgence":"...","note":"..."}]' },
-      ].map(({ key, label, hint }) => (
+      {/* pointsAcces, procedures, pn gérés par leurs éditeurs dédiés */}
+      {([] as { key: string; label: string; hint: string }[]).map(({ key, label, hint }) => (
         <div key={key} className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 space-y-3">
           <div className="flex items-center gap-2">
             <h2 className="font-semibold text-gray-800 text-base">{label}</h2>

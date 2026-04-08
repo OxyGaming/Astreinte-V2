@@ -321,18 +321,23 @@ export default async function PosteDetailPage({
         </section>
       )}
 
-      {/* Lien secteur */}
-      {poste.secteur_slug && (
-        <Link
-          href={`/secteurs/${poste.secteur_slug}`}
-          className="flex items-center justify-between bg-blue-50 rounded-xl border border-blue-200 px-4 py-3 hover:bg-blue-100 transition-colors"
-        >
-          <div>
-            <p className="text-sm font-medium text-blue-800">Voir le secteur associé</p>
-            <p className="text-xs text-blue-600 mt-0.5">Points d&apos;accès, procédures terrain</p>
-          </div>
-          <ChevronLeft size={18} className="text-blue-400 rotate-180" />
-        </Link>
+      {/* Lien(s) secteur */}
+      {poste.secteur_slugs.length > 0 && (
+        <div className="space-y-2">
+          {poste.secteur_slugs.map((slug) => (
+            <Link
+              key={slug}
+              href={`/secteurs/${slug}`}
+              className="flex items-center justify-between bg-blue-50 rounded-xl border border-blue-200 px-4 py-3 hover:bg-blue-100 transition-colors"
+            >
+              <div>
+                <p className="text-sm font-medium text-blue-800">Voir le secteur associé</p>
+                <p className="text-xs text-blue-600 mt-0.5">Points d&apos;accès, procédures terrain</p>
+              </div>
+              <ChevronLeft size={18} className="text-blue-400 rotate-180" />
+            </Link>
+          ))}
+        </div>
       )}
     </div>
   );

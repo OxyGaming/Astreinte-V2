@@ -16,8 +16,8 @@ export async function GET() {
         prisma.mnemonique.findMany({ orderBy: { acronyme: "asc" } }),
         prisma.abreviation.findMany({ orderBy: { sigle: "asc" } }),
         prisma.accesRail.findMany({ orderBy: [{ ligne: "asc" }, { pk: "asc" }] }),
-        prisma.poste.findMany({ orderBy: { nom: "asc" }, include: { secteur: { select: { slug: true } } } }),
-        prisma.secteur.findMany({ select: { slug: true, nom: true } }),
+        prisma.poste.findMany({ orderBy: { nom: "asc" }, include: { secteurs: { include: { secteur: { select: { slug: true } } } } } }),
+        prisma.secteur.findMany({ orderBy: { nom: "asc" } }),
         prisma.procedure.findMany({
           orderBy: { titre: "asc" },
           include: { postes: { include: { poste: { select: { slug: true } } } } },
@@ -86,8 +86,25 @@ export async function GET() {
       ["horaires", "Horaires de service", "OUI", "24h/24"],
       ["electrification", "Système d'électrification", "OUI", "25 kV 50 Hz | Non électrifié"],
       ["systemeBlock", "Système de block", "OUI", "BEM | BAPR | BAL"],
-      ["secteur_slug", "Slug du secteur associé (optionnel)", "NON", "givors-canal"],
+      ["secteur_slug", "Slug(s) du/des secteur(s) associé(s), séparés par | (optionnel)", "NON", "givors-canal|peyraud"],
       ["particularites", "Particularités séparées par | (optionnel)", "NON", "Zone ATEX|Tunnel long"],
+      ["annuaire_json", "JSON de l'annuaire (AnnuaireSection[]) — ne pas modifier à la main", "NON", "[{\"titre\":\"...\",\"contacts\":[...]}]"],
+      ["circuitsVoie_json", "JSON des circuits voie (CircuitVoie[]) — ne pas modifier à la main", "NON", "[{\"voie\":\"V1\",\"longueur\":...}]"],
+      ["pnSensibles_json", "JSON des PN sensibles (PNSensiblePoste[]) — ne pas modifier à la main", "NON", "[{\"pk\":\"...\",\"type\":\"...\"}]"],
+      ["proceduresCles_json", "JSON des procédures clés (ProcedureCle[]) — ne pas modifier à la main", "NON", "[{\"titre\":\"...\",\"etapes\":[...]}]"],
+      ["dbc_json", "JSON DBC (Dbc[]) — optionnel, ne pas modifier à la main", "NON", "[]"],
+      ["rex_json", "JSON REX (string[]) — optionnel, ne pas modifier à la main", "NON", "[]"],
+      [""],
+      ["═══ ONGLET SECTEURS (secteurs ferroviaires) ════════════════════════════════"],
+      ["Colonne", "Description", "Obligatoire", "Exemples"],
+      ["slug", "Identifiant URL unique (ne pas modifier)", "OUI", "givors-canal"],
+      ["nom", "Nom du secteur", "OUI", "Secteur Givors Canal"],
+      ["ligne", "Ligne(s) ferroviaire(s)", "OUI", "750000 / 750100"],
+      ["trajet", "Description du trajet", "OUI", "Givors - Chasse-sur-Rhône"],
+      ["description", "Description détaillée", "OUI", "Secteur couvrant la vallée du Gier"],
+      ["pointsAcces_json", "JSON points d'accès (PointAcces[]) — ne pas modifier à la main", "NON", "[{\"nom\":\"...\",\"adresse\":\"...\",\"note\":\"...\"}]"],
+      ["procedures_json", "JSON procédures spécifiques (données legacy) — ne pas modifier à la main", "NON", "[{\"titre\":\"...\",\"description\":\"...\"}]"],
+      ["pn_json", "JSON passages à niveau (PassageNiveau[]) — ne pas modifier à la main", "NON", "[{\"numero\":\"PN 16\",\"axe\":\"...\"}]"],
       [""],
       ["═══ ONGLET PROCEDURES (procédures guidées) ═════════════════════════════════"],
       ["Colonne", "Description", "Obligatoire", "Exemples"],
@@ -101,11 +118,10 @@ export async function GET() {
       [""],
       ["IMPORTANT : Ne supprimez pas et ne renommez pas les onglets."],
       ["IMPORTANT : La ligne d'en-tête (première ligne) ne doit pas être modifiée."],
-      ["IMPORTANT : Pour les postes, les données techniques JSON (annuaire, circuits voie, etc.) ne sont pas"],
-      ["importées via ce fichier. Utilisez le back-office pour ces données détaillées."],
-      [""],
-      ["Secteurs disponibles :"],
-      ...secteurs.map((s) => [`  ${s.slug}`, s.nom]),
+      ["IMPORTANT : Les colonnes *_json des postes (annuaire_json, circuitsVoie_json, etc.) sont exportées"],
+      ["pour garantir un round-trip fidèle. Ne les modifiez pas manuellement — utilisez le back-office."],
+      ["IMPORTANT : Les colonnes *_json des secteurs (pointsAcces_json, procedures_json, pn_json) sont"],
+      ["exportées pour garantir un round-trip fidèle. Ne les modifiez pas manuellement."],
     ];
     const wsAide = XLSX.utils.aoa_to_sheet(aideData);
     wsAide["!cols"] = [{ wch: 22 }, { wch: 52 }, { wch: 14 }, { wch: 46 }];
@@ -192,7 +208,7 @@ export async function GET() {
 
     // ─── Onglet POSTES ──────────────────────────────────────────────────────────
     const postesRows: unknown[][] = [
-      ["slug", "nom", "typePoste", "lignes", "adresse", "horaires", "electrification", "systemeBlock", "secteur_slug", "particularites"],
+      ["slug", "nom", "typePoste", "lignes", "adresse", "horaires", "electrification", "systemeBlock", "secteur_slug", "particularites", "annuaire_json", "circuitsVoie_json", "pnSensibles_json", "proceduresCles_json", "dbc_json", "rex_json"],
     ];
     for (const p of postes) {
       let lignes: string[] = [];
@@ -208,16 +224,34 @@ export async function GET() {
         p.horaires,
         p.electrification,
         p.systemeBlock,
-        p.secteur?.slug || "",
+        p.secteurs.map((ps) => ps.secteur.slug).join("|"),
         particularites.join("|"),
+        p.annuaire,
+        p.circuitsVoie,
+        p.pnSensibles,
+        p.proceduresCles,
+        p.dbc || "[]",
+        p.rex || "[]",
       ]);
     }
     const wsPostes = XLSX.utils.aoa_to_sheet(postesRows);
     wsPostes["!cols"] = [
       { wch: 22 }, { wch: 35 }, { wch: 12 }, { wch: 18 }, { wch: 35 }, { wch: 14 },
       { wch: 22 }, { wch: 18 }, { wch: 22 }, { wch: 40 },
+      { wch: 60 }, { wch: 60 }, { wch: 60 }, { wch: 60 }, { wch: 40 }, { wch: 40 },
     ];
     XLSX.utils.book_append_sheet(wb, wsPostes, "Postes");
+
+    // ─── Onglet SECTEURS ────────────────────────────────────────────────────────
+    const secteursRows: unknown[][] = [
+      ["slug", "nom", "ligne", "trajet", "description", "pointsAcces_json", "procedures_json", "pn_json"],
+    ];
+    for (const s of secteurs) {
+      secteursRows.push([s.slug, s.nom, s.ligne, s.trajet, s.description, s.pointsAcces, s.procedures, s.pn || "[]"]);
+    }
+    const wsSecteurs = XLSX.utils.aoa_to_sheet(secteursRows);
+    wsSecteurs["!cols"] = [{ wch: 26 }, { wch: 32 }, { wch: 20 }, { wch: 35 }, { wch: 55 }, { wch: 60 }, { wch: 60 }, { wch: 60 }];
+    XLSX.utils.book_append_sheet(wb, wsSecteurs, "Secteurs");
 
     // ─── Onglet PROCEDURES ──────────────────────────────────────────────────────
     const proceduresRows: unknown[][] = [

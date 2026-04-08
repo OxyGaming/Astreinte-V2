@@ -7,7 +7,9 @@ export default async function AdminPostesPage() {
   await requireAdminSession();
   const postes = await prisma.poste.findMany({
     orderBy: { nom: "asc" },
-    include: { secteur: { select: { nom: true } } },
+    include: {
+      secteurs: { include: { secteur: { select: { nom: true } } } },
+    },
   });
 
   return (
@@ -52,10 +54,10 @@ export default async function AdminPostesPage() {
                           Ligne{lignes.length > 1 ? "s" : ""} {lignes.join(", ")}
                         </span>
                       )}
-                      {poste.secteur && (
+                      {poste.secteurs.length > 0 && (
                         <span className="flex items-center gap-1 text-xs text-gray-400">
                           <MapPin size={11} />
-                          {poste.secteur.nom}
+                          {poste.secteurs.map((ps) => ps.secteur.nom).join(", ")}
                         </span>
                       )}
                     </div>

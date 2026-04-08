@@ -4,6 +4,44 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { ChevronLeft, ExternalLink } from "lucide-react";
 import SecteurForm from "./SecteurForm";
+import SecteurPointsAccesEditor from "./SecteurPointsAccesEditor";
+import SecteurProceduresEditor from "./SecteurProceduresEditor";
+import SecteurPNEditor from "./SecteurPNEditor";
+import type { PointAcces, Procedure, PassageNiveau } from "@/lib/types";
+
+function parsePointsAcces(raw: string): PointAcces[] {
+  try {
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    if (parsed.length > 0 && typeof (parsed[0] as Record<string, unknown>).nom !== "string") return [];
+    return parsed as PointAcces[];
+  } catch {
+    return [];
+  }
+}
+
+function parseProcedures(raw: string): Procedure[] {
+  try {
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    if (parsed.length > 0 && typeof (parsed[0] as Record<string, unknown>).titre !== "string") return [];
+    return parsed as Procedure[];
+  } catch {
+    return [];
+  }
+}
+
+function parsePNSecteur(raw: string | null): PassageNiveau[] {
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    if (parsed.length > 0 && typeof (parsed[0] as Record<string, unknown>).numero !== "string") return [];
+    return parsed as PassageNiveau[];
+  } catch {
+    return [];
+  }
+}
 
 interface Props { params: Promise<{ id: string }> }
 
@@ -15,11 +53,15 @@ export default async function EditSecteurPage({ params }: Props) {
     where: { id },
     include: {
       fiches: { include: { fiche: { select: { id: true, titre: true, slug: true } } } },
-      postes: { select: { id: true, nom: true } },
+      postes: { include: { poste: { select: { id: true, nom: true } } } },
     },
   });
 
   if (!secteur) notFound();
+
+  const initialPointsAcces = parsePointsAcces(secteur.pointsAcces);
+  const initialProcedures = parseProcedures(secteur.procedures);
+  const initialPN = parsePNSecteur(secteur.pn);
 
   return (
     <div className="p-8">
@@ -44,7 +86,12 @@ export default async function EditSecteurPage({ params }: Props) {
           </Link>
         </div>
       </div>
-      <SecteurForm mode="edit" secteur={secteur} fichesLiees={secteur.fiches} />
+      <div className="max-w-3xl space-y-8">
+        <SecteurForm mode="edit" secteur={secteur} fichesLiees={secteur.fiches} />
+        <SecteurPointsAccesEditor secteurId={secteur.id} initialEntries={initialPointsAcces} />
+        <SecteurProceduresEditor secteurId={secteur.id} initialEntries={initialProcedures} />
+        <SecteurPNEditor secteurId={secteur.id} initialEntries={initialPN} />
+      </div>
     </div>
   );
 }

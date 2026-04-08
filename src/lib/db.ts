@@ -133,7 +133,7 @@ import type { Poste, AnnuaireSection, CircuitVoie, Dbc, PNSensiblePoste, Procedu
 export async function getAllPostes(): Promise<Poste[]> {
   const rows = await prisma.poste.findMany({
     orderBy: { nom: "asc" },
-    include: { secteur: { select: { slug: true } } },
+    include: { secteurs: { include: { secteur: { select: { slug: true } } } } },
   });
   return rows.map(dbToPoste);
 }
@@ -141,7 +141,7 @@ export async function getAllPostes(): Promise<Poste[]> {
 export async function getPosteBySlug(slug: string): Promise<Poste | null> {
   const row = await prisma.poste.findUnique({
     where: { slug },
-    include: { secteur: { select: { slug: true } } },
+    include: { secteurs: { include: { secteur: { select: { slug: true } } } } },
   });
   return row ? dbToPoste(row) : null;
 }
@@ -151,7 +151,7 @@ function dbToPoste(row: {
   adresse: string; horaires: string; electrification: string; systemeBlock: string;
   annuaire: string; circuitsVoie: string; pnSensibles: string; particularites: string;
   proceduresCles: string; dbc: string | null; rex: string | null;
-  secteur: { slug: string } | null;
+  secteurs: { secteur: { slug: string } }[];
 }): Poste {
   return {
     id: row.id, slug: row.slug, nom: row.nom,
@@ -166,7 +166,7 @@ function dbToPoste(row: {
     procedures_cles: parseJson<ProcedureCle[]>(row.proceduresCles, []),
     dbc: parseJson<Dbc[]>(row.dbc, []),
     rex: parseJson<string[]>(row.rex, []),
-    secteur_slug: row.secteur?.slug ?? undefined,
+    secteur_slugs: row.secteurs.map((ps) => ps.secteur.slug),
   };
 }
 

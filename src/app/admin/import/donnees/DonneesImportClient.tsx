@@ -4,7 +4,7 @@ import { useState, useRef } from "react";
 import Link from "next/link";
 import {
   ChevronLeft, Download, Upload, Loader2, CheckCircle2, AlertTriangle,
-  X, Info, FileX, Phone, BookOpen, Hash, MapPin, Building2, ClipboardList,
+  X, Info, FileX, Phone, BookOpen, Hash, MapPin, Building2, ClipboardList, Layers,
 } from "lucide-react";
 
 // ─── Types de données ───────────────────────────────────────────────────────
@@ -13,8 +13,9 @@ interface ContactRow { nom: string; role: string; categorie: string; telephone: 
 interface MnemoniqueRow { acronyme: string; titre: string; description: string; contexte?: string; couleur?: string; lettres: { lettre: string; signification: string; detail?: string }[]; errors: string[]; warnings: string[] }
 interface AbreviationRow { sigle: string; definition: string; errors: string[]; warnings: string[] }
 interface AccesRow { ligne: string; pk: string; type?: string; identifiant?: string; nomAffiche: string; nomComplet: string; latitude: number; longitude: number; description?: string; errors: string[]; warnings: string[] }
-interface PosteRow { slug: string; nom: string; typePoste: string; lignes: string[]; adresse: string; horaires: string; electrification: string; systemeBlock: string; secteur_slug?: string; particularites: string[]; errors: string[]; warnings: string[] }
+interface PosteRow { slug: string; nom: string; typePoste: string; lignes: string[]; adresse: string; horaires: string; electrification: string; systemeBlock: string; secteur_slug?: string; particularites: string[]; annuaire_json?: string; circuitsVoie_json?: string; pnSensibles_json?: string; proceduresCles_json?: string; dbc_json?: string; rex_json?: string; errors: string[]; warnings: string[] }
 interface ProcedureRow { slug: string; titre: string; typeProcedure: string; description?: string; version: string; etapes_json: string; postes_slugs?: string; errors: string[]; warnings: string[] }
+interface SecteurRow { slug: string; nom: string; ligne: string; trajet: string; description: string; pointsAcces_json?: string; procedures_json?: string; pn_json?: string; errors: string[]; warnings: string[] }
 
 interface ParsedData {
   contacts: ContactRow[];
@@ -23,6 +24,7 @@ interface ParsedData {
   acces: AccesRow[];
   postes: PosteRow[];
   procedures: ProcedureRow[];
+  secteurs: SecteurRow[];
 }
 
 interface ImportResult {
@@ -32,7 +34,7 @@ interface ImportResult {
   details: { status: string; reason?: string }[];
 }
 
-type TabId = "contacts" | "mnemoniques" | "abreviations" | "acces" | "postes" | "procedures";
+type TabId = "contacts" | "mnemoniques" | "abreviations" | "acces" | "postes" | "procedures" | "secteurs";
 
 const TABS: { id: TabId; label: string; icon: React.ReactNode; color: string }[] = [
   { id: "contacts", label: "Numéros utiles", icon: <Phone size={15} />, color: "blue" },
@@ -40,11 +42,37 @@ const TABS: { id: TabId; label: string; icon: React.ReactNode; color: string }[]
   { id: "abreviations", label: "Abréviations", icon: <Hash size={15} />, color: "purple" },
   { id: "acces", label: "Points d'accès", icon: <MapPin size={15} />, color: "green" },
   { id: "postes", label: "Postes", icon: <Building2 size={15} />, color: "orange" },
+  { id: "secteurs", label: "Secteurs", icon: <Layers size={15} />, color: "teal" },
   { id: "procedures", label: "Procédures", icon: <ClipboardList size={15} />, color: "blue" },
 ];
 
 const CONTACT_CATEGORIES = ["urgence", "astreinte", "encadrement", "externe"];
 const COULEURS = ["blue", "amber", "red", "green", "purple"];
+const VALID_ACTION_TYPES = ["information", "question_oui_non", "question_choix", "saisie_texte", "confirmation"];
+const VALID_NIVEAUX = ["informatif", "alerte", "bloquant"];
+
+function validateEtapesStructure(etapes: unknown[]): string[] {
+  const errors: string[] = [];
+  etapes.forEach((etape, ei) => {
+    const e = etape as Record<string, unknown>;
+    const prefix = `Étape ${ei + 1}`;
+    if (!e.id || typeof e.id !== "string") errors.push(`${prefix} : "id" manquant`);
+    if (!e.titre || typeof e.titre !== "string") errors.push(`${prefix} : "titre" manquant`);
+    if (typeof e.ordre !== "number") errors.push(`${prefix} : "ordre" non numérique`);
+    if (!Array.isArray(e.actions)) { errors.push(`${prefix} : "actions" manquant`); return; }
+    (e.actions as unknown[]).forEach((action, ai) => {
+      const a = action as Record<string, unknown>;
+      const ap = `${prefix} action ${ai + 1}`;
+      if (!a.id || typeof a.id !== "string") errors.push(`${ap} : "id" manquant`);
+      if (!a.label || typeof a.label !== "string") errors.push(`${ap} : "label" manquant`);
+      if (!VALID_ACTION_TYPES.includes(a.type as string)) errors.push(`${ap} : type "${a.type}" invalide`);
+      if (typeof a.obligatoire !== "boolean") errors.push(`${ap} : "obligatoire" doit être booléen`);
+      if (typeof a.verifiable !== "boolean") errors.push(`${ap} : "verifiable" doit être booléen`);
+      if (!VALID_NIVEAUX.includes(a.niveau as string)) errors.push(`${ap} : niveau "${a.niveau}" invalide`);
+    });
+  });
+  return errors;
+}
 
 // ─── Parsing Excel ──────────────────────────────────────────────────────────
 
@@ -149,7 +177,16 @@ async function parseFile(file: File): Promise<ParsedData> {
     const particularitesRaw = String(r.particularites || "").trim();
     const particularites = particularitesRaw ? particularitesRaw.split("|").map((s) => s.trim()).filter(Boolean) : [];
     if (lignes.length === 0) warnings.push("Aucune ligne renseignée");
-    return { slug, nom, typePoste, lignes, adresse: String(r.adresse || "").trim(), horaires: String(r.horaires || "").trim(), electrification: String(r.electrification || "").trim(), systemeBlock: String(r.systemeBlock || "").trim(), secteur_slug: String(r.secteur_slug || "").trim() || undefined, particularites, errors, warnings };
+    // Champs JSON complexes — vérification syntaxique uniquement
+    const jsonFields: Record<string, string | undefined> = {};
+    for (const key of ["annuaire_json", "circuitsVoie_json", "pnSensibles_json", "proceduresCles_json", "dbc_json", "rex_json"]) {
+      const raw = String(r[key] || "").trim();
+      if (raw) {
+        try { const p = JSON.parse(raw); if (!Array.isArray(p)) warnings.push(`${key}: doit être un tableau JSON (ignoré)`); else jsonFields[key] = raw; }
+        catch { warnings.push(`${key}: JSON malformé (ignoré)`); }
+      }
+    }
+    return { slug, nom, typePoste, lignes, adresse: String(r.adresse || "").trim(), horaires: String(r.horaires || "").trim(), electrification: String(r.electrification || "").trim(), systemeBlock: String(r.systemeBlock || "").trim(), secteur_slug: String(r.secteur_slug || "").trim() || undefined, particularites, ...jsonFields, errors, warnings };
   });
 
   // ── Procédures ──
@@ -171,7 +208,14 @@ async function parseFile(file: File): Promise<ParsedData> {
     } else {
       try {
         const parsed = JSON.parse(etapes_json);
-        if (!Array.isArray(parsed)) errors.push("etapes_json doit être un tableau JSON");
+        if (!Array.isArray(parsed)) {
+          errors.push("etapes_json doit être un tableau JSON");
+        } else {
+          const structErrors = validateEtapesStructure(parsed);
+          if (structErrors.length > 0) {
+            errors.push(`Structure invalide : ${structErrors.slice(0, 2).join(" ; ")}${structErrors.length > 2 ? ` (+ ${structErrors.length - 2} autres)` : ""}`);
+          }
+        }
       } catch {
         errors.push("etapes_json invalide (JSON malformé)");
       }
@@ -180,7 +224,34 @@ async function parseFile(file: File): Promise<ParsedData> {
     return { slug, titre, typeProcedure, description: String(r.description || "").trim() || undefined, version, etapes_json, postes_slugs, errors, warnings };
   });
 
-  return { contacts, mnemoniques, abreviations, acces, postes, procedures };
+  // ── Secteurs ──
+  const secteursRaws = getSheet<Record<string, string>>("Secteurs");
+  const secteurs: SecteurRow[] = secteursRaws.map((r) => {
+    const errors: string[] = [];
+    const warnings: string[] = [];
+    const slug = String(r.slug || "").trim();
+    const nom = String(r.nom || "").trim();
+    const ligne = String(r.ligne || "").trim();
+    const trajet = String(r.trajet || "").trim();
+    const description = String(r.description || "").trim();
+    if (!slug) errors.push("Slug manquant");
+    if (!nom) errors.push("Nom manquant");
+    if (!ligne) warnings.push("Ligne non renseignée (requise pour la création)");
+    if (!trajet) warnings.push("Trajet non renseigné (requis pour la création)");
+    if (!description) warnings.push("Description non renseignée (requise pour la création)");
+    // Champs JSON optionnels
+    const secteurJsonFields: Record<string, string | undefined> = {};
+    for (const key of ["pointsAcces_json", "procedures_json", "pn_json"]) {
+      const raw = String(r[key] || "").trim();
+      if (raw) {
+        try { const p = JSON.parse(raw); if (!Array.isArray(p)) warnings.push(`${key}: doit être un tableau JSON (ignoré)`); else secteurJsonFields[key] = raw; }
+        catch { warnings.push(`${key}: JSON malformé (ignoré)`); }
+      }
+    }
+    return { slug, nom, ligne, trajet, description, ...secteurJsonFields, errors, warnings };
+  });
+
+  return { contacts, mnemoniques, abreviations, acces, postes, procedures, secteurs };
 }
 
 // ─── Composant principal ────────────────────────────────────────────────────
@@ -248,6 +319,7 @@ export default function DonneesImportClient() {
       acces: "/api/admin/import/acces-excel",
       postes: "/api/admin/import/postes",
       procedures: "/api/admin/import/procedures",
+      secteurs: "/api/admin/import/secteurs",
     };
     const BODY_KEYS: Record<TabId, string> = {
       contacts: "contacts",
@@ -256,6 +328,7 @@ export default function DonneesImportClient() {
       acces: "points",
       postes: "postes",
       procedures: "procedures",
+      secteurs: "secteurs",
     };
 
     setImporting((prev) => ({ ...prev, [tabId]: true }));
@@ -294,6 +367,7 @@ export default function DonneesImportClient() {
         acces: data.acces.length,
         postes: data.postes.length,
         procedures: data.procedures.length,
+        secteurs: data.secteurs.length,
       }
     : null;
 
@@ -343,6 +417,7 @@ export default function DonneesImportClient() {
             <li>• Onglet <strong>Abreviations</strong> : sigles et définitions</li>
             <li>• Onglet <strong>Acces_Rail</strong> : points d&apos;accès ferroviaires (coordonnées GPS requises)</li>
             <li>• Onglet <strong>Postes</strong> : référentiels de postes (champs principaux)</li>
+            <li>• Onglet <strong>Secteurs</strong> : secteurs ferroviaires (slug, nom, ligne, trajet, description)</li>
             <li>• Onglet <strong>Procedures</strong> : procédures guidées (JSON des étapes exporté automatiquement)</li>
           </ul>
         </div>
@@ -541,6 +616,7 @@ function TabContent({
         {tabId === "abreviations" && <AbreviationsTable rows={data.abreviations} />}
         {tabId === "acces" && <AccesTable rows={data.acces} />}
         {tabId === "postes" && <PostesTable rows={data.postes} />}
+        {tabId === "secteurs" && <SecteursTable rows={data.secteurs} />}
         {tabId === "procedures" && <ProceduresTable rows={data.procedures} />}
       </div>
 
@@ -706,6 +782,7 @@ function PostesTable({ rows }: { rows: PosteRow[] }) {
           <th className="text-left px-3 py-2.5 font-medium text-gray-600 w-20">Type</th>
           <th className="text-left px-3 py-2.5 font-medium text-gray-600 w-28">Lignes</th>
           <th className="text-left px-3 py-2.5 font-medium text-gray-600 w-28">Secteur</th>
+          <th className="text-left px-3 py-2.5 font-medium text-gray-600 w-20">Données</th>
           <th className="text-left px-3 py-2.5 font-medium text-gray-600">Statut</th>
         </tr>
       </thead>
@@ -717,6 +794,36 @@ function PostesTable({ rows }: { rows: PosteRow[] }) {
             <td className="px-3 py-2"><span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">{r.typePoste || "—"}</span></td>
             <td className="px-3 py-2 text-xs text-gray-600">{r.lignes.join(", ") || "—"}</td>
             <td className="px-3 py-2 text-xs text-gray-600">{r.secteur_slug || "—"}</td>
+            <td className="px-3 py-2 text-xs text-gray-500">{[r.annuaire_json, r.circuitsVoie_json, r.pnSensibles_json, r.proceduresCles_json].filter(Boolean).length > 0 ? <span className="text-green-600">✓ JSON</span> : <span className="text-gray-300">—</span>}</td>
+            <td className="px-3 py-2"><RowStatus errors={r.errors} warnings={r.warnings} /></td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+}
+
+function SecteursTable({ rows }: { rows: SecteurRow[] }) {
+  return (
+    <table className="w-full text-sm">
+      <thead className="bg-gray-50 border-b border-gray-200">
+        <tr>
+          <th className="text-left px-3 py-2.5 font-medium text-gray-600">Nom</th>
+          <th className="text-left px-3 py-2.5 font-medium text-gray-600 w-32">Slug</th>
+          <th className="text-left px-3 py-2.5 font-medium text-gray-600 w-32">Ligne</th>
+          <th className="text-left px-3 py-2.5 font-medium text-gray-600">Trajet</th>
+          <th className="text-left px-3 py-2.5 font-medium text-gray-600 w-20">Données</th>
+          <th className="text-left px-3 py-2.5 font-medium text-gray-600">Statut</th>
+        </tr>
+      </thead>
+      <tbody className="divide-y divide-gray-50">
+        {rows.map((r, i) => (
+          <tr key={i} className={r.errors.length > 0 ? "bg-red-50/40" : "hover:bg-gray-50/60"}>
+            <td className="px-3 py-2 font-medium text-gray-800 truncate max-w-[160px]">{r.nom || <span className="text-red-400 italic">—</span>}</td>
+            <td className="px-3 py-2 font-mono text-xs text-gray-500 truncate">{r.slug || <span className="text-red-400 italic">—</span>}</td>
+            <td className="px-3 py-2 text-xs text-gray-600">{r.ligne || "—"}</td>
+            <td className="px-3 py-2 text-xs text-gray-600 truncate max-w-[200px]">{r.trajet || "—"}</td>
+            <td className="px-3 py-2 text-xs text-gray-500">{[r.pointsAcces_json, r.procedures_json, r.pn_json].filter(Boolean).length > 0 ? <span className="text-green-600">✓ JSON</span> : <span className="text-gray-300">—</span>}</td>
             <td className="px-3 py-2"><RowStatus errors={r.errors} warnings={r.warnings} /></td>
           </tr>
         ))}

@@ -7,66 +7,60 @@ datasource db {
   provider = "sqlite"
 }
 
-// ─── Entités métier principales ───────────────────────────────────────────────
-
 model Contact {
-  id            String   @id @default(cuid())
+  id            String         @id @default(cuid())
   nom           String
   role          String
-  categorie     String   // urgence | astreinte | encadrement | externe
+  categorie     String
   telephone     String
   telephoneAlt  String?
   note          String?
   disponibilite String?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-
-  fiches FicheContact[]
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  fiches        FicheContact[]
 }
 
 model Secteur {
-  id          String   @id @default(cuid())
-  slug        String   @unique
+  id          String         @id @default(cuid())
+  slug        String         @unique
   nom         String
   ligne       String
   trajet      String
   description String
-  pointsAcces String   // JSON: PointAcces[]
-  procedures  String   // JSON: Procedure[]
-  pn          String?  // JSON: PassageNiveau[]
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  fiches FicheSecteur[]
-  postes Poste[]
+  pointsAcces String
+  procedures  String
+  pn          String?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  fiches      FicheSecteur[]
+  postes      PosteSecteur[]
 }
 
 model Fiche {
-  id               String   @id @default(cuid())
-  slug             String   @unique
-  numero           Int      @unique
+  id               String         @id @default(cuid())
+  slug             String         @unique
+  numero           Int            @unique
   titre            String
-  categorie        String   // accident | incident | securite | gestion-agent | evacuation
-  priorite         String   // urgente | normale
+  categorie        String
+  priorite         String
   mnemonique       String?
   resume           String
-  etapes           String   // JSON: Etape[]
-  references       String?  // JSON: string[]
-  avisObligatoires String?  // JSON: string[]
-  featured         Boolean  @default(false)
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
-
-  contacts FicheContact[]
-  secteurs FicheSecteur[]
+  etapes           String
+  references       String?
+  avisObligatoires String?
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+  featured         Boolean        @default(false)
+  contacts         FicheContact[]
+  secteurs         FicheSecteur[]
 }
 
-// Tables de jonction pour les relations N-N
 model FicheContact {
   ficheId   String
   contactId String
-  fiche     Fiche   @relation(fields: [ficheId], references: [id], onDelete: Cascade)
   contact   Contact @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  fiche     Fiche   @relation(fields: [ficheId], references: [id], onDelete: Cascade)
 
   @@id([ficheId, contactId])
 }
@@ -74,8 +68,8 @@ model FicheContact {
 model FicheSecteur {
   ficheId   String
   secteurId String
-  fiche     Fiche   @relation(fields: [ficheId], references: [id], onDelete: Cascade)
   secteur   Secteur @relation(fields: [secteurId], references: [id], onDelete: Cascade)
+  fiche     Fiche   @relation(fields: [ficheId], references: [id], onDelete: Cascade)
 
   @@id([ficheId, secteurId])
 }
@@ -85,9 +79,9 @@ model Mnemonique {
   acronyme    String
   titre       String
   description String
-  lettres     String   // JSON: LettreAcronyme[]
+  lettres     String
   contexte    String?
-  couleur     String?  // blue | amber | red | green | purple
+  couleur     String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
@@ -101,105 +95,100 @@ model Abreviation {
 }
 
 model Poste {
-  id              String   @id @default(cuid())
-  slug            String   @unique
-  nom             String
-  typePoste       String
-  lignes          String   // JSON: string[]
-  adresse         String
-  horaires        String
-  electrification String
-  systemeBlock    String
-  annuaire        String   // JSON: AnnuaireSection[]
-  circuitsVoie    String   // JSON: CircuitVoie[]
-  pnSensibles     String   // JSON: PNSensiblePoste[]
-  particularites  String   // JSON: string[]
-  proceduresCles  String   // JSON: ProcedureCle[]
-  dbc             String?  // JSON: Dbc[]
-  rex             String?  // JSON: string[]
-  secteurId       String?
-  secteur         Secteur? @relation(fields: [secteurId], references: [id])
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-
+  id               String             @id @default(cuid())
+  slug             String             @unique
+  nom              String
+  typePoste        String
+  lignes           String
+  adresse          String
+  horaires         String
+  electrification  String
+  systemeBlock     String
+  annuaire         String
+  circuitsVoie     String
+  pnSensibles      String
+  particularites   String
+  proceduresCles   String
+  dbc              String?
+  rex              String?
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+  secteurs         PosteSecteur[]
   proceduresMetier PosteProcedure[]
   sessionsMetier   SessionProcedure[]
 }
 
-// ─── Moteur de procédure métier ────────────────────────────────────────────────
+model PosteSecteur {
+  posteId   String
+  secteurId String
+  secteur   Secteur @relation(fields: [secteurId], references: [id], onDelete: Cascade)
+  poste     Poste   @relation(fields: [posteId], references: [id], onDelete: Cascade)
 
-model Procedure {
-  id            String   @id @default(cuid())
-  slug          String   @unique
-  titre         String
-  typeProcedure String   // cessation | reprise | incident | travaux | autre
-  description   String?
-  version       String   @default("1.0")
-  etapes        String   // JSON: EtapeMetier[]
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-
-  postes   PosteProcedure[]
-  sessions SessionProcedure[]
+  @@id([posteId, secteurId])
 }
 
-// Association N-N Poste ↔ Procedure
+model Procedure {
+  id            String             @id @default(cuid())
+  slug          String             @unique
+  titre         String
+  typeProcedure String
+  description   String?
+  version       String             @default("1.0")
+  etapes        String
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+  postes        PosteProcedure[]
+  sessions      SessionProcedure[]
+}
+
 model PosteProcedure {
-  id          String @id @default(cuid())
+  id          String    @id @default(cuid())
   posteId     String
   procedureId String
-  ordre       Int    @default(0)
-
-  poste     Poste     @relation(fields: [posteId], references: [id], onDelete: Cascade)
-  procedure Procedure @relation(fields: [procedureId], references: [id], onDelete: Cascade)
+  ordre       Int       @default(0)
+  procedure   Procedure @relation(fields: [procedureId], references: [id], onDelete: Cascade)
+  poste       Poste     @relation(fields: [posteId], references: [id], onDelete: Cascade)
 
   @@unique([posteId, procedureId])
 }
 
-// Session d'exécution d'une procédure
 model SessionProcedure {
-  id                String    @id @default(cuid())
+  id                String                  @id @default(cuid())
   procedureId       String
   procedureVersion  String
-  procedureSnapshot String    // JSON: Procedure snapshot immuable au démarrage
+  procedureSnapshot String
   posteId           String
-  posteSlug         String    // dénormalisé pour requêtes rapides
+  posteSlug         String
   agentNom          String?
-  statut            String    @default("en_cours") // en_cours | terminee | abandonnee
-  etapeIndex        Int       @default(0)
-  etat              String    @default("{\"etapes\":{}}") // JSON: EtatSession
-  synthese          String?   // JSON: Synthese — null jusqu'à la clôture
-  startedAt         DateTime  @default(now())
+  statut            String                  @default("en_cours")
+  etapeIndex        Int                     @default(0)
+  etat              String                  @default("{\"etapes\":{}}")
+  synthese          String?
+  startedAt         DateTime                @default(now())
   completedAt       DateTime?
-  eventsArchived    Boolean   @default(false)   // true ssi aucun event actif ne subsiste après archivage
-  eventsArchivedAt  DateTime?                   // horodatage du dernier archivage complet
-
-  procedure Procedure              @relation(fields: [procedureId], references: [id])
-  poste     Poste                  @relation(fields: [posteId], references: [id])
-  events    SessionProcedureEvent[]
+  eventsArchived    Boolean                 @default(false)
+  eventsArchivedAt  DateTime?
+  poste             Poste                   @relation(fields: [posteId], references: [id])
+  procedure         Procedure               @relation(fields: [procedureId], references: [id])
+  events            SessionProcedureEvent[]
 
   @@index([posteSlug])
   @@index([statut])
-  @@index([eventsArchived, statut, completedAt]) // index du batch d'archivage
+  @@index([eventsArchived, statut, completedAt])
 }
 
-// Journal append-only des événements d'une session
 model SessionProcedureEvent {
-  id         String   @id @default(cuid())
+  id         String           @id @default(cuid())
   sessionId  String
-  sequence   Int      // position dans la session, assignée par l'application
-  type       String   // session_started | reponse_enregistree | etape_avancee
-                      // | session_completee | session_abandonnee
-  // Colonnes dénormalisées pour requêtes fréquentes (non null selon type)
+  sequence   Int
+  type       String
   etapeId    String?
   actionId   String?
-  valeur     String?  // réponse sérialisée en string ("true", "false", texte libre, choix)
-  // Données complètes — source of truth
-  payload    String   // JSON: snapshot complet de l'événement
-  actorNom   String?  // dénormalisé au moment de l'event
-  occurredAt DateTime @default(now())
-
-  session SessionProcedure @relation(fields: [sessionId], references: [id], onDelete: Restrict)
+  valeur     String?
+  payload    String
+  actorNom   String?
+  occurredAt DateTime         @default(now())
+  session    SessionProcedure @relation(fields: [sessionId], references: [id])
 
   @@unique([sessionId, sequence])
   @@index([sessionId, occurredAt])
@@ -207,9 +196,8 @@ model SessionProcedureEvent {
   @@index([actionId])
 }
 
-// Archive immuable des événements des sessions clôturées et anciennes
 model SessionProcedureEventArchive {
-  id         String   @id           // même id que l'original — garantit l'idempotence
+  id         String   @id
   sessionId  String
   sequence   Int
   type       String
@@ -219,7 +207,7 @@ model SessionProcedureEventArchive {
   payload    String
   actorNom   String?
   occurredAt DateTime
-  archivedAt DateTime @default(now()) // horodatage de la migration vers l'archive
+  archivedAt DateTime @default(now())
 
   @@unique([sessionId, sequence])
   @@index([sessionId])
@@ -227,20 +215,18 @@ model SessionProcedureEventArchive {
   @@index([actionId])
 }
 
-// ─── Points d'accès ferroviaires (KML + back-office) ──────────────────────────
-
 model AccesRail {
   id          String   @id @default(cuid())
   ligne       String
   pk          String
-  type        String?  // PN | TUN | PRO | SRD | PRA | etc.
-  identifiant String?  // ex: 178-2
-  nomAffiche  String   // ex: PN 178-2
-  nomComplet  String   // nom brut original
+  type        String?
+  identifiant String?
+  nomAffiche  String
+  nomComplet  String
   latitude    Float
   longitude   Float
   description String?
-  source      String   @default("KML") // KML | BACKOFFICE
+  source      String   @default("KML")
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -248,91 +234,62 @@ model AccesRail {
   @@index([pk])
 }
 
-// ─── Utilisateurs (front-office et back-office) ────────────────────────────────
-
 model User {
-  id        String   @id @default(cuid())
-  username  String   @unique
-  password  String   // bcrypt hash
-  nom       String
-  prenom    String
-  email     String?  @unique
-  role      String   @default("USER") // ADMIN | EDITOR | USER
-  actif     Boolean  @default(true)
-  status    String   @default("approved") // pending | approved | rejected
-  poste     String?  // poste / service (optionnel, inscription)
-  motif     String?  // motif de la demande (optionnel, inscription)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  sessions    FicheSession[]
+  id          String            @id @default(cuid())
+  username    String            @unique
+  password    String
+  nom         String
+  prenom      String
+  role        String            @default("USER")
+  actif       Boolean           @default(true)
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  email       String?           @unique
+  status      String            @default("approved")
+  poste       String?
+  motif       String?
   actionLogs  FicheActionLog[]
   commentLogs FicheCommentLog[]
+  sessions    FicheSession[]
 }
 
-// ─── Sessions de fiche (événements en cours) ───────────────────────────────────
-
 model FicheSession {
-  id              String    @id @default(cuid())
+  id              String            @id @default(cuid())
   ficheSlug       String
   ficheTitre      String
   createdByUserId String
-  startedAt       DateTime  @default(now())
+  startedAt       DateTime          @default(now())
   endedAt         DateTime?
-  status          String    @default("active") // active | archived
-
-  createdBy   User             @relation(fields: [createdByUserId], references: [id])
-  actionLogs  FicheActionLog[]
-  commentLogs FicheCommentLog[]
+  status          String            @default("active")
+  actionLogs      FicheActionLog[]
+  commentLogs     FicheCommentLog[]
+  createdBy       User              @relation(fields: [createdByUserId], references: [id])
 
   @@index([ficheSlug])
   @@index([status])
 }
 
-// ─── Journal des actions cochées ───────────────────────────────────────────────
-
 model FicheActionLog {
-  id          String   @id @default(cuid())
+  id          String       @id @default(cuid())
   sessionId   String
   ficheSlug   String
   etapeOrdre  Int
   actionIndex Int
   actionLabel String
   userId      String
-  timestamp   DateTime @default(now())
-  type        String   // checked | unchecked
-
-  session FicheSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-  user    User         @relation(fields: [userId], references: [id])
+  timestamp   DateTime     @default(now())
+  type        String
+  user        User         @relation(fields: [userId], references: [id])
+  session     FicheSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
 }
 
-// ─── Journal des commentaires terrain ─────────────────────────────────────────
-
 model FicheCommentLog {
-  id        String   @id @default(cuid())
+  id        String       @id @default(cuid())
   sessionId String
   ficheSlug String
   userId    String
-  timestamp DateTime @default(now())
+  timestamp DateTime     @default(now())
   message   String
-
-  session FicheSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-  user    User         @relation(fields: [userId], references: [id])
-}
-
-// ─── Audit des actions back-office ────────────────────────────────────────────
-
-model AdminAuditLog {
-  id         String   @id @default(cuid())
-  userId     String
-  userNom    String   // dénormalisé au moment de l'action
-  action     String   // CREATE | UPDATE | DELETE
-  resource   String   // contact | fiche | user | mnemonique | abreviation
-  resourceId String
-  detail     String?  // informations libres (ex: "titre: Accident voyageur")
-  timestamp  DateTime @default(now())
-
-  @@index([resource, resourceId])
-  @@index([userId])
-  @@index([timestamp])
+  user      User         @relation(fields: [userId], references: [id])
+  session   FicheSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
 }
