@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import Link from "next/link";
 import { ChevronRight, AlertCircle } from "lucide-react";
 import { getAllFiches } from "@/lib/db";

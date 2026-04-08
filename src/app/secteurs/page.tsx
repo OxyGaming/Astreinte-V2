@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import Link from "next/link";
 import { ChevronRight, MapPin, Train } from "lucide-react";
 import { getAllSecteurs } from "@/lib/db";

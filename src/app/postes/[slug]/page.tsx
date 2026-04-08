@@ -1,6 +1,6 @@
 export const dynamic = "force-dynamic";
 
-import { getAllPostes, getPosteBySlug } from "@/lib/db";
+import { getPosteBySlug } from "@/lib/db";
 import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import Link from "next/link";
@@ -31,10 +31,6 @@ const TYPE_PROCEDURE_META: Record<string, { label: string; sublabel: string; ico
   autre:     { label: "Procédures",           sublabel: "Lancer la procédure guidée", icon: BookOpen,      bg: "bg-slate-700 hover:bg-slate-800", iconColor: "text-white" },
 };
 
-export async function generateStaticParams() {
-  const postes = await getAllPostes();
-  return postes.map((p) => ({ slug: p.slug }));
-}
 
 export default async function PosteDetailPage({
   params,

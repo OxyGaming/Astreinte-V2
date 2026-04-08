@@ -1,16 +1,13 @@
+export const dynamic = "force-dynamic";
+
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, MapPin, Navigation, AlertTriangle, ChevronRight, Phone, BookOpen } from "lucide-react";
-import { getAllSecteurs, getSecteurBySlug } from "@/lib/db";
+import { getSecteurBySlug } from "@/lib/db";
 import Accordion from "@/components/Accordion";
 
 interface Props {
   params: Promise<{ slug: string }>;
-}
-
-export async function generateStaticParams() {
-  const secteurs = await getAllSecteurs();
-  return secteurs.map((s) => ({ slug: s.slug }));
 }
 
 export default async function SecteurDetailPage({ params }: Props) {
