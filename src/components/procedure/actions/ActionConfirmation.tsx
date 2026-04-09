@@ -48,7 +48,7 @@ export default function ActionConfirmation({ action, valeur, onChange, contactTe
             {action.referenceDoc}
           </span>
         )}
-        {contactTelephone && !checked && (
+        {contactTelephone && (
           <div className="mt-2" onClick={(e) => e.stopPropagation()}>
             <PhoneButton number={contactTelephone} size="sm" />
           </div>

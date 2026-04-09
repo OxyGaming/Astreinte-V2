@@ -4,6 +4,10 @@ import { getCurrentUser } from "@/lib/user-auth";
 import { logAdminAction } from "@/lib/audit";
 
 export async function GET() {
+  const user = await getCurrentUser();
+  if (!user || (user.role !== "ADMIN" && user.role !== "EDITOR")) {
+    return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
+  }
   const contacts = await prisma.contact.findMany({ orderBy: { nom: "asc" } });
   return NextResponse.json(contacts);
 }

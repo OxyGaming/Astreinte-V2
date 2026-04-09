@@ -1,8 +1,8 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, AlertTriangle, CheckCircle, ChevronRight, Phone, BookOpen } from "lucide-react";
+import { ArrowLeft, AlertTriangle, CheckCircle, ChevronRight, BookOpen } from "lucide-react";
 import { getFicheBySlug, getAllContacts, getActiveSession, getSessionJournal, getCheckedActionsForSession } from "@/lib/db";
-import PhoneButton from "@/components/PhoneButton";
+import ContactCard from "@/components/ContactCard";
 import FicheSessionView from "@/components/FicheSessionView";
 import { getCurrentUser } from "@/lib/user-auth";
 
@@ -151,7 +151,7 @@ export default async function FicheDetailPage({ params }: Props) {
           </section>
         )}
 
-        {/* Contacts liés */}
+        {/* Contacts liés — toutes les infos visibles en situation d'urgence */}
         {contactsLies.length > 0 && (
           <section className="px-4 lg:px-8">
             <h2 className="text-xs font-bold text-slate-500 uppercase tracking-wide mb-3">
@@ -159,11 +159,12 @@ export default async function FicheDetailPage({ params }: Props) {
             </h2>
             <div className="card divide-y divide-slate-100">
               {contactsLies.map((c) => (
-                <div key={c.id} className="px-4 py-3">
-                  <p className="font-semibold text-slate-800 text-sm">{c.nom}</p>
-                  <p className="text-xs text-slate-500 mb-2">{c.role}</p>
-                  <PhoneButton number={c.telephone} />
-                </div>
+                <ContactCard
+                  key={c.id}
+                  contact={c}
+                  mode="full"
+                  showLink={true}
+                />
               ))}
               <Link
                 href="/contacts"

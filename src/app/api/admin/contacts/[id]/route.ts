@@ -6,6 +6,10 @@ import { logAdminAction } from "@/lib/audit";
 type Params = { params: Promise<{ id: string }> };
 
 export async function GET(_req: NextRequest, { params }: Params) {
+  const user = await getCurrentUser();
+  if (!user || (user.role !== "ADMIN" && user.role !== "EDITOR")) {
+    return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
+  }
   const { id } = await params;
   const contact = await prisma.contact.findUnique({
     where: { id },

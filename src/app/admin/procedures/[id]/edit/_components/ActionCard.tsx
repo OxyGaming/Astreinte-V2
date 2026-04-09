@@ -3,6 +3,7 @@ import { useState } from "react";
 import type { ActionForm } from "@/lib/procedure/form-types";
 import { TYPE_ACTION_OPTIONS, NIVEAU_OPTIONS, actionIdFromLabel, slugify } from "@/lib/procedure/form-types";
 import { ChevronDown, ChevronUp, ChevronRight, Copy, Trash2, Pencil, Lock } from "lucide-react";
+import ContactPicker from "./ContactPicker";
 
 interface Props {
   action: ActionForm;
@@ -22,6 +23,7 @@ const TYPE_COLORS: Record<string, string> = {
   question_choix: "bg-purple-100 text-purple-700",
   saisie_texte: "bg-amber-100 text-amber-700",
   confirmation: "bg-gray-100 text-gray-700",
+  contact_recherche: "bg-teal-100 text-teal-700",
 };
 
 export default function ActionCard({
@@ -43,6 +45,11 @@ export default function ActionCard({
       updates.niveau = "informatif";
       updates.reponseAttendue = null;
     }
+    if (type === "contact_recherche") {
+      updates.niveau = "informatif";
+      updates.reponseAttendue = null;
+      updates.reponsesDisponibles = [];
+    }
     if (type === "saisie_texte" && action.niveau === "bloquant") {
       updates.niveau = "alerte";
     }
@@ -55,6 +62,9 @@ export default function ActionCard({
     if (type !== "confirmation") {
       updates.contactId = "";
       updates.referenceDoc = "";
+    }
+    if (type !== "contact_recherche") {
+      updates.filtreCategorieContact = "";
     }
     onUpdate({ ...action, ...updates });
   };
@@ -81,8 +91,11 @@ export default function ActionCard({
   const typeLabel = TYPE_ACTION_OPTIONS.find((o) => o.value === action.type)?.label ?? action.type;
   const typeColor = TYPE_COLORS[action.type] ?? "bg-gray-100 text-gray-700";
 
-  // Niveau options — bloquant disabled for information and saisie_texte
-  const niveauDisabled = action.type === "information" || action.type === "saisie_texte";
+  // Niveau options — bloquant disabled for information, saisie_texte, contact_recherche
+  const niveauDisabled =
+    action.type === "information" ||
+    action.type === "saisie_texte" ||
+    action.type === "contact_recherche";
 
   return (
     <div className="border border-gray-200 rounded-lg overflow-hidden bg-white">
@@ -125,7 +138,7 @@ export default function ActionCard({
               <select
                 value={action.niveau}
                 onChange={(e) => set("niveau", e.target.value as ActionForm["niveau"])}
-                disabled={action.type === "information"}
+                disabled={niveauDisabled}
                 className="w-full rounded border border-gray-300 px-2.5 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:bg-gray-50 disabled:text-gray-400"
               >
                 {NIVEAU_OPTIONS.map((o) => (
@@ -136,6 +149,9 @@ export default function ActionCard({
               </select>
               {action.type === "saisie_texte" && (
                 <p className="text-xs text-amber-600 mt-1">V1 : saisie texte ne peut pas être bloquante (pas d&apos;évaluation automatique)</p>
+              )}
+              {action.type === "contact_recherche" && (
+                <p className="text-xs text-teal-600 mt-1">Toujours informatif — la sélection d&apos;un contact n&apos;est pas évaluable comme bonne/mauvaise réponse</p>
               )}
             </div>
           </div>
@@ -275,21 +291,79 @@ export default function ActionCard({
             </div>
           )}
 
+          {/* contact_recherche : configuration */}
+          {action.type === "contact_recherche" && (
+            <div className="rounded-lg border border-teal-200 bg-teal-50 p-3 space-y-3">
+              <p className="text-xs font-semibold text-teal-700 uppercase tracking-wide">
+                Recherche contact — configuration
+              </p>
+
+              {/* Filtre catégorie */}
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1">
+                  Restreindre à une catégorie{" "}
+                  <span className="font-normal text-gray-400">(optionnel)</span>
+                </label>
+                <select
+                  value={action.filtreCategorieContact}
+                  onChange={(e) => set("filtreCategorieContact", e.target.value)}
+                  className="w-full rounded border border-gray-300 px-2.5 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                >
+                  <option value="">— Tous les contacts (recherche globale) —</option>
+                  <option value="urgence">Urgences &amp; Opérations</option>
+                  <option value="astreinte">Astreintes</option>
+                  <option value="encadrement">Encadrement</option>
+                  <option value="externe">Contacts externes</option>
+                </select>
+                <p className="text-xs text-gray-400 mt-1">
+                  Exemple : choisir &quot;Astreintes&quot; si l&apos;agent doit impérativement contacter un agent d&apos;astreinte.
+                  Laisser vide si n&apos;importe quel contact peut convenir.
+                </p>
+              </div>
+
+              {/* Rappel comportement */}
+              <div className="rounded bg-teal-100 px-2.5 py-2 space-y-1">
+                <p className="text-xs font-semibold text-teal-700">Ce que voit l&apos;agent :</p>
+                <ul className="text-xs text-teal-600 space-y-0.5 list-disc list-inside">
+                  <li>Un champ de recherche (nom, rôle)</li>
+                  <li>Les résultats avec <strong>bouton d&apos;appel direct</strong> visible immédiatement</li>
+                  <li>Après sélection : numéro principal, numéro fixe, disponibilité</li>
+                  {action.obligatoire && (
+                    <li className="font-semibold">La sélection est obligatoire pour passer à l&apos;étape suivante</li>
+                  )}
+                </ul>
+              </div>
+
+              {/* Avertissement si non obligatoire */}
+              {!action.obligatoire && (
+                <p className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded px-2.5 py-1.5">
+                  ⚠️ Action non obligatoire : l&apos;agent peut avancer sans sélectionner de contact.
+                  Cochez &quot;Obligatoire&quot; si la sélection est requise.
+                </p>
+              )}
+            </div>
+          )}
+
           {/* confirmation : contactId + referenceDoc */}
           {action.type === "confirmation" && (
-            <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-3">
               <div>
-                <label className="block text-xs font-semibold text-gray-600 mb-1">ID Contact <span className="font-normal text-gray-400">(affiche un bouton d&apos;appel)</span></label>
-                <input
-                  type="text"
+                <label className="block text-xs font-semibold text-gray-600 mb-1">
+                  Contact à appeler{" "}
+                  <span className="font-normal text-gray-400">
+                    (affiche un bouton d&apos;appel dans la procédure)
+                  </span>
+                </label>
+                <ContactPicker
                   value={action.contactId}
-                  onChange={(e) => set("contactId", e.target.value)}
-                  placeholder="Ex : supervision"
-                  className="w-full rounded border border-gray-300 px-2.5 py-2 text-sm font-mono focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  onChange={(id) => set("contactId", id)}
                 />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-gray-600 mb-1">Référence doc <span className="font-normal text-gray-400">(badge)</span></label>
+                <label className="block text-xs font-semibold text-gray-600 mb-1">
+                  Référence doc{" "}
+                  <span className="font-normal text-gray-400">(badge réglementaire, optionnel)</span>
+                </label>
                 <input
                   type="text"
                   value={action.referenceDoc}

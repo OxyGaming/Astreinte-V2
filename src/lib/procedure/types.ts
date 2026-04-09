@@ -6,15 +6,17 @@
 // ─── Action : 5 types V1 core ─────────────────────────────────────────────────
 
 export type TypeAction =
-  | "information"      // Affichage pur, aucune réponse requise
-  | "question_oui_non" // Réponse Oui / Non
-  | "question_choix"   // Choix parmi une liste
-  | "saisie_texte"     // Saisie libre
-  | "confirmation";    // Checkbox "J'ai effectué cette action"
+  | "information"        // Affichage pur, aucune réponse requise
+  | "question_oui_non"   // Réponse Oui / Non
+  | "question_choix"     // Choix parmi une liste
+  | "saisie_texte"       // Saisie libre
+  | "confirmation"       // Checkbox "J'ai effectué cette action"
+  | "contact_recherche"; // Recherche d'un contact avec autocomplétion (réponse = contactId sélectionné)
 
 // Enrichissements UI (n'impactent pas le moteur, portés comme champs optionnels)
-//   contactId?    → affiche un PhoneButton (appel direct)
-//   referenceDoc? → affiche un badge référence réglementaire
+//   contactId?            → affiche un PhoneButton (appel direct, type confirmation)
+//   referenceDoc?         → affiche un badge référence réglementaire
+//   filtreCategorieContact? → filtre la recherche sur une catégorie (type contact_recherche)
 
 // ─── Niveau d'une action ─────────────────────────────────────────────────────
 
@@ -61,8 +63,9 @@ export interface ActionMetier {
   niveau: NiveauAction;             // Impact d'une mauvaise réponse sur la synthèse
 
   // Enrichissements UI (sans impact moteur)
-  contactId?: string;               // Affiche un PhoneButton si présent
-  referenceDoc?: string;            // Affiche un badge référence si présent
+  contactId?: string;                    // Affiche un PhoneButton si présent (confirmation)
+  referenceDoc?: string;                 // Affiche un badge référence si présent
+  filtreCategorieContact?: string;       // Filtre la recherche par catégorie (contact_recherche)
 
   // V2 : présent dans le JSON, ignoré par le moteur V1
   conditionAffichage?: ConditionExpr;

@@ -1,23 +1,75 @@
 "use client";
-import { useState, useCallback } from "react";
-import { X, Eye, AlertTriangle } from "lucide-react";
+import { useState, useCallback, useEffect, useMemo } from "react";
+import { X, Eye, AlertTriangle, Loader2 } from "lucide-react";
 import type { ProcedureForm } from "@/lib/procedure/form-types";
 import { formToMetier } from "@/lib/procedure/form-types";
 import { initialiserEtatSession, enregistrerReponse, etapesVisibles, actionsVisibles, etapeFranchissable } from "@/lib/procedure/engine";
 import type { EtatSession, ValeurReponse } from "@/lib/procedure/types";
+import type { Contact } from "@/lib/types";
 import ActionRenderer from "@/components/procedure/ActionRenderer";
 import { CheckCircle2, Circle, ChevronLeft, ChevronRight } from "lucide-react";
+
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+// Shape brute retournée par /api/admin/contacts (camelCase Prisma)
+interface RawContact {
+  id: string;
+  nom: string;
+  role: string;
+  categorie: string;
+  telephone: string;
+  telephoneAlt: string | null;
+  note: string | null;
+  disponibilite: string | null;
+}
+
+function rawToContact(c: RawContact): Contact {
+  return {
+    id: c.id,
+    nom: c.nom,
+    role: c.role,
+    categorie: c.categorie as Contact["categorie"],
+    telephone: c.telephone,
+    telephone_alt: c.telephoneAlt ?? undefined,
+    note: c.note ?? undefined,
+    disponibilite: c.disponibilite ?? undefined,
+  };
+}
+
+// ─── Props ────────────────────────────────────────────────────────────────────
 
 interface Props {
   form: ProcedureForm;
   onClose: () => void;
 }
 
+// ─── Composant ────────────────────────────────────────────────────────────────
+
 export default function PreviewModal({ form, onClose }: Props) {
   const procedure = formToMetier(form);
   const [etat, setEtat] = useState<EtatSession>(() => initialiserEtatSession(procedure));
   const [etapeIndex, setEtapeIndex] = useState(0);
 
+  // ── Chargement des contacts ────────────────────────────────────────────────
+  const [contacts, setContacts] = useState<Contact[]>([]);
+  const [contactsLoading, setContactsLoading] = useState(true);
+
+  useEffect(() => {
+    fetch("/api/admin/contacts")
+      .then((r) => (r.ok ? r.json() : Promise.reject()))
+      .then((data: RawContact[]) => setContacts(data.map(rawToContact)))
+      .catch(() => {/* silencieux — le preview reste utilisable sans contacts */})
+      .finally(() => setContactsLoading(false));
+  }, []);
+
+  // Index id → telephone (pour ActionConfirmation)
+  const contactsIndex = useMemo<Record<string, string>>(() => {
+    const idx: Record<string, string> = {};
+    for (const c of contacts) idx[c.id] = c.telephone;
+    return idx;
+  }, [contacts]);
+
+  // ── Moteur procédure ───────────────────────────────────────────────────────
   const etapes = etapesVisibles(procedure, etat);
   const etapeCourante = etapes[etapeIndex] ?? etapes[0];
   const estDerniere = etapeIndex === etapes.length - 1;
@@ -27,6 +79,7 @@ export default function PreviewModal({ form, onClose }: Props) {
     setEtat((prev) => enregistrerReponse(prev, etapeCourante.id, actionId, valeur));
   }, [etapeCourante]);
 
+  // ── Aucune étape ───────────────────────────────────────────────────────────
   if (!etapeCourante) {
     return (
       <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center">
@@ -44,11 +97,15 @@ export default function PreviewModal({ form, onClose }: Props) {
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
       <div className="bg-white w-full sm:max-w-lg sm:rounded-2xl overflow-hidden shadow-2xl max-h-[95vh] flex flex-col">
-        {/* Banner non-persistant */}
+
+        {/* Banner */}
         <div className="flex items-center justify-between bg-amber-50 border-b border-amber-200 px-4 py-2.5">
           <div className="flex items-center gap-2 text-amber-700">
             <Eye size={14} />
             <span className="text-xs font-semibold">MODE APERÇU — Les réponses ne sont pas enregistrées</span>
+            {contactsLoading && (
+              <Loader2 size={12} className="animate-spin text-amber-500 ml-1" />
+            )}
           </div>
           <button onClick={onClose} className="p-1 text-amber-500 hover:text-amber-700">
             <X size={16} />
@@ -87,13 +144,19 @@ export default function PreviewModal({ form, onClose }: Props) {
               {actionsVisibles(etapeCourante, etat).map((action) => {
                 const valeur = etatEtape?.reponses[action.id]?.valeur ?? null;
                 const estBloque = actionsBloques.includes(action.id);
+                // Résolution du téléphone pour les actions de type confirmation avec contactId
+                const contactTelephone = action.contactId ? contactsIndex[action.contactId] : undefined;
                 return (
-                  <div key={action.id} className={`rounded-xl border bg-white p-4 ${estBloque ? "border-red-300 ring-1 ring-red-200" : "border-slate-200"}`}>
+                  <div
+                    key={action.id}
+                    className={`rounded-xl border bg-white p-4 ${estBloque ? "border-red-300 ring-1 ring-red-200" : "border-slate-200"}`}
+                  >
                     <ActionRenderer
                       action={action}
                       valeur={valeur}
                       onChange={(v) => handleRepondre(action.id, v)}
-                      contactTelephone={undefined}
+                      contactTelephone={contactTelephone}
+                      allContacts={contacts}
                     />
                   </div>
                 );
@@ -104,7 +167,9 @@ export default function PreviewModal({ form, onClose }: Props) {
           {!ok && (
             <div className="flex items-center gap-2 bg-red-50 border border-red-200 rounded-xl px-3 py-2.5">
               <AlertTriangle size={14} className="text-red-500 flex-shrink-0" />
-              <p className="text-xs text-red-700 font-medium">{actionsBloques.length} action{actionsBloques.length > 1 ? "s" : ""} en attente ou bloquante{actionsBloques.length > 1 ? "s" : ""}.</p>
+              <p className="text-xs text-red-700 font-medium">
+                {actionsBloques.length} action{actionsBloques.length > 1 ? "s" : ""} en attente ou bloquante{actionsBloques.length > 1 ? "s" : ""}.
+              </p>
             </div>
           )}
         </div>

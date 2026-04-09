@@ -40,6 +40,7 @@ export type ActionForm = {
   reponsesDisponibles: string[];            // question_choix uniquement
   contactId: string;
   referenceDoc: string;
+  filtreCategorieContact: string;           // contact_recherche : filtre optionnel
 };
 
 export type ValidationError = { field: string; message: string };
@@ -60,6 +61,7 @@ export const TYPE_ACTION_OPTIONS: { value: TypeAction; label: string; descriptio
   { value: "question_choix", label: "Choix multiple", description: "L'agent choisit parmi une liste de réponses" },
   { value: "saisie_texte", label: "Saisie texte libre", description: "L'agent saisit un texte libre (non évalué en V1)" },
   { value: "confirmation", label: "Confirmation d'action", description: "L'agent confirme avoir effectué une action" },
+  { value: "contact_recherche", label: "Recherche contact", description: "L'agent recherche et sélectionne un contact avec accès immédiat au numéro" },
 ];
 
 export const NIVEAU_OPTIONS: { value: NiveauAction; label: string; color: string }[] = [
@@ -139,6 +141,7 @@ export function emptyAction(_existingActionIds: string[]): ActionForm {
     reponsesDisponibles: [],
     contactId: "",
     referenceDoc: "",
+    filtreCategorieContact: "",
   };
 }
 
@@ -196,6 +199,7 @@ export function formToMetier(form: ProcedureForm): ProcedureMetier {
         niveau: action.type === "information" ? "informatif" : action.niveau,
         contactId: action.contactId || undefined,
         referenceDoc: action.referenceDoc || undefined,
+        filtreCategorieContact: action.filtreCategorieContact || undefined,
       })),
     })),
   };
@@ -236,6 +240,7 @@ export function metierToForm(
         reponsesDisponibles: action.reponsesDisponibles ?? [],
         contactId: action.contactId ?? "",
         referenceDoc: action.referenceDoc ?? "",
+        filtreCategorieContact: (action as { filtreCategorieContact?: string }).filtreCategorieContact ?? "",
       })),
     })),
   };
@@ -291,6 +296,10 @@ export function validateProcedureForm(form: ProcedureForm): ValidationError[] {
       // saisie_texte : bloquant interdit (pas de réponse attendue exploitable en V1)
       if (action.type === "saisie_texte" && action.niveau === "bloquant")
         errors.push({ field: `${pf}.niveau`, message: `${loc} : une saisie texte ne peut pas être bloquante (aucune réponse attendue vérifiable en V1)` });
+
+      // contact_recherche : niveau doit être informatif (pas de bonne/mauvaise réponse)
+      if (action.type === "contact_recherche" && action.niveau !== "informatif")
+        errors.push({ field: `${pf}.niveau`, message: `${loc} : une recherche contact doit être de niveau informatif (pas de réponse attendue évaluable)` });
 
       // bloquant + question_oui_non : reponseAttendue obligatoire
       if (action.niveau === "bloquant" && action.type === "question_oui_non" && action.reponseAttendue === null)

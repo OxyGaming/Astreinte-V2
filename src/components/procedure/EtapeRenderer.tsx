@@ -3,6 +3,7 @@
 import type { EtapeMetier, EtatEtape, ValeurReponse } from "@/lib/procedure/types";
 import { actionsVisibles, etapeFranchissable } from "@/lib/procedure/engine";
 import type { EtatSession } from "@/lib/procedure/types";
+import type { Contact } from "@/lib/types";
 import ActionRenderer from "./ActionRenderer";
 import { AlertTriangle, ChevronRight, ChevronLeft } from "lucide-react";
 
@@ -15,13 +16,15 @@ interface Props {
   onSuivant: () => void;
   onPrecedent: () => void;
   onTerminer: () => void;
-  /** Map contactId → telephone (résolution des enrichissements UI) */
+  /** Map contactId → telephone (enrichissement confirmation) */
   contactsIndex: Record<string, string>;
+  /** Liste complète des contacts (pour les actions contact_recherche) */
+  allContacts?: Contact[];
 }
 
 export default function EtapeRenderer({
   etape, etatEtape, etat, estDerniere,
-  onRepondre, onSuivant, onPrecedent, onTerminer, contactsIndex,
+  onRepondre, onSuivant, onPrecedent, onTerminer, contactsIndex, allContacts = [],
 }: Props) {
   const actions = actionsVisibles(etape, etat);
   const { ok, actionsBloques } = etapeFranchissable(etape, etat);
@@ -56,6 +59,7 @@ export default function EtapeRenderer({
                 valeur={valeur}
                 onChange={(v) => onRepondre(action.id, v)}
                 contactTelephone={action.contactId ? contactsIndex[action.contactId] : undefined}
+                allContacts={allContacts}
               />
             </div>
           );

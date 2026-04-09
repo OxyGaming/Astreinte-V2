@@ -25,9 +25,32 @@ export async function getContactById(id: string): Promise<Contact | null> {
   return row ? dbToContact(row) : null;
 }
 
+export interface ContactWithFiches extends Contact {
+  fiches: { id: string; titre: string; slug: string; numero: number }[];
+}
+
+export async function getContactWithFiches(id: string): Promise<ContactWithFiches | null> {
+  const row = await prisma.contact.findUnique({
+    where: { id },
+    include: {
+      fiches: {
+        include: {
+          fiche: { select: { id: true, titre: true, slug: true, numero: true } },
+        },
+      },
+    },
+  });
+  if (!row) return null;
+  return {
+    ...dbToContact(row),
+    fiches: row.fiches.map((f) => f.fiche),
+  };
+}
+
 function dbToContact(row: {
   id: string; nom: string; role: string; categorie: string;
-  telephone: string; telephoneAlt: string | null; note: string | null; disponibilite: string | null;
+  telephone: string; telephoneAlt: string | null; note: string | null;
+  disponibilite: string | null; secteurId?: string | null;
 }): Contact {
   return {
     id: row.id, nom: row.nom, role: row.role,
@@ -36,6 +59,7 @@ function dbToContact(row: {
     telephone_alt: row.telephoneAlt ?? undefined,
     note: row.note ?? undefined,
     disponibilite: row.disponibilite ?? undefined,
+    secteur_id: row.secteurId ?? undefined,
   };
 }
 
@@ -128,7 +152,41 @@ export const getAllAbreviations = cache(async (): Promise<Abréviation[]> => {
 
 // ─── Postes ────────────────────────────────────────────────────────────────────
 
-import type { Poste, AnnuaireSection, CircuitVoie, Dbc, PNSensiblePoste, ProcedureCle } from "./types";
+import type { Poste, AnnuaireSection, ContactPoste, CircuitVoie, Dbc, PNSensiblePoste, ProcedureCle } from "./types";
+import { normalizeAnnuaire } from "./annuaire";
+
+/**
+ * Convertit AnnuaireEntry[] (format pivot) → AnnuaireSection[] (format affichage).
+ * Les entrées liées conservent leur contactId pour la résolution live côté page.
+ *
+ * Ne gère plus qu'un seul format en entrée : le format pivot AnnuaireEntry[].
+ * La normalisation (legacy → pivot) est déléguée à normalizeAnnuaire() de lib/annuaire.ts.
+ */
+function entriesToSections(raw: unknown): AnnuaireSection[] {
+  const entries = normalizeAnnuaire(raw);
+  if (!entries.length) return [];
+
+  const NONE = "\x00no-section\x00";
+  const sectionMap = new Map<string, ContactPoste[]>();
+
+  for (const e of entries) {
+    const key = e.section?.trim() || NONE;
+    if (!sectionMap.has(key)) sectionMap.set(key, []);
+    sectionMap.get(key)!.push({
+      nom: e.label?.trim() || e.nom,
+      role: e.fonction,
+      telephone: e.telephone ?? "",
+      note: e.note,
+      contactId: e.contactId,
+      linked: !!e.contactId,
+    });
+  }
+
+  return [...sectionMap.entries()].map(([titre, contacts]) => ({
+    titre: titre === NONE ? "" : titre,
+    contacts,
+  }));
+}
 
 export async function getAllPostes(): Promise<Poste[]> {
   const rows = await prisma.poste.findMany({
@@ -159,7 +217,7 @@ function dbToPoste(row: {
     lignes: parseJson<string[]>(row.lignes, []),
     adresse: row.adresse, horaires: row.horaires, electrification: row.electrification,
     systeme_block: row.systemeBlock,
-    annuaire: parseJson<AnnuaireSection[]>(row.annuaire, []),
+    annuaire: entriesToSections(parseJson<unknown>(row.annuaire, [])),
     circuits_voie: parseJson<CircuitVoie[]>(row.circuitsVoie, []),
     pn_sensibles: parseJson<PNSensiblePoste[]>(row.pnSensibles, []),
     particularites: parseJson<string[]>(row.particularites, []),

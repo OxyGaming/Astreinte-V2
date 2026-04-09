@@ -39,6 +39,8 @@ export interface Contact {
   telephone_alt?: string;
   note?: string;
   disponibilite?: string;
+  /** Rattachement optionnel à un secteur (évolution métier, non affiché en UI pour l'instant) */
+  secteur_id?: string;
 }
 
 export interface PointAcces {
@@ -103,6 +105,12 @@ export interface ContactPoste {
   role?: string;
   telephone: string;
   note?: string;
+  // ─── Enrichissements résolution contact lié ──────────────────────────────────
+  telephoneAlt?: string;
+  disponibilite?: string;
+  contactId?: string;  // présent si entrée liée
+  linked?: boolean;    // true si résolu depuis le référentiel
+  orphan?: boolean;    // true si contactId renseigné mais contact introuvable
 }
 
 export interface AnnuaireSection {
@@ -113,11 +121,16 @@ export interface AnnuaireSection {
 export interface AnnuaireEntry {
   section?: string;
   ordre: number;
-  nom: string;
+  nom: string;        // nom libre OU snapshot du contact lié (fallback si supprimé)
   fonction?: string;
-  telephone?: string;
+  telephone?: string; // téléphone libre OU snapshot du contact lié
   email?: string;
   note?: string;
+  // ─── Liaison contact ────────────────────────────────────────────────────────
+  /** Si défini : entrée liée à un contact du référentiel */
+  contactId?: string;
+  /** Libellé d'affichage personnalisé (remplace nom du contact si renseigné) */
+  label?: string;
 }
 
 export interface CircuitVoie {

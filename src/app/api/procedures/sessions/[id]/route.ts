@@ -87,6 +87,37 @@ export async function PATCH(req: NextRequest, { params }: Params) {
     // Sérialisation de la valeur : boolean → "true"/"false", string → tel quel, null → null
     const valeurStr = body.valeur === null ? null : String(body.valeur);
 
+    // ── Traçabilité contact_recherche ────────────────────────────────────────
+    // Si la valeur est un string (potentiel contactId), on vérifie si l'action
+    // est de type contact_recherche dans le snapshot, puis on résout le contact
+    // pour l'inclure dans le payload de l'événement (audit lisible même après modif).
+    let contactSnapshot: Record<string, unknown> | undefined;
+    if (typeof body.valeur === "string" && body.valeur) {
+      try {
+        const snap: { etapes?: { actions?: { id: string; type: string }[] }[] } =
+          JSON.parse(session.procedureSnapshot);
+        const isContactRecherche = snap.etapes?.some((e) =>
+          e.actions?.some((a) => a.id === body.actionId && a.type === "contact_recherche")
+        );
+        if (isContactRecherche) {
+          const contact = await prisma.contact.findUnique({
+            where: { id: body.valeur },
+            select: { id: true, nom: true, role: true, telephone: true, telephoneAlt: true, disponibilite: true },
+          });
+          if (contact) contactSnapshot = contact as Record<string, unknown>;
+        }
+      } catch {
+        // Snapshot corrompu — on continue sans enrichissement
+      }
+    }
+
+    const eventPayload = {
+      etapeId: body.etapeId,
+      actionId: body.actionId,
+      valeur: body.valeur,
+      ...(contactSnapshot ? { contactSnapshot } : {}),
+    };
+
     const updated = await prisma.$transaction(async (tx) => {
       const result = await tx.sessionProcedure.update({
         where: { id },
@@ -102,7 +133,7 @@ export async function PATCH(req: NextRequest, { params }: Params) {
           etapeId:   body.etapeId,
           actionId:  body.actionId,
           valeur:    valeurStr,
-          payload:   JSON.stringify({ etapeId: body.etapeId, actionId: body.actionId, valeur: body.valeur }),
+          payload:   JSON.stringify(eventPayload),
           actorNom,
         },
       });

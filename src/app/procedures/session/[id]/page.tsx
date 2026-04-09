@@ -1,12 +1,21 @@
 /**
  * /procedures/session/[id]
- * Page du wizard : charge le poste + les contacts nécessaires (pour les enrichissements UI),
- * puis passe la main au composant client ProcedureWizard.
+ * Page du wizard : charge tous les contacts en une seule passe, puis passe la main
+ * au composant client ProcedureWizard.
+ *
+ * Stratégie de chargement :
+ * - On charge TOUS les contacts une seule fois (getAllContacts).
+ * - On en dérive :
+ *   • contactsIndex  : Record<string, string> id→telephone  (pour ActionConfirmation)
+ *   • allContacts    : Contact[]                            (pour ActionContactRecherche)
+ * Cela supprime la fragilité liée au scan du snapshot (contactId absent si snapshot
+ * capturé avant ajout du contact, ou snapshot corrompu).
  */
 
 export const dynamic = "force-dynamic";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
+import { getAllContacts } from "@/lib/db";
 import ProcedureWizard from "@/components/procedure/ProcedureWizard";
 
 export default async function SessionPage({
@@ -16,49 +25,30 @@ export default async function SessionPage({
 }) {
   const { id } = await params;
 
-  // Charger la session (lecture minimale côté serveur pour les enrichissements)
+  // Vérifier que la session existe (lecture minimale)
   const session = await prisma.sessionProcedure.findUnique({
     where: { id },
-    select: {
-      id: true,
-      procedureSnapshot: true,
-      posteSlug: true,
-      statut: true,
-    },
+    select: { id: true, statut: true },
   });
 
   if (!session) notFound();
 
-  // Extraire tous les contactIds référencés dans le snapshot pour les résoudre
-  let snapshot: { etapes: { actions: { contactId?: string }[] }[] } = { etapes: [] };
-  try {
-    snapshot = JSON.parse(session.procedureSnapshot);
-  } catch {
-    // snapshot corrompu, le wizard affichera une erreur
-  }
+  // Charger tous les contacts une seule fois
+  const allContacts = await getAllContacts();
 
-  const contactIds = new Set<string>();
-  for (const etape of snapshot.etapes ?? []) {
-    for (const action of etape.actions ?? []) {
-      if (action.contactId) contactIds.add(action.contactId);
-    }
-  }
-
-  // Résoudre les contacts → map contactId → telephone
+  // Construire l'index id→telephone pour enrichir ActionConfirmation
   const contactsIndex: Record<string, string> = {};
-  if (contactIds.size > 0) {
-    const contacts = await prisma.contact.findMany({
-      where: { id: { in: [...contactIds] } },
-      select: { id: true, telephone: true },
-    });
-    for (const c of contacts) {
-      contactsIndex[c.id] = c.telephone;
-    }
+  for (const c of allContacts) {
+    contactsIndex[c.id] = c.telephone;
   }
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-6">
-      <ProcedureWizard sessionId={id} contactsIndex={contactsIndex} />
+      <ProcedureWizard
+        sessionId={id}
+        contactsIndex={contactsIndex}
+        allContacts={allContacts}
+      />
     </div>
   );
 }

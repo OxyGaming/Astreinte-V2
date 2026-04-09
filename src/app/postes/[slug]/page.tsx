@@ -4,6 +4,7 @@ import { getPosteBySlug } from "@/lib/db";
 import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import type { AnnuaireSection } from "@/lib/types";
 import {
   Building2,
   MapPin,
@@ -46,6 +47,46 @@ export default async function PosteDetailPage({
     }).then((rows) => [...new Set(rows.map((r) => r.procedure.typeProcedure))]),
   ]);
   if (!poste) notFound();
+
+  // ── Résolution des contacts liés ────────────────────────────────────────────
+  // On collecte tous les contactIds référencés dans l'annuaire, puis on résout
+  // leurs données depuis la DB (téléphone live, disponibilité, etc.).
+  const linkedContactIds = poste.annuaire.flatMap((section) =>
+    section.contacts.filter((c) => c.contactId).map((c) => c.contactId!)
+  );
+
+  const resolvedContacts =
+    linkedContactIds.length > 0
+      ? await prisma.contact.findMany({
+          where: { id: { in: linkedContactIds } },
+          select: { id: true, nom: true, role: true, telephone: true, telephoneAlt: true, disponibilite: true },
+        })
+      : [];
+
+  const contactMap = new Map(resolvedContacts.map((c) => [c.id, c]));
+
+  // Annuaire avec contacts liés résolus (téléphone toujours à jour)
+  const annuaire: AnnuaireSection[] = poste.annuaire.map((section) => ({
+    ...section,
+    contacts: section.contacts.map((contact) => {
+      if (!contact.contactId) return contact; // entrée libre → inchangée
+      const resolved = contactMap.get(contact.contactId);
+      if (!resolved) {
+        // Contact supprimé → afficher le snapshot avec indicateur orphelin
+        return { ...contact, orphan: true };
+      }
+      return {
+        ...contact,
+        nom: contact.nom || resolved.nom, // label override ou nom du contact
+        role: resolved.role,
+        telephone: resolved.telephone,
+        telephoneAlt: resolved.telephoneAlt ?? undefined,
+        disponibilite: resolved.disponibilite ?? undefined,
+        linked: true,
+        orphan: false,
+      };
+    }),
+  }));
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-6 space-y-6">
@@ -131,30 +172,53 @@ export default async function PosteDetailPage({
           Annuaire
         </h2>
         <div className="space-y-3">
-          {poste.annuaire.map((section) => (
-            <div key={section.titre} className="bg-white rounded-xl border border-slate-200 overflow-hidden">
-              <div className="px-4 py-2.5 bg-slate-50 border-b border-slate-200">
-                <h3 className="text-xs font-semibold text-slate-600 uppercase tracking-wide">
-                  {section.titre}
-                </h3>
-              </div>
+          {annuaire.map((section, si) => (
+            <div key={section.titre || `section-${si}`} className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+              {section.titre && (
+                <div className="px-4 py-2.5 bg-slate-50 border-b border-slate-200">
+                  <h3 className="text-xs font-semibold text-slate-600 uppercase tracking-wide">
+                    {section.titre}
+                  </h3>
+                </div>
+              )}
               <div className="divide-y divide-slate-100">
-                {section.contacts.map((contact) => (
-                  <div key={contact.nom} className="flex items-center justify-between px-4 py-3 gap-3">
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium text-slate-900 truncate">{contact.nom}</p>
-                      {contact.role && (
-                        <p className="text-xs text-slate-500">{contact.role}</p>
-                      )}
-                      {contact.note && (
-                        <p className="text-xs text-amber-600 mt-0.5">{contact.note}</p>
-                      )}
-                    </div>
-                    {!contact.telephone.includes("X") && (
-                      <PhoneButton number={contact.telephone} />
-                    )}
-                    {contact.telephone.includes("X") && (
-                      <span className="text-sm text-slate-400 font-mono">{contact.telephone}</span>
+                {section.contacts.map((contact, ci) => (
+                  <div key={`${contact.nom}-${ci}`} className="px-4 py-3 gap-3">
+                    {/* Contact introuvable */}
+                    {contact.orphan ? (
+                      <div className="flex items-center gap-2 text-amber-700">
+                        <AlertTriangle size={14} className="flex-shrink-0" />
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium truncate">{contact.nom}</p>
+                          <p className="text-xs text-amber-600 mt-0.5">Contact introuvable dans le référentiel</p>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-medium text-slate-900 truncate">{contact.nom}</p>
+                          {contact.role && (
+                            <p className="text-xs text-slate-500">{contact.role}</p>
+                          )}
+                          {contact.disponibilite && (
+                            <p className="text-xs text-green-700 font-medium mt-0.5">{contact.disponibilite}</p>
+                          )}
+                          {contact.note && (
+                            <p className="text-xs text-amber-600 mt-0.5">{contact.note}</p>
+                          )}
+                        </div>
+                        <div className="flex-shrink-0 flex flex-col items-end gap-1">
+                          {contact.telephone && !contact.telephone.includes("X") && (
+                            <PhoneButton number={contact.telephone} />
+                          )}
+                          {contact.telephone?.includes("X") && (
+                            <span className="text-sm text-slate-400 font-mono">{contact.telephone}</span>
+                          )}
+                          {contact.telephoneAlt && !contact.telephoneAlt.includes("X") && (
+                            <PhoneButton number={contact.telephoneAlt} size="sm" />
+                          )}
+                        </div>
+                      </div>
                     )}
                   </div>
                 ))}

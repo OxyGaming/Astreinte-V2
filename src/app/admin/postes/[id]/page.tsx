@@ -10,17 +10,19 @@ import PosteProceduresClesEditor from "./PosteProceduresClesEditor";
 import PosteCircuitsVoieEditor from "./PosteCircuitsVoieEditor";
 import { PosteDbcEditor, PosteRexEditor } from "./PosteDbcRexEditor";
 import PosteParticularitesEditor from "./PosteParticularitesEditor";
-import type { AnnuaireEntry, PNSensiblePoste, ProcedureCle, CircuitVoie, Dbc } from "@/lib/types";
+import type { PNSensiblePoste, ProcedureCle, CircuitVoie, Dbc } from "@/lib/types";
+import { normalizeAnnuaire } from "@/lib/annuaire";
 
 interface Props { params: Promise<{ id: string }> }
 
-function parseAnnuaire(raw: string): AnnuaireEntry[] {
+/**
+ * Parse le JSON annuaire depuis la DB en AnnuaireEntry[] pour l'éditeur admin.
+ * Délègue la normalisation (tous formats) à normalizeAnnuaire() de lib/annuaire.ts.
+ */
+function parseAnnuaire(raw: string): ReturnType<typeof normalizeAnnuaire> {
   try {
     const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return [];
-    // Accepte uniquement le format plat AnnuaireEntry (champ "nom" requis)
-    if (parsed.length > 0 && typeof (parsed[0] as Record<string, unknown>).nom !== "string") return [];
-    return parsed as AnnuaireEntry[];
+    return normalizeAnnuaire(parsed);
   } catch {
     return [];
   }

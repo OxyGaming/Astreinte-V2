@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import {
   Plus, ChevronUp, ChevronDown, Pencil, Trash2,
-  Phone, Mail, Tag, Save, CheckCircle2, AlertTriangle, Users,
+  Phone, Mail, Tag, Save, CheckCircle2, AlertTriangle, Users, Link2,
 } from "lucide-react";
 import type { AnnuaireEntry } from "@/lib/types";
 import AnnuaireForm from "./AnnuaireForm";
@@ -260,8 +260,17 @@ function EntryRow({
               {entry.section}
             </span>
           )}
-          <span className="font-medium text-gray-900 text-sm">{entry.nom}</span>
-          {entry.fonction && (
+          {/* Badge "Lié" pour les entrées liées au référentiel */}
+          {entry.contactId && (
+            <span className="inline-flex items-center gap-1 text-xs bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded-full font-medium">
+              <Link2 size={10} />
+              Lié
+            </span>
+          )}
+          <span className="font-medium text-gray-900 text-sm">
+            {entry.label?.trim() || entry.nom}
+          </span>
+          {!entry.contactId && entry.fonction && (
             <span className="text-xs text-gray-500">{entry.fonction}</span>
           )}
         </div>
@@ -270,9 +279,12 @@ function EntryRow({
             <span className="text-xs text-gray-600 flex items-center gap-1">
               <Phone size={11} className="text-gray-400" />
               {entry.telephone}
+              {entry.contactId && (
+                <span className="text-gray-400 italic ml-1">(snapshot)</span>
+              )}
             </span>
           )}
-          {entry.email && (
+          {!entry.contactId && entry.email && (
             <span className="text-xs text-gray-600 flex items-center gap-1">
               <Mail size={11} className="text-gray-400" />
               {entry.email}

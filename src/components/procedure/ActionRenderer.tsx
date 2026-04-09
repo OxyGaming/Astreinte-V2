@@ -1,27 +1,38 @@
 "use client";
 
 import type { ActionMetier, ValeurReponse } from "@/lib/procedure/types";
+import type { Contact } from "@/lib/types";
 import ActionInformation from "./actions/ActionInformation";
 import ActionOuiNon from "./actions/ActionOuiNon";
 import ActionChoix from "./actions/ActionChoix";
 import ActionSaisieTexte from "./actions/ActionSaisieTexte";
 import ActionConfirmation from "./actions/ActionConfirmation";
+import ActionContactRecherche from "./actions/ActionContactRecherche";
 
 interface Props {
   action: ActionMetier;
   valeur: ValeurReponse;
   onChange: (v: ValeurReponse) => void;
-  /** Téléphone résolu depuis le contactId (passé par EtapeRenderer) */
+  /** Téléphone résolu depuis le contactId (passé par EtapeRenderer, pour confirmation) */
   contactTelephone?: string;
+  /** Liste complète des contacts (pour contact_recherche) */
+  allContacts?: Contact[];
 }
 
 /**
  * Dispatch vers le bon composant selon `action.type`.
- * Les enrichissements UI (contactId, referenceDoc) sont traités ici :
- * - contactId  → passe contactTelephone à ActionConfirmation
- * - referenceDoc → affiché dans ActionConfirmation et comme badge
+ * Enrichissements UI :
+ * - contactId       → passe contactTelephone à ActionConfirmation
+ * - referenceDoc    → affiché dans ActionConfirmation
+ * - contact_recherche → passe allContacts à ActionContactRecherche
  */
-export default function ActionRenderer({ action, valeur, onChange, contactTelephone }: Props) {
+export default function ActionRenderer({
+  action,
+  valeur,
+  onChange,
+  contactTelephone,
+  allContacts = [],
+}: Props) {
   switch (action.type) {
     case "information":
       return <ActionInformation action={action} />;
@@ -60,6 +71,16 @@ export default function ActionRenderer({ action, valeur, onChange, contactTeleph
           valeur={valeur}
           onChange={(v) => onChange(v)}
           contactTelephone={contactTelephone}
+        />
+      );
+
+    case "contact_recherche":
+      return (
+        <ActionContactRecherche
+          action={action}
+          valeur={valeur}
+          onChange={(v) => onChange(v)}
+          allContacts={allContacts}
         />
       );
 
