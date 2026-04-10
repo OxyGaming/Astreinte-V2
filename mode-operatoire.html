@@ -1,0 +1,1915 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mode Opératoire — Application Astreinte</title>
+<style>
+  :root {
+    --bleu:       #1a3a5c;
+    --bleu-clair: #2563eb;
+    --bleu-pale:  #eff6ff;
+    --orange:     #ea580c;
+    --orange-pale:#fff7ed;
+    --vert:       #16a34a;
+    --vert-pale:  #f0fdf4;
+    --rouge:      #dc2626;
+    --rouge-pale: #fef2f2;
+    --jaune:      #ca8a04;
+    --jaune-pale: #fefce8;
+    --gris:       #6b7280;
+    --gris-clair: #f3f4f6;
+    --gris-bord:  #e5e7eb;
+    --texte:      #111827;
+    --texte-sec:  #374151;
+    --sidebar-w:  280px;
+    --radius:     10px;
+    --ombre:      0 2px 12px rgba(0,0,0,.08);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+    font-size: 15px;
+    line-height: 1.65;
+    color: var(--texte);
+    background: #f8fafc;
+    display: flex;
+    min-height: 100vh;
+  }
+
+  /* ═══════════════════ SIDEBAR ═══════════════════ */
+  #sidebar {
+    width: var(--sidebar-w);
+    background: var(--bleu);
+    color: #fff;
+    position: fixed;
+    top: 0; left: 0; bottom: 0;
+    overflow-y: auto;
+    z-index: 100;
+    transition: transform .3s ease;
+    display: flex;
+    flex-direction: column;
+  }
+  .sidebar-logo {
+    padding: 24px 20px 16px;
+    border-bottom: 1px solid rgba(255,255,255,.12);
+  }
+  .sidebar-logo .app-name {
+    font-size: 22px;
+    font-weight: 800;
+    letter-spacing: -.5px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .sidebar-logo .app-name .badge {
+    background: var(--orange);
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 1px 6px;
+    letter-spacing: .5px;
+  }
+  .sidebar-logo .subtitle {
+    font-size: 12px;
+    color: rgba(255,255,255,.6);
+    margin-top: 3px;
+  }
+  .sidebar-search {
+    padding: 14px 16px;
+    border-bottom: 1px solid rgba(255,255,255,.08);
+  }
+  .sidebar-search input {
+    width: 100%;
+    background: rgba(255,255,255,.12);
+    border: 1px solid rgba(255,255,255,.18);
+    border-radius: 8px;
+    padding: 8px 12px 8px 34px;
+    color: #fff;
+    font-size: 13px;
+    outline: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='rgba(255,255,255,.6)' stroke-width='2.5'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='M21 21l-4.35-4.35'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: 10px center;
+    transition: background .2s;
+  }
+  .sidebar-search input::placeholder { color: rgba(255,255,255,.5); }
+  .sidebar-search input:focus {
+    background-color: rgba(255,255,255,.2);
+    border-color: rgba(255,255,255,.4);
+  }
+  nav.sidebar-nav { flex: 1; padding: 12px 0; }
+  .nav-section-label {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1.2px;
+    color: rgba(255,255,255,.4);
+    text-transform: uppercase;
+    padding: 12px 20px 4px;
+  }
+  .nav-link {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 20px;
+    color: rgba(255,255,255,.82);
+    text-decoration: none;
+    font-size: 13.5px;
+    font-weight: 500;
+    cursor: pointer;
+    border: none;
+    background: none;
+    width: 100%;
+    text-align: left;
+    border-left: 3px solid transparent;
+    transition: all .15s;
+  }
+  .nav-link:hover { background: rgba(255,255,255,.08); color: #fff; }
+  .nav-link.active {
+    background: rgba(255,255,255,.12);
+    color: #fff;
+    border-left-color: var(--orange);
+    font-weight: 600;
+  }
+  .nav-link .icon { font-size: 17px; min-width: 22px; text-align: center; }
+  .sidebar-footer {
+    padding: 16px 20px;
+    border-top: 1px solid rgba(255,255,255,.1);
+    font-size: 11.5px;
+    color: rgba(255,255,255,.4);
+  }
+
+  /* ═══════════════════ MAIN ═══════════════════ */
+  #main { margin-left: var(--sidebar-w); flex: 1; min-width: 0; }
+  #topbar {
+    background: #fff;
+    border-bottom: 1px solid var(--gris-bord);
+    padding: 14px 28px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    box-shadow: 0 1px 4px rgba(0,0,0,.05);
+  }
+  #topbar .breadcrumb {
+    font-size: 13px;
+    color: var(--gris);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  #topbar .breadcrumb .current { color: var(--texte); font-weight: 600; }
+  #burger { display: none; background: none; border: none; font-size: 22px; cursor: pointer; color: var(--bleu); }
+
+  .page-section { display: none; padding: 32px 28px 60px; max-width: 920px; }
+  .page-section.active { display: block; }
+
+  /* ═══════════════════ TYPO ═══════════════════ */
+  .page-title { font-size: 26px; font-weight: 800; color: var(--bleu); margin-bottom: 6px; line-height: 1.25; }
+  .page-intro { font-size: 15px; color: var(--texte-sec); margin-bottom: 28px; max-width: 680px; }
+  h2 { font-size: 17px; font-weight: 700; color: var(--bleu); margin: 28px 0 12px; }
+  h3 { font-size: 14.5px; font-weight: 700; margin-bottom: 6px; }
+  p { margin-bottom: 10px; }
+  ul, ol { padding-left: 20px; margin-bottom: 12px; }
+  li { margin-bottom: 5px; }
+  strong { font-weight: 700; }
+
+  /* ═══════════════════ HERO ═══════════════════ */
+  .hero {
+    background: linear-gradient(135deg, var(--bleu) 0%, #1e40af 100%);
+    border-radius: var(--radius);
+    padding: 28px;
+    color: #fff;
+    margin-bottom: 28px;
+  }
+  .hero h1 { font-size: 24px; margin-bottom: 8px; }
+  .hero p { color: rgba(255,255,255,.85); font-size: 14.5px; max-width: 640px; }
+
+  /* ═══════════════════ FEATURE HEADER ═══════════════════ */
+  .feature-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 18px;
+    background: #fff;
+    border: 1px solid var(--gris-bord);
+    border-radius: var(--radius);
+    padding: 22px 24px;
+    margin-bottom: 24px;
+    box-shadow: var(--ombre);
+  }
+  .feature-icon-big {
+    font-size: 42px;
+    line-height: 1;
+    min-width: 50px;
+    text-align: center;
+  }
+  .feature-header-body {}
+  .feature-header-body .tag {
+    display: inline-block;
+    background: var(--bleu-pale);
+    color: var(--bleu-clair);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .5px;
+    padding: 2px 10px;
+    border-radius: 20px;
+    margin-bottom: 6px;
+    text-transform: uppercase;
+  }
+  .feature-header-body h1 { font-size: 22px; font-weight: 800; color: var(--bleu); line-height: 1.2; margin-bottom: 6px; }
+  .feature-header-body p { font-size: 14px; color: var(--texte-sec); margin: 0; }
+
+  /* ═══════════════════ CARDS ═══════════════════ */
+  .card {
+    background: #fff;
+    border: 1px solid var(--gris-bord);
+    border-radius: var(--radius);
+    padding: 20px 22px;
+    margin-bottom: 16px;
+    box-shadow: var(--ombre);
+  }
+  .card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+    gap: 14px;
+    margin-bottom: 24px;
+  }
+  .card-feat {
+    background: #fff;
+    border: 1px solid var(--gris-bord);
+    border-radius: var(--radius);
+    padding: 18px 20px;
+    box-shadow: var(--ombre);
+    cursor: pointer;
+    transition: all .2s;
+    border-top: 3px solid var(--bleu-clair);
+    display: flex;
+    flex-direction: column;
+  }
+  .card-feat:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,.1); }
+  .card-feat .cf-icon { font-size: 28px; margin-bottom: 10px; }
+  .card-feat h3 { font-size: 14px; color: var(--bleu); margin-bottom: 5px; }
+  .card-feat p { font-size: 12.5px; color: var(--gris); margin: 0; flex: 1; }
+  .card-feat .cf-go { font-size: 11.5px; color: var(--bleu-clair); font-weight: 700; margin-top: 12px; }
+
+  /* ═══════════════════ WHAT-BOX ═══════════════════ */
+  /* Bloc "ce que vous voyez à l'écran" */
+  .screen-box {
+    background: var(--gris-clair);
+    border: 1px solid var(--gris-bord);
+    border-radius: 8px;
+    padding: 16px 18px;
+    margin: 14px 0;
+    font-size: 13.5px;
+  }
+  .screen-box .sb-title {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .8px;
+    color: var(--gris);
+    text-transform: uppercase;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .screen-box ul { margin: 0; padding-left: 18px; }
+  .screen-box li { margin-bottom: 4px; color: var(--texte-sec); }
+
+  /* ═══════════════════ ÉTAPES ═══════════════════ */
+  .steps { margin: 16px 0 20px; }
+  .step { display: flex; gap: 16px; margin-bottom: 14px; align-items: flex-start; }
+  .step-num {
+    min-width: 32px; height: 32px;
+    border-radius: 50%;
+    background: var(--bleu);
+    color: #fff;
+    font-weight: 800;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+  .step-body { flex: 1; }
+  .step-body strong { display: block; font-size: 14px; margin-bottom: 3px; color: var(--bleu); }
+  .step-body span { font-size: 13.5px; color: var(--texte-sec); }
+  .step-connector { width: 2px; height: 14px; background: var(--gris-bord); margin-left: 15px; margin-top: -4px; margin-bottom: -4px; }
+
+  /* ═══════════════════ ALERTES ═══════════════════ */
+  .alert {
+    border-radius: 8px;
+    padding: 14px 16px;
+    margin: 14px 0;
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    font-size: 13.5px;
+  }
+  .alert .alert-icon { font-size: 18px; min-width: 22px; margin-top: 1px; }
+  .alert-info { background: var(--bleu-pale); border-left: 4px solid var(--bleu-clair); }
+  .alert-info .alert-title { color: var(--bleu-clair); }
+  .alert-note { background: var(--jaune-pale); border-left: 4px solid var(--jaune); }
+  .alert-note .alert-title { color: var(--jaune); }
+  .alert-title { font-weight: 700; font-size: 13px; margin-bottom: 3px; }
+
+  /* ═══════════════════ ACCORDÉON ═══════════════════ */
+  .accordion { margin: 10px 0 18px; }
+  .acc-item { border: 1px solid var(--gris-bord); border-radius: 8px; margin-bottom: 8px; overflow: hidden; background: #fff; }
+  .acc-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 13px 16px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 14px;
+    color: var(--texte);
+    background: #fff;
+    border: none;
+    width: 100%;
+    text-align: left;
+    gap: 12px;
+    transition: background .15s;
+  }
+  .acc-header:hover { background: var(--gris-clair); }
+  .acc-header.open { background: var(--bleu-pale); color: var(--bleu); }
+  .acc-header .acc-icon { font-size: 16px; }
+  .acc-arrow { font-size: 12px; transition: transform .25s; color: var(--gris); }
+  .acc-header.open .acc-arrow { transform: rotate(180deg); }
+  .acc-body { display: none; padding: 14px 18px 18px; border-top: 1px solid var(--gris-bord); font-size: 13.5px; color: var(--texte-sec); }
+  .acc-body.open { display: block; }
+
+  /* ═══════════════════ ONGLETS ═══════════════════ */
+  .tab-nav {
+    display: flex;
+    gap: 4px;
+    border-bottom: 2px solid var(--gris-bord);
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+  }
+  .tab-btn {
+    padding: 8px 14px;
+    border: none;
+    background: none;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--gris);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -2px;
+    transition: all .15s;
+    border-radius: 4px 4px 0 0;
+  }
+  .tab-btn:hover { color: var(--bleu); background: var(--bleu-pale); }
+  .tab-btn.active { color: var(--bleu); border-bottom-color: var(--bleu); }
+  .tab-pane { display: none; }
+  .tab-pane.active { display: block; }
+
+  /* ═══════════════════ TAGS / BADGES ═══════════════════ */
+  .badge-row { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0; }
+  .badge {
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 11.5px;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .badge-bleu { background: var(--bleu-pale); color: var(--bleu-clair); }
+  .badge-vert { background: var(--vert-pale); color: var(--vert); }
+  .badge-orange { background: var(--orange-pale); color: var(--orange); }
+  .badge-gris { background: var(--gris-clair); color: var(--gris); }
+
+  /* ═══════════════════ ACTION LIST ═══════════════════ */
+  /* Ce que je peux faire */
+  .action-list { list-style: none; padding: 0; margin: 12px 0; }
+  .action-list li {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 9px 12px;
+    border-radius: 7px;
+    margin-bottom: 6px;
+    background: var(--gris-clair);
+    font-size: 13.5px;
+    color: var(--texte-sec);
+  }
+  .action-list li .al-icon { font-size: 16px; min-width: 20px; }
+
+  /* ═══════════════════ ROLE PILLS ═══════════════════ */
+  .role-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 2px 10px;
+    border-radius: 20px;
+    font-size: 11.5px;
+    font-weight: 700;
+  }
+  .role-admin { background: #fef3c7; color: #92400e; }
+  .role-editor { background: #e0e7ff; color: #3730a3; }
+  .role-user { background: var(--vert-pale); color: var(--vert); }
+
+  /* ═══════════════════ DIVIDER ═══════════════════ */
+  .divider { border: none; border-top: 1px solid var(--gris-bord); margin: 24px 0; }
+
+  /* ═══════════════════ HIGHLIGHT SEARCH ═══════════════════ */
+  .highlight { background: #fef08a; border-radius: 2px; }
+  .hidden-by-search { display: none !important; }
+  .no-results { text-align: center; padding: 40px; color: var(--gris); font-size: 14px; display: none; }
+
+  /* ═══════════════════ OVERLAY / MOBILE ═══════════════════ */
+  #overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 90; }
+  @media (max-width: 768px) {
+    #sidebar { transform: translateX(-100%); }
+    #sidebar.open { transform: translateX(0); }
+    #overlay.open { display: block; }
+    #main { margin-left: 0; }
+    #burger { display: block; }
+    .page-section { padding: 20px 16px 50px; }
+    .card-grid { grid-template-columns: 1fr; }
+    .feature-header { flex-direction: column; gap: 10px; }
+  }
+  @media print {
+    #sidebar, #topbar, #overlay { display: none; }
+    #main { margin-left: 0; }
+    .page-section { display: block !important; }
+    .acc-body { display: block !important; }
+  }
+</style>
+</head>
+<body>
+
+<div id="overlay" onclick="closeSidebar()"></div>
+
+<!-- SIDEBAR -->
+<aside id="sidebar">
+  <div class="sidebar-logo">
+    <div class="app-name">🚦 Astreinte <span class="badge">V2</span></div>
+    <div class="subtitle">Mode opératoire — Fonctionnalités</div>
+  </div>
+  <div class="sidebar-search">
+    <input type="text" id="sidebarSearch" placeholder="Rechercher…" oninput="searchGuide(this.value)">
+  </div>
+  <nav class="sidebar-nav">
+    <div class="nav-section-label">Introduction</div>
+    <button class="nav-link active" onclick="showSection('accueil', this)">
+      <span class="icon">🏠</span> Vue d'ensemble
+    </button>
+
+    <div class="nav-section-label">Fonctionnalités</div>
+    <button class="nav-link" onclick="showSection('contacts', this)">
+      <span class="icon">📞</span> Contacts
+    </button>
+    <button class="nav-link" onclick="showSection('fiches', this)">
+      <span class="icon">📄</span> Fiches de procédure
+    </button>
+    <button class="nav-link" onclick="showSection('sessions', this)">
+      <span class="icon">▶️</span> Sessions
+    </button>
+    <button class="nav-link" onclick="showSection('journal', this)">
+      <span class="icon">📓</span> Journal de session
+    </button>
+    <button class="nav-link" onclick="showSection('secteurs', this)">
+      <span class="icon">🗺️</span> Secteurs
+    </button>
+    <button class="nav-link" onclick="showSection('postes', this)">
+      <span class="icon">🏷️</span> Postes
+    </button>
+    <button class="nav-link" onclick="showSection('mnemoniques', this)">
+      <span class="icon">🔤</span> Mnémoniques &amp; Abréviations
+    </button>
+    <button class="nav-link" onclick="showSection('recherche', this)">
+      <span class="icon">🔍</span> Recherche
+    </button>
+    <button class="nav-link" onclick="showSection('compte', this)">
+      <span class="icon">👤</span> Compte &amp; accès
+    </button>
+    <button class="nav-link" onclick="showSection('procedures-guidees', this)">
+      <span class="icon">🧭</span> Procédures guidées
+    </button>
+    <button class="nav-link" onclick="showSection('import-export', this)">
+      <span class="icon">📦</span> Import / Export
+    </button>
+  </nav>
+  <div class="sidebar-footer">Version 2.0 · Avril 2026</div>
+</aside>
+
+<!-- MAIN -->
+<div id="main">
+  <div id="topbar">
+    <button id="burger" onclick="openSidebar()">☰</button>
+    <div class="breadcrumb">
+      <span>Astreinte</span>
+      <span>›</span>
+      <span class="current" id="breadcrumb-current">Vue d'ensemble</span>
+    </div>
+  </div>
+
+  <div id="search-no-results" class="no-results">
+    <div style="font-size: 36px; margin-bottom: 8px;">🔍</div>
+    <strong>Aucun résultat.</strong><br>Essayez un autre mot-clé.
+  </div>
+
+  <!-- ══════════════════════════════════════════════
+       ACCUEIL
+  ══════════════════════════════════════════════ -->
+  <section id="sec-accueil" class="page-section active" data-title="Vue d'ensemble">
+
+    <div class="hero">
+      <h1>Application Astreinte — Mode opératoire</h1>
+      <p>Ce guide décrit chaque fonctionnalité de l'application : ce qu'elle contient, comment elle fonctionne et ce qu'elle permet de faire. Sélectionnez une fonctionnalité dans le menu à gauche.</p>
+    </div>
+
+    <h2>Les fonctionnalités de l'application</h2>
+    <div class="card-grid">
+      <div class="card-feat" onclick="nav('contacts')">
+        <div class="cf-icon">📞</div>
+        <h3>Contacts</h3>
+        <p>Liste des personnes d'astreinte, classées par secteur et par rôle, avec numéros directs.</p>
+        <div class="cf-go">Voir la fonctionnalité →</div>
+      </div>
+      <div class="card-feat" onclick="nav('fiches')">
+        <div class="cf-icon">📄</div>
+        <h3>Fiches de procédure</h3>
+        <p>Procédures structurées en étapes, consultables et activables en mode interactif.</p>
+        <div class="cf-go">Voir la fonctionnalité →</div>
+      </div>
+      <div class="card-feat" onclick="nav('sessions')">
+        <div class="cf-icon">▶️</div>
+        <h3>Sessions</h3>
+        <p>Suivi en temps réel de l'exécution d'une fiche, avec traçabilité horodatée des actions.</p>
+        <div class="cf-go">Voir la fonctionnalité →</div>
+      </div>
+      <div class="card-feat" onclick="nav('journal')">
+        <div class="cf-icon">📓</div>
+        <h3>Journal de session</h3>
+        <p>Chronologie complète des actions et commentaires enregistrés pendant une session.</p>
+        <div class="cf-go">Voir la fonctionnalité →</div>
+      </div>
+      <div class="card-feat" onclick="nav('secteurs')">
+        <div class="cf-icon">🗺️</div>
+        <h3>Secteurs</h3>
+        <p>Zones géographiques d'intervention, avec leurs contacts et fiches associés.</p>
+        <div class="cf-go">Voir la fonctionnalité →</div>
+      </div>
+      <div class="card-feat" onclick="nav('postes')">
+        <div class="cf-icon">🏷️</div>
+        <h3>Postes</h3>
+        <p>Référentiels de compétences par poste, rattachés à un secteur.</p>
+        <div class="cf-go">Voir la fonctionnalité →</div>
+      </div>
+      <div class="card-feat" onclick="nav('mnemoniques')">
+        <div class="cf-icon">🔤</div>
+        <h3>Mnémoniques &amp; Abréviations</h3>
+        <p>Glossaires des codes et abréviations utilisés dans l'organisation.</p>
+        <div class="cf-go">Voir la fonctionnalité →</div>
+      </div>
+      <div class="card-feat" onclick="nav('recherche')">
+        <div class="cf-icon">🔍</div>
+        <h3>Recherche</h3>
+        <p>Recherche globale sur tous les contenus de l'application.</p>
+        <div class="cf-go">Voir la fonctionnalité →</div>
+      </div>
+      <div class="card-feat" onclick="nav('procedures-guidees')">
+        <div class="cf-icon">🧭</div>
+        <h3>Procédures guidées</h3>
+        <p>Exécution pas à pas de procédures métier structurées : cessation, reprise, incident, travaux.</p>
+        <div class="cf-go">Voir la fonctionnalité →</div>
+      </div>
+      <div class="card-feat" onclick="nav('import-export')">
+        <div class="cf-icon">📦</div>
+        <h3>Import / Export</h3>
+        <p>Chargement de données depuis Excel et export complet du référentiel.</p>
+        <div class="cf-go">Voir la fonctionnalité →</div>
+      </div>
+    </div>
+
+    <div class="alert alert-info">
+      <div class="alert-icon">ℹ️</div>
+      <div>
+        <div class="alert-title">Navigation</div>
+        Utilisez le menu latéral ou les cartes ci-dessus pour accéder à la description d'une fonctionnalité. Sur mobile, ouvrez le menu avec le bouton <strong>☰</strong>.
+      </div>
+    </div>
+
+  </section>
+
+  <!-- ══════════════════════════════════════════════
+       CONTACTS
+  ══════════════════════════════════════════════ -->
+  <section id="sec-contacts" class="page-section" data-title="Contacts">
+
+    <div class="feature-header">
+      <div class="feature-icon-big">📞</div>
+      <div class="feature-header-body">
+        <div class="tag">Fonctionnalité</div>
+        <h1>Contacts</h1>
+        <p>Répertoire des personnes d'astreinte, organisé par secteur géographique et par rôle, avec accès direct aux numéros de téléphone.</p>
+      </div>
+    </div>
+
+    <h2>Ce que contient cette section</h2>
+    <div class="screen-box">
+      <div class="sb-title">📋 Informations affichées pour chaque contact</div>
+      <ul>
+        <li><strong>Nom et prénom</strong> de la personne</li>
+        <li><strong>Rôle ou fonction</strong> dans l'organisation</li>
+        <li><strong>Secteur de rattachement</strong></li>
+        <li><strong>Numéro de téléphone</strong> — cliquable sur mobile pour appel direct</li>
+        <li><strong>Informations complémentaires</strong> si renseignées (service, remarques)</li>
+      </ul>
+    </div>
+
+    <h2>Organisation des contacts</h2>
+    <p>Les contacts sont regroupés et filtrables par <strong>secteur géographique</strong>. Chaque secteur affiche les personnes qui y sont rattachées.</p>
+    <p>Sur la page d'accueil de l'application, les <strong>contacts marqués comme urgents</strong> apparaissent directement en haut de l'écran, sans navigation.</p>
+
+    <h2>Ce que vous pouvez faire</h2>
+    <ul class="action-list">
+      <li><span class="al-icon">📋</span> Consulter la liste complète des contacts d'astreinte</li>
+      <li><span class="al-icon">🗺️</span> Filtrer les contacts par secteur géographique</li>
+      <li><span class="al-icon">📞</span> Appeler directement en appuyant sur le numéro (mobile)</li>
+      <li><span class="al-icon">👤</span> Accéder à la fiche détaillée d'un contact (nom, rôle, numéro, secteur)</li>
+      <li><span class="al-icon">📄</span> Consulter les fiches de procédure associées à un contact depuis sa page de détail</li>
+    </ul>
+
+    <h2>Accéder aux contacts</h2>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-body">
+          <strong>Appuyez sur « Contacts » dans le menu de navigation</strong>
+          <span>La liste complète s'affiche, regroupée par secteur.</span>
+        </div>
+      </div>
+      <div class="step-connector"></div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-body">
+          <strong>Repérez le secteur ou le rôle recherché</strong>
+          <span>Faites défiler ou utilisez la recherche pour filtrer.</span>
+        </div>
+      </div>
+      <div class="step-connector"></div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-body">
+          <strong>Appuyez sur le numéro de téléphone</strong>
+          <span>Sur mobile, l'appel se lance directement. Sur ordinateur, le numéro est affiché pour composition manuelle.</span>
+        </div>
+      </div>
+      <div class="step-connector"></div>
+      <div class="step">
+        <div class="step-num">4</div>
+        <div class="step-body">
+          <strong>Appuyez sur le nom d'un contact pour ouvrir sa fiche détaillée</strong>
+          <span>La page de détail affiche toutes les informations du contact ainsi que les fiches de procédure dans lesquelles il intervient.</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="alert alert-info">
+      <div class="alert-icon">ℹ️</div>
+      <div>
+        <div class="alert-title">Page de détail d'un contact</div>
+        Chaque contact dispose désormais d'une page dédiée (<code>/contacts/[id]</code>) qui centralise ses coordonnées et la liste des fiches de procédure auxquelles il est rattaché. Utile pour retrouver rapidement les procédures impliquant un agent donné.
+      </div>
+    </div>
+
+  </section>
+
+  <!-- ══════════════════════════════════════════════
+       FICHES
+  ══════════════════════════════════════════════ -->
+  <section id="sec-fiches" class="page-section" data-title="Fiches de procédure">
+
+    <div class="feature-header">
+      <div class="feature-icon-big">📄</div>
+      <div class="feature-header-body">
+        <div class="tag">Fonctionnalité</div>
+        <h1>Fiches de procédure</h1>
+        <p>Procédures opérationnelles structurées en étapes numérotées, consultables à tout moment et activables en mode session interactif.</p>
+      </div>
+    </div>
+
+    <h2>Ce que contient une fiche</h2>
+    <div class="screen-box">
+      <div class="sb-title">📋 Structure d'une fiche</div>
+      <ul>
+        <li><strong>Titre</strong> de la procédure</li>
+        <li><strong>Description</strong> du contexte d'utilisation</li>
+        <li><strong>Étapes numérotées</strong> à suivre dans l'ordre</li>
+        <li>Pour chaque étape : une ou plusieurs <strong>actions à réaliser</strong></li>
+        <li><strong>Secteurs et postes associés</strong> à la fiche</li>
+      </ul>
+    </div>
+
+    <h2>Liste des fiches</h2>
+    <p>Toutes les fiches disponibles s'affichent dans la section « Fiches ». Chaque fiche est identifiable par son titre. Elles peuvent être filtrées par secteur ou par poste associé.</p>
+
+    <h2>Ce que vous pouvez faire</h2>
+    <ul class="action-list">
+      <li><span class="al-icon">📋</span> Consulter la liste complète des fiches disponibles</li>
+      <li><span class="al-icon">👁️</span> Lire une fiche et ses étapes en mode consultation</li>
+      <li><span class="al-icon">▶️</span> Démarrer une session interactive sur une fiche</li>
+      <li><span class="al-icon">🗺️</span> Accéder à une fiche depuis la page d'un secteur ou d'un poste associé</li>
+    </ul>
+
+    <h2>Accéder à une fiche</h2>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-body">
+          <strong>Appuyez sur « Fiches » dans le menu de navigation</strong>
+          <span>La liste de toutes les fiches s'affiche.</span>
+        </div>
+      </div>
+      <div class="step-connector"></div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-body">
+          <strong>Sélectionnez la fiche souhaitée</strong>
+          <span>Son contenu complet s'affiche : description, étapes, actions.</span>
+        </div>
+      </div>
+      <div class="step-connector"></div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-body">
+          <strong>Lisez la fiche ou démarrez une session</strong>
+          <span>En consultation simple, faites défiler les étapes. Pour un suivi interactif, appuyez sur « Démarrer une session » (voir fonctionnalité Sessions).</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="alert alert-info">
+      <div class="alert-icon">ℹ️</div>
+      <div>
+        <div class="alert-title">Mode consultation vs mode session</div>
+        La <strong>consultation</strong> permet de lire une fiche sans enregistrer d'actions. Le <strong>mode session</strong> active le suivi interactif avec traçabilité horodatée. Ces deux modes sont indépendants.
+      </div>
+    </div>
+
+  </section>
+
+  <!-- ══════════════════════════════════════════════
+       SESSIONS
+  ══════════════════════════════════════════════ -->
+  <section id="sec-sessions" class="page-section" data-title="Sessions">
+
+    <div class="feature-header">
+      <div class="feature-icon-big">▶️</div>
+      <div class="feature-header-body">
+        <div class="tag">Fonctionnalité</div>
+        <h1>Sessions</h1>
+        <p>Mode interactif d'exécution d'une fiche de procédure. Chaque action cochée est enregistrée avec l'heure et l'identifiant de l'agent. Les sessions sont consultables et archivables.</p>
+      </div>
+    </div>
+
+    <div class="tab-nav">
+      <button class="tab-btn active" onclick="switchTab(this, 'tab-sess-contenu')">Contenu</button>
+      <button class="tab-btn" onclick="switchTab(this, 'tab-sess-actions')">Actions disponibles</button>
+      <button class="tab-btn" onclick="switchTab(this, 'tab-sess-statuts')">Statuts</button>
+    </div>
+
+    <div id="tab-sess-contenu" class="tab-pane active">
+      <h2>Ce que contient une session</h2>
+      <div class="screen-box">
+        <div class="sb-title">📋 Informations d'une session</div>
+        <ul>
+          <li><strong>Fiche associée</strong> — titre et référence de la procédure suivie</li>
+          <li><strong>Date et heure de démarrage</strong> — enregistrées automatiquement</li>
+          <li><strong>Agent ayant démarré la session</strong></li>
+          <li><strong>Statut</strong> — active ou archivée</li>
+          <li><strong>Liste des étapes et actions</strong> de la fiche, avec cases à cocher</li>
+          <li><strong>Journal</strong> — actions cochées et commentaires, horodatés</li>
+        </ul>
+      </div>
+
+      <h2>Comment fonctionne une session</h2>
+      <p>Une session est créée à partir d'une fiche. Elle reprend exactement le contenu de la fiche au moment de son démarrage. Les étapes et actions s'affichent sous forme de cases à cocher.</p>
+      <p>Chaque case cochée génère automatiquement une entrée dans le journal de la session, avec l'heure et le nom de l'agent connecté.</p>
+
+      <h2>Démarrer une session</h2>
+      <div class="steps">
+        <div class="step">
+          <div class="step-num">1</div>
+          <div class="step-body">
+            <strong>Ouvrez la fiche de procédure concernée</strong>
+            <span>Depuis la section « Fiches », sélectionnez la fiche adaptée à votre situation.</span>
+          </div>
+        </div>
+        <div class="step-connector"></div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <div class="step-body">
+            <strong>Appuyez sur « Démarrer une session »</strong>
+            <span>Le bouton est affiché en bas ou en haut de la fiche. Une nouvelle session s'ouvre immédiatement.</span>
+          </div>
+        </div>
+        <div class="step-connector"></div>
+        <div class="step">
+          <div class="step-num">3</div>
+          <div class="step-body">
+            <strong>Cochez les actions au fur et à mesure</strong>
+            <span>Chaque case cochée est enregistrée. Vous pouvez décocher une action si nécessaire — l'annulation est aussi tracée.</span>
+          </div>
+        </div>
+        <div class="step-connector"></div>
+        <div class="step">
+          <div class="step-num">4</div>
+          <div class="step-body">
+            <strong>Ajoutez des commentaires si besoin</strong>
+            <span>Un champ de saisie libre permet d'ajouter des observations à tout moment (voir fonctionnalité Journal).</span>
+          </div>
+        </div>
+        <div class="step-connector"></div>
+        <div class="step">
+          <div class="step-num">5</div>
+          <div class="step-body">
+            <strong>Archivez la session en fin d'intervention</strong>
+            <span>Le bouton « Archiver » clôture la session. Elle reste consultable mais ne peut plus être modifiée.</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="tab-sess-actions" class="tab-pane">
+      <h2>Ce que vous pouvez faire</h2>
+      <ul class="action-list">
+        <li><span class="al-icon">▶️</span> Démarrer une nouvelle session depuis une fiche</li>
+        <li><span class="al-icon">☑️</span> Cocher et décocher les actions de la fiche en cours</li>
+        <li><span class="al-icon">💬</span> Ajouter un commentaire libre dans le journal de la session</li>
+        <li><span class="al-icon">📋</span> Consulter la liste de toutes les sessions (actives et archivées)</li>
+        <li><span class="al-icon">🗂️</span> Ouvrir le détail d'une session passée et relire son journal</li>
+        <li><span class="al-icon">🗃️</span> Archiver une session active une fois l'intervention terminée</li>
+      </ul>
+
+      <div class="alert alert-note">
+        <div class="alert-icon">ℹ️</div>
+        <div>
+          <div class="alert-title">Droits selon le rôle</div>
+          <ul style="margin: 6px 0 0 16px;">
+            <li><span class="role-pill role-user">Utilisateur</span> — peut démarrer une session et cocher des actions</li>
+            <li><span class="role-pill role-editor">Éditeur</span> — peut également archiver les sessions</li>
+            <li><span class="role-pill role-admin">Administrateur</span> — accès complet, y compris à l'historique global</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div id="tab-sess-statuts" class="tab-pane">
+      <h2>Statuts d'une session</h2>
+      <div class="accordion">
+        <div class="acc-item">
+          <button class="acc-header open" onclick="toggleAcc(this)">
+            <span><span class="acc-icon">🟢</span> Active</span>
+            <span class="acc-arrow" style="transform:rotate(180deg)">▼</span>
+          </button>
+          <div class="acc-body open">
+            <p>La session est en cours. Les actions peuvent être cochées ou décochées. Des commentaires peuvent être ajoutés. Elle apparaît dans la liste principale des sessions sous l'étiquette « En cours ».</p>
+          </div>
+        </div>
+        <div class="acc-item">
+          <button class="acc-header" onclick="toggleAcc(this)">
+            <span><span class="acc-icon">🗃️</span> Archivée</span>
+            <span class="acc-arrow">▼</span>
+          </button>
+          <div class="acc-body">
+            <p>La session a été clôturée. Son journal et toutes les actions sont consultables en lecture seule. Elle n'est plus modifiable. Elle apparaît dans la liste des sessions avec l'étiquette « Archivée ».</p>
+          </div>
+        </div>
+      </div>
+
+      <h2>Consulter les sessions</h2>
+      <p>La section <strong>« Sessions »</strong> du menu affiche toutes les sessions, triées par date. Les sessions actives apparaissent en premier. Cliquez sur une session pour accéder à son détail et à son journal complet.</p>
+    </div>
+
+  </section>
+
+  <!-- ══════════════════════════════════════════════
+       JOURNAL
+  ══════════════════════════════════════════════ -->
+  <section id="sec-journal" class="page-section" data-title="Journal de session">
+
+    <div class="feature-header">
+      <div class="feature-icon-big">📓</div>
+      <div class="feature-header-body">
+        <div class="tag">Fonctionnalité</div>
+        <h1>Journal de session</h1>
+        <p>Chronologie complète et horodatée de tout ce qui se passe pendant une session : actions cochées, actions décochées et commentaires libres, avec l'identifiant de l'agent à chaque entrée.</p>
+      </div>
+    </div>
+
+    <h2>Ce que contient le journal</h2>
+    <div class="screen-box">
+      <div class="sb-title">📋 Chaque entrée du journal contient</div>
+      <ul>
+        <li><strong>Heure exacte</strong> de l'action ou du commentaire</li>
+        <li><strong>Nom de l'agent</strong> connecté au moment de l'entrée</li>
+        <li><strong>Type d'entrée</strong> : action cochée, action décochée, ou commentaire</li>
+        <li><strong>Contenu</strong> : libellé de l'action ou texte du commentaire</li>
+      </ul>
+    </div>
+
+    <h2>Les types d'entrées</h2>
+    <div class="accordion">
+      <div class="acc-item">
+        <button class="acc-header open" onclick="toggleAcc(this)">
+          <span><span class="acc-icon">☑️</span> Action cochée</span>
+          <span class="acc-arrow" style="transform:rotate(180deg)">▼</span>
+        </button>
+        <div class="acc-body open">
+          <p>Générée automatiquement lorsqu'un agent coche une action dans la fiche. Enregistre l'heure, le nom de l'agent et le libellé de l'action concernée.</p>
+        </div>
+      </div>
+      <div class="acc-item">
+        <button class="acc-header" onclick="toggleAcc(this)">
+          <span><span class="acc-icon">🔲</span> Action décochée</span>
+          <span class="acc-arrow">▼</span>
+        </button>
+        <div class="acc-body">
+          <p>Générée automatiquement lorsqu'un agent décoche une action précédemment cochée. L'annulation est tracée comme une entrée distincte dans le journal.</p>
+        </div>
+      </div>
+      <div class="acc-item">
+        <button class="acc-header" onclick="toggleAcc(this)">
+          <span><span class="acc-icon">💬</span> Commentaire</span>
+          <span class="acc-arrow">▼</span>
+        </button>
+        <div class="acc-body">
+          <p>Saisie manuelle par l'agent. Le champ de commentaire est disponible en permanence pendant la session. Le texte est libre. Chaque commentaire est horodaté et associé à l'agent qui l'a saisi.</p>
+        </div>
+      </div>
+    </div>
+
+    <h2>Ajouter un commentaire</h2>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-body">
+          <strong>Ouvrez la session active</strong>
+          <span>Depuis la section « Sessions » ou depuis la fiche en cours d'exécution.</span>
+        </div>
+      </div>
+      <div class="step-connector"></div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-body">
+          <strong>Localisez le champ de commentaire</strong>
+          <span>Il est affiché dans la vue de la session active, sous les étapes de la fiche.</span>
+        </div>
+      </div>
+      <div class="step-connector"></div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-body">
+          <strong>Tapez votre message et validez</strong>
+          <span>Le commentaire est immédiatement enregistré dans le journal avec l'heure et votre identifiant.</span>
+        </div>
+      </div>
+    </div>
+
+    <h2>Consulter le journal d'une session</h2>
+    <p>Depuis la section <strong>« Sessions »</strong>, ouvrez une session (active ou archivée). Le journal s'affiche sous forme de fil chronologique, du plus ancien au plus récent. Chaque entrée est clairement identifiée par son type, son heure et son auteur.</p>
+
+    <div class="alert alert-info">
+      <div class="alert-icon">ℹ️</div>
+      <div>
+        <div class="alert-title">Le journal est en lecture seule une fois la session archivée</div>
+        Aucune entrée ne peut être modifiée ou supprimée après archivage. Le journal constitue un historique permanent et inaltérable de la session.
+      </div>
+    </div>
+
+  </section>
+
+  <!-- ══════════════════════════════════════════════
+       SECTEURS
+  ══════════════════════════════════════════════ -->
+  <section id="sec-secteurs" class="page-section" data-title="Secteurs">
+
+    <div class="feature-header">
+      <div class="feature-icon-big">🗺️</div>
+      <div class="feature-header-body">
+        <div class="tag">Fonctionnalité</div>
+        <h1>Secteurs</h1>
+        <p>Zones géographiques d'intervention. Chaque secteur regroupe les contacts, les postes et les fiches de procédure qui lui sont rattachés.</p>
+      </div>
+    </div>
+
+    <h2>Ce que contient un secteur</h2>
+    <div class="screen-box">
+      <div class="sb-title">📋 Informations affichées pour chaque secteur</div>
+      <ul>
+        <li><strong>Nom du secteur</strong></li>
+        <li><strong>Description ou périmètre géographique</strong></li>
+        <li><strong>Contacts rattachés</strong> à ce secteur</li>
+        <li><strong>Postes associés</strong> à ce secteur</li>
+        <li><strong>Fiches de procédure liées</strong> à ce secteur</li>
+      </ul>
+    </div>
+
+    <h2>Liste des secteurs</h2>
+    <p>La section « Secteurs » affiche l'ensemble des zones géographiques configurées dans l'application. Chaque secteur est accessible par son nom. En ouvrant un secteur, vous accédez à une vue centralisée de tout ce qui lui est rattaché : contacts, postes et fiches.</p>
+
+    <h2>Ce que vous pouvez faire</h2>
+    <ul class="action-list">
+      <li><span class="al-icon">📋</span> Consulter la liste de tous les secteurs</li>
+      <li><span class="al-icon">👁️</span> Ouvrir un secteur pour voir ses contacts, postes et fiches associés</li>
+      <li><span class="al-icon">📞</span> Accéder directement aux contacts du secteur</li>
+      <li><span class="al-icon">📄</span> Ouvrir une fiche de procédure depuis la page du secteur</li>
+    </ul>
+
+    <h2>Accéder à un secteur</h2>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-body">
+          <strong>Appuyez sur « Secteurs » dans le menu</strong>
+          <span>La liste des secteurs s'affiche.</span>
+        </div>
+      </div>
+      <div class="step-connector"></div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-body">
+          <strong>Sélectionnez le secteur souhaité</strong>
+          <span>Sa page de détail s'ouvre, avec tous les éléments rattachés.</span>
+        </div>
+      </div>
+      <div class="step-connector"></div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-body">
+          <strong>Naviguez vers un contact, un poste ou une fiche</strong>
+          <span>Les liens sont directs depuis la page du secteur.</span>
+        </div>
+      </div>
+    </div>
+
+  </section>
+
+  <!-- ══════════════════════════════════════════════
+       POSTES
+  ══════════════════════════════════════════════ -->
+  <section id="sec-postes" class="page-section" data-title="Postes">
+
+    <div class="feature-header">
+      <div class="feature-icon-big">🏷️</div>
+      <div class="feature-header-body">
+        <div class="tag">Fonctionnalité</div>
+        <h1>Postes</h1>
+        <p>Référentiels de compétences par poste de travail. Chaque poste est rattaché à un secteur et liste les aptitudes, responsabilités et procédures associées.</p>
+      </div>
+    </div>
+
+    <h2>Ce que contient un poste</h2>
+    <div class="screen-box">
+      <div class="sb-title">📋 Informations affichées pour chaque poste</div>
+      <ul>
+        <li><strong>Nom du poste</strong></li>
+        <li><strong>Secteur de rattachement</strong></li>
+        <li><strong>Compétences et aptitudes</strong> associées au poste</li>
+        <li><strong>Annuaire des contacts du poste</strong> — numéros directs et contacts liés</li>
+        <li><strong>Fiches de procédure</strong> liées à ce poste</li>
+      </ul>
+    </div>
+
+    <h2>Liste des postes</h2>
+    <p>La section « Postes » liste tous les postes configurés dans l'application. L'application contient notamment les postes <strong>Badan</strong>, <strong>Givors Canal</strong> et <strong>Peyraud</strong>, chacun rattaché à son secteur géographique.</p>
+
+    <h2>Annuaire du poste — mode hybride</h2>
+    <p>Chaque poste dispose d'un <strong>annuaire de contacts</strong> qui peut mélanger deux types d'entrées :</p>
+    <div class="card-grid">
+      <div class="card" style="border-top: 3px solid #6b7280;">
+        <h3>✏️ Entrée libre</h3>
+        <p>Numéro de téléphone et libellé saisis manuellement. Utile pour des contacts externes ou ponctuels non enregistrés dans la base.</p>
+        <div class="badge-row"><span class="badge badge-gris">Libre</span></div>
+      </div>
+      <div class="card" style="border-top: 3px solid #2563eb;">
+        <h3>🔗 Entrée liée</h3>
+        <p>Contact rattaché directement à un enregistrement de l'annuaire de l'application. Le numéro et le nom sont résolus automatiquement. Un badge <strong>« Lié »</strong> est affiché. Si le contact est supprimé, un indicateur orange signale l'orphelin sans provoquer d'erreur.</p>
+        <div class="badge-row"><span class="badge badge-bleu">Lié</span></div>
+      </div>
+    </div>
+    <p>Pour les entrées liées, un <strong>numéro alternatif</strong> (<em>téléphone alt.</em>) et une <strong>disponibilité</strong> peuvent être précisés, en complément du numéro principal du contact.</p>
+
+    <h2>Ce que vous pouvez faire</h2>
+    <ul class="action-list">
+      <li><span class="al-icon">📋</span> Consulter la liste de tous les postes</li>
+      <li><span class="al-icon">👁️</span> Ouvrir un poste pour consulter son référentiel de compétences</li>
+      <li><span class="al-icon">📞</span> Consulter l'annuaire du poste avec contacts libres et contacts liés</li>
+      <li><span class="al-icon">📄</span> Accéder aux fiches de procédure associées à ce poste</li>
+      <li><span class="al-icon">🗺️</span> Naviguer vers le secteur rattaché</li>
+    </ul>
+
+    <div class="alert alert-info">
+      <div class="alert-icon">ℹ️</div>
+      <div>
+        <div class="alert-title">Lien entre poste et secteur</div>
+        Un poste est toujours rattaché à un ou plusieurs secteurs. Depuis la page d'un secteur, vous pouvez accéder directement aux postes qui lui sont associés, et inversement.
+      </div>
+    </div>
+
+    <div class="alert alert-note">
+      <div class="alert-icon">⚠️</div>
+      <div>
+        <div class="alert-title">Contact orphelin</div>
+        Si un contact lié à l'annuaire d'un poste est supprimé de la base, l'entrée reste affichée avec un indicateur amber (orange clair). Aucune erreur ne se produit. L'administrateur peut mettre à jour l'annuaire pour retirer ou remplacer l'entrée concernée.
+      </div>
+    </div>
+
+  </section>
+
+  <!-- ══════════════════════════════════════════════
+       MNÉMONIQUES & ABRÉVIATIONS
+  ══════════════════════════════════════════════ -->
+  <section id="sec-mnemoniques" class="page-section" data-title="Mnémoniques & Abréviations">
+
+    <div class="feature-header">
+      <div class="feature-icon-big">🔤</div>
+      <div class="feature-header-body">
+        <div class="tag">Fonctionnalité</div>
+        <h1>Mnémoniques &amp; Abréviations</h1>
+        <p>Deux glossaires distincts qui répertorient les codes, mnémoniques et abréviations utilisés dans l'organisation. Filtrables en temps réel.</p>
+      </div>
+    </div>
+
+    <h2>Mnémoniques</h2>
+    <div class="screen-box">
+      <div class="sb-title">📋 Ce que contient chaque entrée mnémonique</div>
+      <ul>
+        <li><strong>Code mnémonique</strong> (ex. : code opérationnel court)</li>
+        <li><strong>Signification complète</strong></li>
+        <li><strong>Contexte d'utilisation</strong> si renseigné</li>
+      </ul>
+    </div>
+
+    <p>La liste complète s'affiche dans la section « Mnémoniques ». Un <strong>champ de filtre</strong> permet de réduire la liste en tapant le début du code ou un mot de sa signification. La liste se met à jour immédiatement à chaque caractère saisi.</p>
+
+    <hr class="divider">
+
+    <h2>Abréviations</h2>
+    <div class="screen-box">
+      <div class="sb-title">📋 Ce que contient chaque entrée abréviation</div>
+      <ul>
+        <li><strong>Abréviation</strong> (ex. : sigle ou raccourci textuel)</li>
+        <li><strong>Développement complet</strong></li>
+        <li><strong>Remarques</strong> si renseignées</li>
+      </ul>
+    </div>
+
+    <p>Accessible depuis la même section ou via un onglet dédié. Le filtre fonctionne de la même façon que pour les mnémoniques.</p>
+
+    <h2>Ce que vous pouvez faire</h2>
+    <ul class="action-list">
+      <li><span class="al-icon">📋</span> Consulter la liste complète des mnémoniques</li>
+      <li><span class="al-icon">📋</span> Consulter la liste complète des abréviations</li>
+      <li><span class="al-icon">🔍</span> Filtrer les deux listes en temps réel par code ou par signification</li>
+    </ul>
+
+    <h2>Utiliser le filtre</h2>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-body">
+          <strong>Ouvrez la section « Mnémoniques »</strong>
+          <span>La liste complète s'affiche.</span>
+        </div>
+      </div>
+      <div class="step-connector"></div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-body">
+          <strong>Tapez dans le champ de filtre</strong>
+          <span>Entrez le code, une lettre ou un mot. La liste se réduit instantanément aux correspondances.</span>
+        </div>
+      </div>
+      <div class="step-connector"></div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-body">
+          <strong>Lisez la définition de l'entrée trouvée</strong>
+          <span>Signification complète et contexte s'affichent pour chaque résultat.</span>
+        </div>
+      </div>
+    </div>
+
+  </section>
+
+  <!-- ══════════════════════════════════════════════
+       RECHERCHE
+  ══════════════════════════════════════════════ -->
+  <section id="sec-recherche" class="page-section" data-title="Recherche">
+
+    <div class="feature-header">
+      <div class="feature-icon-big">🔍</div>
+      <div class="feature-header-body">
+        <div class="tag">Fonctionnalité</div>
+        <h1>Recherche</h1>
+        <p>Recherche globale sur l'ensemble du contenu de l'application : contacts, fiches, secteurs, postes, mnémoniques et abréviations. Les résultats sont regroupés par type.</p>
+      </div>
+    </div>
+
+    <h2>Ce que couvre la recherche</h2>
+    <div class="screen-box">
+      <div class="sb-title">📋 Contenus interrogés par la recherche</div>
+      <ul>
+        <li><strong>Contacts</strong> — noms, fonctions, secteurs</li>
+        <li><strong>Fiches de procédure</strong> — titres et descriptions</li>
+        <li><strong>Secteurs</strong> — noms et descriptions</li>
+        <li><strong>Postes</strong> — noms et compétences</li>
+        <li><strong>Mnémoniques</strong> — codes et significations</li>
+        <li><strong>Abréviations</strong> — sigles et développements</li>
+      </ul>
+    </div>
+
+    <h2>Ce que vous pouvez faire</h2>
+    <ul class="action-list">
+      <li><span class="al-icon">🔍</span> Lancer une recherche sur l'ensemble du contenu de l'application depuis un seul champ</li>
+      <li><span class="al-icon">📋</span> Consulter les résultats regroupés par catégorie (contacts, fiches, secteurs…)</li>
+      <li><span class="al-icon">👁️</span> Accéder directement à un résultat en appuyant dessus</li>
+    </ul>
+
+    <h2>Utiliser la recherche</h2>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-body">
+          <strong>Appuyez sur « Recherche » dans le menu de navigation</strong>
+          <span>Le champ de recherche global s'affiche.</span>
+        </div>
+      </div>
+      <div class="step-connector"></div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-body">
+          <strong>Tapez un ou plusieurs mots-clés</strong>
+          <span>Nom d'une personne, titre d'une fiche, nom d'un secteur, code mnémonique…</span>
+        </div>
+      </div>
+      <div class="step-connector"></div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-body">
+          <strong>Consultez les résultats regroupés par catégorie</strong>
+          <span>Contacts trouvés, fiches trouvées, secteurs trouvés, etc.</span>
+        </div>
+      </div>
+      <div class="step-connector"></div>
+      <div class="step">
+        <div class="step-num">4</div>
+        <div class="step-body">
+          <strong>Appuyez sur un résultat pour y accéder directement</strong>
+          <span>Vous êtes redirigé vers la page complète de l'élément sélectionné.</span>
+        </div>
+      </div>
+    </div>
+
+  </section>
+
+  <!-- ══════════════════════════════════════════════
+       COMPTE & ACCÈS
+  ══════════════════════════════════════════════ -->
+  <section id="sec-compte" class="page-section" data-title="Compte & accès">
+
+    <div class="feature-header">
+      <div class="feature-icon-big">👤</div>
+      <div class="feature-header-body">
+        <div class="tag">Fonctionnalité</div>
+        <h1>Compte &amp; accès</h1>
+        <p>Connexion à l'application, gestion des droits selon le rôle attribué, et accès à l'espace d'administration pour les profils habilités.</p>
+      </div>
+    </div>
+
+    <h2>Connexion</h2>
+    <p>L'application utilise une <strong>page de connexion unique</strong> pour tous les profils (agents, éditeurs, administrateurs). Un seul identifiant et mot de passe donne accès à l'ensemble des fonctionnalités correspondant à votre rôle.</p>
+
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-body">
+          <strong>Ouvrez la page de l'application</strong>
+          <span>La page de connexion s'affiche si vous n'êtes pas encore connecté.</span>
+        </div>
+      </div>
+      <div class="step-connector"></div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-body">
+          <strong>Entrez votre identifiant et votre mot de passe</strong>
+          <span>Ces informations vous ont été communiquées par votre responsable.</span>
+        </div>
+      </div>
+      <div class="step-connector"></div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-body">
+          <strong>Validez</strong>
+          <span>Vous arrivez sur l'accueil de l'application. Le menu et les fonctionnalités disponibles correspondent à votre rôle.</span>
+        </div>
+      </div>
+    </div>
+
+    <hr class="divider">
+
+    <h2>Les trois rôles</h2>
+
+    <div class="accordion">
+      <div class="acc-item">
+        <button class="acc-header open" onclick="toggleAcc(this)">
+          <span><span class="acc-icon">👷</span> Utilisateur <span class="role-pill role-user" style="margin-left:8px">USER</span></span>
+          <span class="acc-arrow" style="transform:rotate(180deg)">▼</span>
+        </button>
+        <div class="acc-body open">
+          <p>Rôle attribué aux agents de terrain. Donne accès à :</p>
+          <ul>
+            <li>Consultation de tous les contenus (contacts, fiches, secteurs, postes, mnémoniques, abréviations)</li>
+            <li>Démarrage d'une session sur une fiche</li>
+            <li>Cochage des actions dans une session active</li>
+            <li>Ajout de commentaires dans le journal</li>
+            <li>Utilisation de la recherche</li>
+          </ul>
+        </div>
+      </div>
+      <div class="acc-item">
+        <button class="acc-header" onclick="toggleAcc(this)">
+          <span><span class="acc-icon">✏️</span> Éditeur <span class="role-pill role-editor" style="margin-left:8px">EDITOR</span></span>
+          <span class="acc-arrow">▼</span>
+        </button>
+        <div class="acc-body">
+          <p>Rôle attribué aux agents habilités à gérer le contenu. Inclut tous les droits Utilisateur, plus :</p>
+          <ul>
+            <li>Archivage des sessions</li>
+            <li>Modification du contenu (contacts, fiches, secteurs, postes, mnémoniques, abréviations) via l'espace d'administration</li>
+          </ul>
+        </div>
+      </div>
+      <div class="acc-item">
+        <button class="acc-header" onclick="toggleAcc(this)">
+          <span><span class="acc-icon">🔑</span> Administrateur <span class="role-pill role-admin" style="margin-left:8px">ADMIN</span></span>
+          <span class="acc-arrow">▼</span>
+        </button>
+        <div class="acc-body">
+          <p>Rôle réservé aux responsables de l'application. Inclut tous les droits Éditeur, plus :</p>
+          <ul>
+            <li>Gestion des comptes utilisateurs (création, modification, désactivation)</li>
+            <li>Accès à l'espace d'administration complet</li>
+            <li>Consultation des journaux d'audit</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <hr class="divider">
+
+    <h2>Espace d'administration</h2>
+    <p>Accessible uniquement aux profils <span class="role-pill role-editor">Éditeur</span> et <span class="role-pill role-admin">Administrateur</span>. Il permet de gérer l'intégralité du contenu de l'application depuis une interface dédiée.</p>
+
+    <div class="screen-box">
+      <div class="sb-title">📋 Ce que l'administration permet de gérer</div>
+      <ul>
+        <li>Contacts — ajout, modification, suppression</li>
+        <li>Fiches de procédure — création, édition des étapes et actions</li>
+        <li>Secteurs — création et modification</li>
+        <li>Postes — création, gestion des compétences et <strong>édition de l'annuaire hybride</strong> (entrées libres et entrées liées à des contacts)</li>
+        <li>Mnémoniques et abréviations — ajout et modification</li>
+        <li>Utilisateurs — création et gestion des comptes (Administrateur uniquement)</li>
+      </ul>
+    </div>
+
+    <h2>Édition de l'annuaire d'un poste</h2>
+    <p>Dans l'espace d'administration, la page d'édition d'un poste (<strong>Admin → Postes → [poste]</strong>) propose un éditeur d'annuaire qui permet de gérer chaque entrée en mode <strong>libre</strong> ou <strong>lié</strong> :</p>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-body">
+          <strong>Choisissez le mode de l'entrée</strong>
+          <span>Sélectionnez « Libre » pour saisir un numéro manuellement, ou « Lié » pour rattacher l'entrée à un contact existant dans l'application.</span>
+        </div>
+      </div>
+      <div class="step-connector"></div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-body">
+          <strong>En mode « Lié » — sélectionnez le contact via le sélecteur</strong>
+          <span>Le ContactPicker permet de rechercher et de choisir un contact de la base. Le nom et le numéro sont résolus automatiquement. Vous pouvez ajouter un numéro alternatif et une disponibilité spécifiques à ce poste.</span>
+        </div>
+      </div>
+      <div class="step-connector"></div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-body">
+          <strong>Vérifiez l'aperçu en temps réel</strong>
+          <span>L'annuaire s'actualise immédiatement à chaque modification. Les entrées liées affichent un badge « Lié ».</span>
+        </div>
+      </div>
+      <div class="step-connector"></div>
+      <div class="step">
+        <div class="step-num">4</div>
+        <div class="step-body">
+          <strong>Enregistrez</strong>
+          <span>Les données sont normalisées et validées avant sauvegarde. Un avertissement est affiché si un identifiant de contact lié est invalide.</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="alert alert-note">
+      <div class="alert-icon">ℹ️</div>
+      <div>
+        <div class="alert-title">Accès à l'administration</div>
+        L'espace d'administration est accessible depuis le même identifiant que l'application principale. Aucune connexion séparée n'est nécessaire.
+      </div>
+    </div>
+
+  </section>
+
+
+  <!-- ══════════════════════════════════════════════
+       PROCÉDURES GUIDÉES
+  ══════════════════════════════════════════════ -->
+  <section id="sec-procedures-guidees" class="page-section" data-title="Procédures guidées">
+
+    <div class="feature-header">
+      <div class="feature-icon-big">🧭</div>
+      <div class="feature-header-body">
+        <div class="tag">Fonctionnalité</div>
+        <h1>Procédures guidées</h1>
+        <p>Moteur d'exécution pas à pas de procédures métier structurées. Chaque procédure pose des questions à l'agent, valide ses réponses en temps réel et produit une synthèse finale permettant de conclure si l'opération est possible ou non.</p>
+      </div>
+    </div>
+
+    <div class="alert alert-info">
+      <div class="alert-icon">ℹ️</div>
+      <div>
+        <div class="alert-title">Différence avec les fiches de procédure</div>
+        Les <strong>fiches</strong> sont des listes d'actions à cocher librement. Les <strong>procédures guidées</strong> sont des formulaires intelligents : elles posent des questions, bloquent la progression si une réponse est incompatible, et calculent automatiquement une conclusion à la fin.
+      </div>
+    </div>
+
+    <h2>Les types de procédures</h2>
+    <div class="card-grid">
+      <div class="card" style="border-top: 3px solid #2563eb;">
+        <h3>🔴 Cessation de service</h3>
+        <p>Vérification de toutes les conditions nécessaires avant d'arrêter un service. La procédure s'assure que les trains en cours sont pris en compte, que la coordination agents est faite, et que les particularités du secteur sont traitées.</p>
+        <div class="badge-row"><span class="badge badge-bleu">Cessation</span></div>
+      </div>
+      <div class="card" style="border-top: 3px solid #16a34a;">
+        <h3>🟢 Reprise de service</h3>
+        <p>Vérification des conditions de remise en service après un arrêt ou un incident. Contrôle que la situation est stable et que la reprise est autorisée.</p>
+        <div class="badge-row"><span class="badge badge-vert">Reprise</span></div>
+      </div>
+      <div class="card" style="border-top: 3px solid #dc2626;">
+        <h3>🚨 Incident</h3>
+        <p>Procédure de traitement d'un incident opérationnel. Guide l'agent dans la qualification de l'incident et les actions immédiates à engager.</p>
+        <div class="badge-row"><span class="badge badge-rouge">Incident</span></div>
+      </div>
+      <div class="card" style="border-top: 3px solid #ca8a04;">
+        <h3>🔧 Travaux</h3>
+        <p>Vérifications liées à une phase de travaux : conditions de sécurité, coordination avec les équipes, autorisation de début ou de fin de chantier.</p>
+        <div class="badge-row"><span class="badge badge-gris">Travaux</span></div>
+      </div>
+    </div>
+
+    <h2>Ce que contient une procédure guidée</h2>
+    <div class="screen-box">
+      <div class="sb-title">📋 Structure d'une procédure guidée</div>
+      <ul>
+        <li><strong>Titre et type</strong> (cessation, reprise, incident, travaux)</li>
+        <li><strong>Référence métier</strong> (ex. : EIC RA DC 7291)</li>
+        <li><strong>Étapes</strong> — chaque étape regroupe un ensemble d'actions à valider</li>
+        <li><strong>Actions</strong> — voir les types ci-dessous</li>
+        <li><strong>Synthèse finale</strong> — résultat calculé automatiquement à la fin</li>
+      </ul>
+    </div>
+
+    <h2>Les types d'actions dans une procédure</h2>
+    <div class="accordion">
+      <div class="acc-item">
+        <button class="acc-header open" onclick="toggleAcc(this)">
+          <span><span class="acc-icon">ℹ️</span> Information</span>
+          <span class="acc-arrow" style="transform:rotate(180deg)">▼</span>
+        </button>
+        <div class="acc-body open">
+          <p>Texte affiché à l'agent sans interaction requise. Sert à rappeler une règle, une consigne ou un contexte à connaître avant de répondre aux questions suivantes.</p>
+        </div>
+      </div>
+      <div class="acc-item">
+        <button class="acc-header" onclick="toggleAcc(this)">
+          <span><span class="acc-icon">✅</span> Question Oui / Non</span>
+          <span class="acc-arrow">▼</span>
+        </button>
+        <div class="acc-body">
+          <p>L'agent répond par Oui ou par Non. La procédure vérifie si la réponse correspond à la réponse attendue. En cas d'écart, une alerte ou un blocage peut être déclenché selon le niveau de l'action.</p>
+        </div>
+      </div>
+      <div class="acc-item">
+        <button class="acc-header" onclick="toggleAcc(this)">
+          <span><span class="acc-icon">🔘</span> Question à choix</span>
+          <span class="acc-arrow">▼</span>
+        </button>
+        <div class="acc-body">
+          <p>L'agent choisit parmi une liste d'options prédéfinies. La réponse sélectionnée peut conditionner l'affichage d'étapes ou d'actions suivantes.</p>
+        </div>
+      </div>
+      <div class="acc-item">
+        <button class="acc-header" onclick="toggleAcc(this)">
+          <span><span class="acc-icon">✏️</span> Saisie texte libre</span>
+          <span class="acc-arrow">▼</span>
+        </button>
+        <div class="acc-body">
+          <p>L'agent saisit une valeur libre (numéro de train, heure, nom d'agent, observation). La saisie est enregistrée dans la session et apparaît dans la synthèse finale.</p>
+        </div>
+      </div>
+      <div class="acc-item">
+        <button class="acc-header" onclick="toggleAcc(this)">
+          <span><span class="acc-icon">☑️</span> Confirmation</span>
+          <span class="acc-arrow">▼</span>
+        </button>
+        <div class="acc-body">
+          <p>L'agent coche une case pour attester qu'une action a bien été réalisée. Certaines confirmations incluent un <strong>bouton d'appel direct</strong> : appuyer sur le bouton lance l'appel téléphonique vers le contact associé. Le bouton d'appel reste visible même après la confirmation de l'action.</p>
+        </div>
+      </div>
+      <div class="acc-item">
+        <button class="acc-header" onclick="toggleAcc(this)">
+          <span><span class="acc-icon">📞</span> Recherche de contact</span>
+          <span class="acc-arrow">▼</span>
+        </button>
+        <div class="acc-body">
+          <p>Action dédiée à la recherche d'un contact pendant l'exécution d'une procédure. L'agent peut filtrer les contacts par <strong>catégorie</strong> (ex. : agents de secteur, responsables, externes). Si la liste filtrée contient 5 contacts ou moins, ils s'affichent directement sans étape intermédiaire.</p>
+          <p>Le contact sélectionné est enregistré dans un <strong>snapshot immuable</strong> attaché à l'événement de session : même si le contact est modifié ou supprimé ultérieurement, la traçabilité reste intacte dans le journal.</p>
+        </div>
+      </div>
+    </div>
+
+    <h2>Les niveaux d'action</h2>
+    <div class="card-grid">
+      <div class="card" style="border-left: 4px solid #6b7280;">
+        <h3>⚪ Informatif</h3>
+        <p>La réponse est enregistrée mais n'a pas d'impact sur la possibilité d'avancer ou de conclure. Aucun blocage possible.</p>
+      </div>
+      <div class="card" style="border-left: 4px solid #ca8a04;">
+        <h3>🟡 Alerte</h3>
+        <p>La réponse incorrecte génère un avertissement visible dans la synthèse finale, mais ne bloque pas la progression ni la conclusion.</p>
+      </div>
+      <div class="card" style="border-left: 4px solid #dc2626;">
+        <h3>🔴 Bloquant</h3>
+        <p>La réponse incorrecte empêche de valider l'étape en cours et peut rendre la conclusion « impossible ». L'agent ne peut pas passer à la suite tant que la condition n'est pas satisfaite.</p>
+      </div>
+    </div>
+
+    <h2>Déroulement d'une session de procédure guidée</h2>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-body">
+          <strong>Accédez à la page du poste concerné</strong>
+          <span>Depuis le menu « Postes », sélectionnez le poste correspondant à votre situation (ex. : Givors Ville).</span>
+        </div>
+      </div>
+      <div class="step-connector"></div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-body">
+          <strong>Sélectionnez le type de procédure</strong>
+          <span>Sur la page du poste, choisissez « Cessation », « Reprise », « Incident » ou « Travaux » selon votre situation. La liste des procédures disponibles pour ce type s'affiche.</span>
+        </div>
+      </div>
+      <div class="step-connector"></div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-body">
+          <strong>Saisissez votre nom (optionnel) et démarrez</strong>
+          <span>La session s'ouvre avec un identifiant unique. Le contenu de la procédure est figé au moment du démarrage.</span>
+        </div>
+      </div>
+      <div class="step-connector"></div>
+      <div class="step">
+        <div class="step-num">4</div>
+        <div class="step-body">
+          <strong>Répondez aux actions de chaque étape</strong>
+          <span>Une barre de progression indique l'avancement. Naviguez entre les étapes avec les boutons « Précédent » et « Suivant ». Une étape avec des actions bloquantes non satisfaites ne peut pas être franchie.</span>
+        </div>
+      </div>
+      <div class="step-connector"></div>
+      <div class="step">
+        <div class="step-num">5</div>
+        <div class="step-body">
+          <strong>Consultez la synthèse finale</strong>
+          <span>Une fois toutes les étapes parcourues, la synthèse s'affiche automatiquement avec le résultat calculé et la liste des alertes et blocages identifiés.</span>
+        </div>
+      </div>
+    </div>
+
+    <h2>La synthèse finale</h2>
+    <div class="screen-box">
+      <div class="sb-title">📋 Les quatre résultats possibles</div>
+      <ul>
+        <li><strong>✅ Possible</strong> — toutes les conditions sont satisfaites, aucune alerte ni blocage</li>
+        <li><strong>⚠️ Possible avec alerte</strong> — l'opération est autorisée mais des points d'attention ont été relevés</li>
+        <li><strong>⛔ Incomplet</strong> — certaines actions obligatoires n'ont pas été renseignées</li>
+        <li><strong>🚫 Impossible</strong> — une ou plusieurs conditions bloquantes ne sont pas satisfaites</li>
+      </ul>
+    </div>
+
+  </section>
+
+  <!-- ══════════════════════════════════════════════
+       IMPORT / EXPORT
+  ══════════════════════════════════════════════ -->
+  <section id="sec-import-export" class="page-section" data-title="Import / Export">
+
+    <div class="feature-header">
+      <div class="feature-icon-big">📦</div>
+      <div class="feature-header-body">
+        <div class="tag">Fonctionnalité — Administration</div>
+        <h1>Import / Export</h1>
+        <p>Chargement en masse de données dans l'application depuis un fichier Excel, et export complet du référentiel. Accessible uniquement aux profils <span class="role-pill role-editor">Éditeur</span> et <span class="role-pill role-admin">Administrateur</span>.</p>
+      </div>
+    </div>
+
+    <div class="tab-nav">
+      <button class="tab-btn active" onclick="switchTab(this, 'tab-ie-import')">📥 Import</button>
+      <button class="tab-btn" onclick="switchTab(this, 'tab-ie-export')">📤 Export</button>
+    </div>
+
+    <div id="tab-ie-import" class="tab-pane active">
+
+      <h2>Importer des données depuis Excel</h2>
+      <p>L'espace d'administration propose une page d'import dédiée. Un fichier Excel (.xlsx) structuré selon le modèle fourni par l'application peut être chargé pour mettre à jour ou créer des données en masse.</p>
+
+      <h2>Les données importables</h2>
+      <div class="screen-box">
+        <div class="sb-title">📋 Types de données pris en charge à l'import</div>
+        <ul>
+          <li><strong>Contacts</strong> — noms, fonctions, numéros, secteurs de rattachement</li>
+          <li><strong>Mnémoniques</strong> — codes et significations</li>
+          <li><strong>Abréviations</strong> — sigles et développements</li>
+          <li><strong>Accès Rail (Excel)</strong> — données d'accès spécifiques aux voies ferrées</li>
+          <li><strong>Fiches de procédure</strong> — structure complète des fiches avec leurs étapes</li>
+          <li><strong>Procédures guidées</strong> — étapes, actions, niveaux et conditions</li>
+          <li><strong>Secteurs</strong> — zones géographiques et leurs paramètres</li>
+          <li><strong>Données géographiques (KML)</strong> — import de zones cartographiques</li>
+        </ul>
+      </div>
+
+      <h2>Les deux modes d'import</h2>
+      <div class="card-grid">
+        <div class="card" style="border-top: 3px solid #2563eb;">
+          <h3>➕ Création seule</h3>
+          <p>Seules les nouvelles entrées sont ajoutées. Les données existantes ne sont pas modifiées. À utiliser pour un premier chargement ou pour ajouter de nouvelles entrées sans risque d'écraser l'existant.</p>
+          <div class="badge-row"><span class="badge badge-bleu">Mode « create »</span></div>
+        </div>
+        <div class="card" style="border-top: 3px solid #16a34a;">
+          <h3>🔄 Création + mise à jour</h3>
+          <p>Les nouvelles entrées sont créées et les entrées existantes sont mises à jour si elles ont changé. À utiliser pour une synchronisation complète du référentiel.</p>
+          <div class="badge-row"><span class="badge badge-vert">Mode « upsert »</span></div>
+        </div>
+      </div>
+
+      <h2>Déroulement d'un import</h2>
+      <div class="steps">
+        <div class="step">
+          <div class="step-num">1</div>
+          <div class="step-body">
+            <strong>Accédez à l'espace d'administration</strong>
+            <span>Depuis le menu, ouvrez l'espace Admin puis naviguez vers « Import de données ».</span>
+          </div>
+        </div>
+        <div class="step-connector"></div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <div class="step-body">
+            <strong>Choisissez le type de données à importer</strong>
+            <span>Sélectionnez l'onglet correspondant : Contacts, Mnémoniques, Fiches, Procédures, etc.</span>
+          </div>
+        </div>
+        <div class="step-connector"></div>
+        <div class="step">
+          <div class="step-num">3</div>
+          <div class="step-body">
+            <strong>Chargez votre fichier Excel</strong>
+            <span>Le fichier doit respecter le format attendu par l'application (colonnes et libellés définis). L'application parse le fichier et affiche un aperçu des données détectées avant envoi.</span>
+          </div>
+        </div>
+        <div class="step-connector"></div>
+        <div class="step">
+          <div class="step-num">4</div>
+          <div class="step-body">
+            <strong>Vérifiez l'aperçu et les erreurs éventuelles</strong>
+            <span>L'application valide les données avant import. Les lignes incorrectes sont signalées avec un message d'erreur précis (champ manquant, valeur invalide, etc.).</span>
+          </div>
+        </div>
+        <div class="step-connector"></div>
+        <div class="step">
+          <div class="step-num">5</div>
+          <div class="step-body">
+            <strong>Choisissez le mode et lancez l'import</strong>
+            <span>Sélectionnez « Création seule » ou « Création + mise à jour » puis confirmez. Un rapport indique le nombre d'entrées créées et mises à jour.</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="alert alert-note">
+        <div class="alert-icon">⚠️</div>
+        <div>
+          <div class="alert-title">Validation avant import</div>
+          L'application contrôle la structure et le contenu du fichier avant d'écrire quoi que ce soit en base. Si des erreurs sont détectées, aucune donnée n'est importée. Corrigez les erreurs signalées et relancez l'import.
+        </div>
+      </div>
+
+    </div>
+
+    <div id="tab-ie-export" class="tab-pane">
+
+      <h2>Exporter le référentiel complet</h2>
+      <p>L'espace d'administration propose un export complet de toutes les données de référence de l'application dans un fichier Excel unique, prêt à être archivé ou réimporté.</p>
+
+      <h2>Ce que contient l'export Excel</h2>
+      <div class="screen-box">
+        <div class="sb-title">📋 Les 8 onglets du fichier exporté</div>
+        <ul>
+          <li><strong>Aide</strong> — notice de lecture du fichier</li>
+          <li><strong>Contacts</strong> — ensemble des contacts d'astreinte</li>
+          <li><strong>Mnémoniques</strong> — liste complète des codes mnémoniques</li>
+          <li><strong>Mnémoniques_Lettres</strong> — variante par initiales</li>
+          <li><strong>Abréviations</strong> — liste complète des abréviations</li>
+          <li><strong>Accès_Rail</strong> — données d'accès voies ferrées</li>
+          <li><strong>Postes</strong> — référentiels de compétences</li>
+          <li><strong>Secteurs</strong> — zones géographiques</li>
+          <li><strong>Procédures</strong> — structure complète des procédures guidées</li>
+        </ul>
+      </div>
+
+      <h2>Lancer un export</h2>
+      <div class="steps">
+        <div class="step">
+          <div class="step-num">1</div>
+          <div class="step-body">
+            <strong>Accédez à l'espace d'administration</strong>
+            <span>Depuis le menu, ouvrez l'espace Admin puis naviguez vers « Export de données ».</span>
+          </div>
+        </div>
+        <div class="step-connector"></div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <div class="step-body">
+            <strong>Appuyez sur « Exporter »</strong>
+            <span>Le fichier Excel est généré et téléchargé automatiquement sur votre appareil.</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="alert alert-info">
+        <div class="alert-icon">ℹ️</div>
+        <div>
+          <div class="alert-title">Ce que l'export ne contient pas</div>
+          L'export du référentiel ne contient pas les données utilisateurs, les sessions, les journaux d'actions ni les commentaires. Ces données restent dans l'application.
+        </div>
+      </div>
+
+    </div>
+
+  </section>
+
+</div><!-- fin #main -->
+
+<script>
+  function showSection(id, trigger) {
+    document.querySelectorAll('.page-section').forEach(s => s.classList.remove('active'));
+    document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+    const sec = document.getElementById('sec-' + id);
+    if (sec) {
+      sec.classList.add('active');
+      document.getElementById('breadcrumb-current').textContent = sec.dataset.title || id;
+    }
+    if (trigger) trigger.classList.add('active');
+    if (window.innerWidth <= 768) closeSidebar();
+    window.scrollTo(0, 0);
+  }
+
+  function nav(id) {
+    const btn = document.querySelector('[onclick*="' + id + '"]');
+    showSection(id, btn);
+  }
+
+  function openSidebar() {
+    document.getElementById('sidebar').classList.add('open');
+    document.getElementById('overlay').classList.add('open');
+  }
+  function closeSidebar() {
+    document.getElementById('sidebar').classList.remove('open');
+    document.getElementById('overlay').classList.remove('open');
+  }
+
+  function toggleAcc(header) {
+    const body = header.nextElementSibling;
+    const isOpen = body.classList.contains('open');
+    body.classList.toggle('open', !isOpen);
+    header.classList.toggle('open', !isOpen);
+  }
+
+  function switchTab(btn, paneId) {
+    const parent = btn.closest('.page-section') || btn.closest('.tabs') || document;
+    parent.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    parent.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    const pane = document.getElementById(paneId);
+    if (pane) pane.classList.add('active');
+  }
+
+  // Recherche
+  function searchGuide(val) {
+    const query = val.trim().toLowerCase();
+    const noResults = document.getElementById('search-no-results');
+    if (!query) {
+      document.querySelectorAll('.page-section').forEach(s => s.classList.remove('hidden-by-search'));
+      noResults.style.display = 'none';
+      removeHighlights();
+      return;
+    }
+    let anyVisible = false;
+    document.querySelectorAll('.page-section').forEach(s => {
+      if (s.textContent.toLowerCase().includes(query)) {
+        s.classList.remove('hidden-by-search');
+        anyVisible = true;
+      } else {
+        s.classList.add('hidden-by-search');
+      }
+    });
+    noResults.style.display = anyVisible ? 'none' : 'block';
+    if (anyVisible) {
+      const first = document.querySelector('.page-section:not(.hidden-by-search)');
+      if (first && !first.classList.contains('active')) {
+        document.querySelectorAll('.page-section').forEach(s => s.classList.remove('active'));
+        document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+        first.classList.add('active');
+        document.getElementById('breadcrumb-current').textContent = 'Résultats : "' + val + '"';
+      }
+    }
+    highlightText(query);
+  }
+
+  function highlightText(query) {
+    removeHighlights();
+    if (!query) return;
+    const walker = document.createTreeWalker(
+      document.getElementById('main'),
+      NodeFilter.SHOW_TEXT,
+      {
+        acceptNode(node) {
+          const p = node.parentElement;
+          if (!p) return NodeFilter.FILTER_REJECT;
+          if (['SCRIPT','STYLE','INPUT'].includes(p.tagName)) return NodeFilter.FILTER_REJECT;
+          if (p.classList.contains('highlight')) return NodeFilter.FILTER_REJECT;
+          return node.textContent.toLowerCase().includes(query) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
+        }
+      }
+    );
+    const nodes = [];
+    while (walker.nextNode()) nodes.push(walker.currentNode);
+    nodes.forEach(node => {
+      const text = node.textContent;
+      const lower = text.toLowerCase();
+      let idx = lower.indexOf(query);
+      if (idx === -1) return;
+      const frag = document.createDocumentFragment();
+      let last = 0;
+      while (idx !== -1) {
+        if (idx > last) frag.appendChild(document.createTextNode(text.slice(last, idx)));
+        const mark = document.createElement('mark');
+        mark.className = 'highlight';
+        mark.textContent = text.slice(idx, idx + query.length);
+        frag.appendChild(mark);
+        last = idx + query.length;
+        idx = lower.indexOf(query, last);
+      }
+      if (last < text.length) frag.appendChild(document.createTextNode(text.slice(last)));
+      node.parentElement.replaceChild(frag, node);
+    });
+  }
+
+  function removeHighlights() {
+    document.querySelectorAll('.highlight').forEach(m => {
+      const p = m.parentNode;
+      if (p) { p.replaceChild(document.createTextNode(m.textContent), m); p.normalize(); }
+    });
+  }
+
+  document.querySelectorAll('.nav-link').forEach(link => {
+    link.addEventListener('click', () => {
+      const input = document.getElementById('sidebarSearch');
+      if (input.value) { input.value = ''; searchGuide(''); }
+    });
+  });
+</script>
+</body>
+</html>
