@@ -43,7 +43,20 @@
   }
 }
 
-/* Safe area for mobile bottom nav */
+/* Safe area pour la nav mobile (BottomNav ~54px + home indicator Android/iOS) */
+.pb-nav {
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 5rem);
+}
+
+/* Rétrocompatibilité */
 .pb-safe {
-  padding-bottom: calc(env(safe-area-inset-bottom) + 4rem);
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 4rem);
+}
+
+/* Mode standalone PWA : compense le haut de l'écran sur appareils avec encoche */
+@media (display-mode: standalone) {
+  body {
+    /* Utilise tout l'écran, safe-area gère les zones système */
+    overscroll-behavior: none;
+  }
 }
