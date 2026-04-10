@@ -498,6 +498,11 @@
     <button class="nav-link" onclick="showSection('import-export', this)">
       <span class="icon">📦</span> Import / Export
     </button>
+
+    <div class="nav-section-label">Disponibilité</div>
+    <button class="nav-link" onclick="showSection('mode-hors-ligne', this)">
+      <span class="icon">📶</span> Mode hors ligne
+    </button>
   </nav>
   <div class="sidebar-footer">Version 2.0 · Avril 2026</div>
 </aside>
@@ -588,6 +593,12 @@
         <div class="cf-icon">📦</div>
         <h3>Import / Export</h3>
         <p>Chargement de données depuis Excel et export complet du référentiel.</p>
+        <div class="cf-go">Voir la fonctionnalité →</div>
+      </div>
+      <div class="card-feat" onclick="nav('mode-hors-ligne')">
+        <div class="cf-icon">📶</div>
+        <h3>Mode hors ligne</h3>
+        <p>Consultation des fiches, contacts et référentiels postes sans réseau, après un premier chargement.</p>
         <div class="cf-go">Voir la fonctionnalité →</div>
       </div>
     </div>
@@ -1776,6 +1787,228 @@
         </div>
       </div>
 
+    </div>
+
+  </section>
+
+
+  <!-- ══════════════════════════════════════════════
+       MODE HORS LIGNE
+  ══════════════════════════════════════════════ -->
+  <section id="sec-mode-hors-ligne" class="page-section" data-title="Mode hors ligne">
+
+    <div class="feature-header">
+      <div class="feature-icon-big">📶</div>
+      <div class="feature-header-body">
+        <div class="tag">Disponibilité terrain</div>
+        <h1>Mode hors ligne</h1>
+        <p>L'application peut être consultée sans réseau. Les fiches de procédure, les contacts, les référentiels postes et les secteurs restent accessibles après un premier chargement en zone couverte.</p>
+      </div>
+    </div>
+
+    <div class="alert alert-note">
+      <div class="alert-icon">⚠️</div>
+      <div>
+        <div class="alert-title">Donnée en cache ≠ donnée en temps réel</div>
+        En mode hors ligne, vous consultez une copie locale des données, enregistrée lors du dernier chargement. Cette copie peut ne pas refléter les mises à jour récentes effectuées par un administrateur. Vérifiez toujours la fraîcheur des données avant d'intervenir.
+      </div>
+    </div>
+
+    <h2>Principe de fonctionnement</h2>
+    <p>L'application utilise un <strong>Service Worker</strong> — un programme qui s'exécute en arrière-plan dans le navigateur — pour mettre en cache les pages consultées et pour précacher automatiquement l'ensemble des pages critiques dès que vous êtes connecté.</p>
+
+    <div class="screen-box">
+      <div class="sb-title">🔄 Ce qui se passe automatiquement</div>
+      <ul>
+        <li>À la <strong>première ouverture</strong> de l'application (après connexion), toutes les pages critiques sont téléchargées et mises en cache en arrière-plan — sans action de votre part.</li>
+        <li>À chaque <strong>retour en ligne</strong>, si le cache a plus de 6 heures, une mise à jour silencieuse est déclenchée automatiquement.</li>
+        <li>Chaque page que vous <strong>visitez manuellement</strong> est également mise en cache au passage.</li>
+      </ul>
+    </div>
+
+    <h2>Pages disponibles hors ligne</h2>
+    <div class="card-grid" style="margin-top:12px">
+      <div style="background:var(--vert-pale);border:1px solid #bbf7d0;border-radius:var(--radius);padding:16px 18px">
+        <div style="font-weight:700;color:var(--vert);margin-bottom:8px;font-size:13.5px">✅ Disponible hors ligne</div>
+        <ul style="padding-left:18px;font-size:13px;color:var(--texte-sec)">
+          <li>Page d'accueil</li>
+          <li>Liste des contacts</li>
+          <li>Toutes les fiches de procédure</li>
+          <li>Tous les postes et leurs annuaires</li>
+          <li>Tous les secteurs</li>
+          <li>Mnémoniques &amp; abréviations</li>
+        </ul>
+      </div>
+      <div style="background:var(--rouge-pale);border:1px solid #fecaca;border-radius:var(--radius);padding:16px 18px">
+        <div style="font-weight:700;color:var(--rouge);margin-bottom:8px;font-size:13.5px">✕ Non disponible hors ligne</div>
+        <ul style="padding-left:18px;font-size:13px;color:var(--texte-sec)">
+          <li>Démarrage d'une nouvelle session</li>
+          <li>Enregistrement d'actions en session</li>
+          <li>Journal et commentaires</li>
+          <li>Procédures guidées (exécution)</li>
+          <li>Espace administration</li>
+          <li>Pages jamais visitées si le précache a échoué</li>
+        </ul>
+      </div>
+    </div>
+
+    <h2>Indicateurs visuels</h2>
+    <p>Un bandeau s'affiche en haut de l'écran pour vous informer de l'état du réseau et de la fraîcheur des données.</p>
+
+    <div class="accordion">
+
+      <div class="acc-item">
+        <button class="acc-header" onclick="toggleAcc(this)">
+          <span><span class="acc-icon">🟡</span> Bandeau amber — Mode hors ligne</span>
+          <span class="acc-arrow">▼</span>
+        </button>
+        <div class="acc-body">
+          <p>Affiché dès que le réseau est coupé. Trois variantes selon l'état du cache :</p>
+          <ul>
+            <li><strong>« Mode hors ligne — données du [date/heure] · À jour »</strong><br>Cache présent et récent (moins de 6h). Les données sont fiables pour une utilisation terrain.</li>
+            <li><strong>« Mode hors ligne — données du [date/heure] · Potentiellement obsolètes »</strong><br>Cache présent mais ancien (plus de 6h). Les données sont consultables mais peuvent ne pas être à jour. Mentionnez-le si vous les transmettez.</li>
+            <li><strong>« Mode hors ligne — certaines pages peuvent être indisponibles »</strong><br>Aucun précache effectué. Les pages déjà visitées manuellement restent accessibles ; les autres affichent une page d'erreur.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="acc-item">
+        <button class="acc-header" onclick="toggleAcc(this)">
+          <span><span class="acc-icon">🟢</span> Bandeau vert — Connexion rétablie</span>
+          <span class="acc-arrow">▼</span>
+        </button>
+        <div class="acc-body">
+          <p>Affiché 3 secondes lors du retour en ligne. Une mise à jour du cache est déclenchée automatiquement en arrière-plan si les données ont plus de 6 heures.</p>
+        </div>
+      </div>
+
+      <div class="acc-item">
+        <button class="acc-header" onclick="toggleAcc(this)">
+          <span><span class="acc-icon">🔵</span> Bandeau bleu — Chargement des données hors ligne</span>
+          <span class="acc-arrow">▼</span>
+        </button>
+        <div class="acc-body">
+          <p>Affiché pendant le précache automatique ou manuel. Une fois terminé, le nombre de pages mises en cache est confirmé pendant 5 secondes, puis le bandeau disparaît.</p>
+        </div>
+      </div>
+
+      <div class="acc-item">
+        <button class="acc-header" onclick="toggleAcc(this)">
+          <span><span class="acc-icon">⚠️</span> Bandeau discret — Données potentiellement obsolètes</span>
+          <span class="acc-arrow">▼</span>
+        </button>
+        <div class="acc-body">
+          <p>Affiché en mode connecté lorsque le cache a plus de 6 heures. Un bouton <strong>« Mettre à jour »</strong> permet de déclencher immédiatement un nouveau précache. Ce bandeau est discret (gris clair) pour ne pas perturber l'usage normal.</p>
+        </div>
+      </div>
+
+    </div>
+
+    <h2>Mettre à jour manuellement le cache</h2>
+    <p>Si vous savez que des données ont été modifiées (nouvelle fiche, mise à jour d'un contact) ou si vous partez en zone sans réseau et souhaitez un cache récent :</p>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-body">
+          <strong>Vérifiez que vous êtes bien connecté au réseau</strong>
+          <span>La mise à jour n'est possible qu'en ligne.</span>
+        </div>
+      </div>
+      <div class="step-connector"></div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-body">
+          <strong>Repérez le bandeau discret « Données du [date] — Mettre à jour »</strong>
+          <span>Il apparaît en haut de l'écran lorsque le cache a plus de 6 heures. S'il n'est pas visible, le cache est déjà à jour.</span>
+        </div>
+      </div>
+      <div class="step-connector"></div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-body">
+          <strong>Appuyez sur « Mettre à jour »</strong>
+          <span>Le précache démarre. Un bandeau bleu confirme la progression, puis le nombre de pages mises en cache.</span>
+        </div>
+      </div>
+      <div class="step-connector"></div>
+      <div class="step">
+        <div class="step-num">4</div>
+        <div class="step-body">
+          <strong>Attendez la confirmation « N pages disponibles hors ligne »</strong>
+          <span>Le cache est à jour. Vous pouvez partir en zone à couverture limitée.</span>
+        </div>
+      </div>
+    </div>
+
+    <h2>Que se passe-t-il si une page n'est pas dans le cache ?</h2>
+    <p>Si vous tentez d'accéder hors ligne à une page qui n'a pas été précachée (ni visitée manuellement), l'application affiche une <strong>page dédiée</strong> qui :</p>
+    <ul>
+      <li>Indique clairement que vous êtes hors ligne</li>
+      <li>Liste les types de contenus disponibles hors ligne</li>
+      <li>Propose un bouton <strong>« Réessayer »</strong> pour recharger lorsque le réseau est rétabli</li>
+    </ul>
+    <p>Aucune erreur technique n'est affichée à l'utilisateur.</p>
+
+    <h2>Tableau récapitulatif des situations terrain</h2>
+    <div class="card" style="overflow-x:auto;padding:0">
+      <table style="width:100%;border-collapse:collapse;font-size:13px">
+        <thead>
+          <tr style="background:var(--bleu);color:#fff;text-align:left">
+            <th style="padding:10px 14px">Situation</th>
+            <th style="padding:10px 14px">Ce que vous voyez</th>
+            <th style="padding:10px 14px">Ce que vous pouvez faire</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr style="border-bottom:1px solid var(--gris-bord)">
+            <td style="padding:10px 14px">En ligne, cache récent</td>
+            <td style="padding:10px 14px">Rien (aucun bandeau)</td>
+            <td style="padding:10px 14px">Navigation complète, données en temps réel</td>
+          </tr>
+          <tr style="background:var(--gris-clair);border-bottom:1px solid var(--gris-bord)">
+            <td style="padding:10px 14px">En ligne, cache &gt; 6h</td>
+            <td style="padding:10px 14px">Bandeau discret + bouton « Mettre à jour »</td>
+            <td style="padding:10px 14px">Déclencher une mise à jour avant de partir</td>
+          </tr>
+          <tr style="border-bottom:1px solid var(--gris-bord)">
+            <td style="padding:10px 14px">Hors ligne, cache récent (&lt; 6h)</td>
+            <td style="padding:10px 14px">Bandeau amber « À jour »</td>
+            <td style="padding:10px 14px">Consultation normale des pages critiques</td>
+          </tr>
+          <tr style="background:var(--gris-clair);border-bottom:1px solid var(--gris-bord)">
+            <td style="padding:10px 14px">Hors ligne, cache ancien (&gt; 6h)</td>
+            <td style="padding:10px 14px">Bandeau amber « Potentiellement obsolètes »</td>
+            <td style="padding:10px 14px">Consultation possible — mentionner la fraîcheur si les données sont transmises</td>
+          </tr>
+          <tr style="border-bottom:1px solid var(--gris-bord)">
+            <td style="padding:10px 14px">Hors ligne, aucun cache</td>
+            <td style="padding:10px 14px">Bandeau amber + page d'erreur sur les pages non visitées</td>
+            <td style="padding:10px 14px">Accès aux pages déjà visitées uniquement — rétablir le réseau</td>
+          </tr>
+          <tr style="background:var(--gris-clair)">
+            <td style="padding:10px 14px">Retour en ligne</td>
+            <td style="padding:10px 14px">Bandeau vert 3s, puis mise à jour auto si cache &gt; 6h</td>
+            <td style="padding:10px 14px">Navigation normale reprise automatiquement</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2>Bonnes pratiques terrain</h2>
+    <ul class="action-list">
+      <li><span class="al-icon">📶</span> <strong>Avant de partir en zone à couverture limitée</strong> : ouvrir l'application en zone couverte pour déclencher le précache automatique</li>
+      <li><span class="al-icon">🔄</span> <strong>Après une mise à jour du référentiel</strong> : utiliser le bouton « Mettre à jour » pour recharger le cache avant d'aller sur le terrain</li>
+      <li><span class="al-icon">📅</span> <strong>Vérifier la date des données</strong> : le bandeau amber indique toujours la date et l'heure du dernier chargement</li>
+      <li><span class="al-icon">⚠️</span> <strong>Ne pas utiliser des données &gt; 24h pour prendre une décision critique</strong> sans vérification préalable</li>
+      <li><span class="al-icon">🔋</span> <strong>Le cache survit aux rechargements</strong> : fermer et rouvrir l'application n'efface pas les données hors ligne</li>
+    </ul>
+
+    <div class="alert alert-info">
+      <div class="alert-icon">ℹ️</div>
+      <div>
+        <div class="alert-title">Compatibilité</div>
+        Le mode hors ligne fonctionne sur les navigateurs modernes supportant les Service Workers : Chrome, Firefox, Safari (iOS 16.4+), Edge. Il ne nécessite pas d'installation d'application native — l'app web standard suffit. Si l'application est ajoutée à l'écran d'accueil (PWA), le mode hors ligne est pleinement opérationnel.
+      </div>
     </div>
 
   </section>

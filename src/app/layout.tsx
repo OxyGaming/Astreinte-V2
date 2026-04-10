@@ -2,6 +2,8 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import BottomNav from "@/components/BottomNav";
 import SideNav from "@/components/SideNav";
+import OfflineIndicator from "@/components/OfflineIndicator";
+import ServiceWorkerRegister from "@/components/ServiceWorkerRegister";
 
 export const metadata: Metadata = {
   title: "Astreinte — UOC Zone Diffuse",
@@ -29,10 +31,15 @@ export default function RootLayout({
   return (
     <html lang="fr">
       <body className="bg-slate-50">
+        <ServiceWorkerRegister />
         <SideNav />
-        <main className="lg:ml-64 pb-20 lg:pb-0 min-h-screen">
-          {children}
-        </main>
+        {/* Wrapper décalé de la sidebar, flex pour que OfflineIndicator pousse le contenu vers le bas */}
+        <div className="lg:ml-64 flex flex-col min-h-screen">
+          <OfflineIndicator />
+          <main className="flex-1 pb-20 lg:pb-0">
+            {children}
+          </main>
+        </div>
         <BottomNav />
       </body>
     </html>
