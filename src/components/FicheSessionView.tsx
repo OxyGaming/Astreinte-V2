@@ -55,11 +55,12 @@ export default function FicheSessionView({
   // Clés des actions en cours de fetch — empêche les doubles clics d'envoyer plusieurs requêtes
   const pendingKeys = useRef<Set<string>>(new Set());
 
-  // Détection offline — synchronisée avec les événements navigateur
-  const [isOffline, setIsOffline] = useState(
-    typeof navigator !== "undefined" ? !navigator.onLine : false
-  );
+  // Détection offline — initialisé à false (identique au rendu SSR) pour éviter
+  // l'erreur d'hydration. La vraie valeur est lue dans useEffect, après le montage.
+  const [isOffline, setIsOffline] = useState(false);
   useEffect(() => {
+    // Synchroniser avec l'état réseau réel dès le montage côté client
+    setIsOffline(!navigator.onLine);
     const onOnline  = () => setIsOffline(false);
     const onOffline = () => setIsOffline(true);
     window.addEventListener("online",  onOnline);
