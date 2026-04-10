@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useCallback, useRef } from "react";
-import { Play, Archive, Send, CheckSquare, Square, MessageSquare, Clock, User, ChevronDown, ChevronUp, AlertTriangle, Mic, Square as StopIcon } from "lucide-react";
+import { useState, useCallback, useRef, useEffect } from "react";
+import { Play, Archive, Send, CheckSquare, Square, MessageSquare, Clock, User, ChevronDown, ChevronUp, AlertTriangle, Mic, Square as StopIcon, WifiOff, CheckCircle } from "lucide-react";
 import type { Fiche, FicheSession, JournalEntry } from "@/lib/types";
 import type { SessionUser } from "@/lib/user-auth";
 import { useSpeechRecognition } from "@/hooks/useSpeechRecognition";
@@ -55,6 +55,21 @@ export default function FicheSessionView({
   // Clés des actions en cours de fetch — empêche les doubles clics d'envoyer plusieurs requêtes
   const pendingKeys = useRef<Set<string>>(new Set());
 
+  // Détection offline — synchronisée avec les événements navigateur
+  const [isOffline, setIsOffline] = useState(
+    typeof navigator !== "undefined" ? !navigator.onLine : false
+  );
+  useEffect(() => {
+    const onOnline  = () => setIsOffline(false);
+    const onOffline = () => setIsOffline(true);
+    window.addEventListener("online",  onOnline);
+    window.addEventListener("offline", onOffline);
+    return () => {
+      window.removeEventListener("online",  onOnline);
+      window.removeEventListener("offline", onOffline);
+    };
+  }, []);
+
   const speech = useSpeechRecognition((text) => setComment(text));
   const [showMicModal, setShowMicModal] = useState(false);
 
@@ -94,6 +109,7 @@ export default function FicheSessionView({
   const toggleAction = useCallback(
     async (etapeOrdre: number, actionIndex: number, label: string, currentlyChecked: boolean) => {
       if (!session || session.status === "archived") return;
+      if (isOffline) return; // Pas de synchronisation possible hors ligne
       const key = actionKey(etapeOrdre, actionIndex);
       if (pendingKeys.current.has(key)) return; // dédup : ignore si déjà en cours
       pendingKeys.current.add(key);
@@ -126,7 +142,7 @@ export default function FicheSessionView({
         pendingKeys.current.delete(key);
       }
     },
-    [session]
+    [session, isOffline]
   );
 
   const submitComment = async () => {
@@ -168,6 +184,12 @@ export default function FicheSessionView({
   const isOwner = session?.createdByUserId === user.id;
   const canArchive = !isArchived && (user.role === "ADMIN" || user.role === "EDITOR" || isOwner);
 
+  /**
+   * Mode interactif = session active + non archivée + en ligne.
+   * Dans tous les autres cas, les étapes s'affichent en lecture seule.
+   */
+  const isInteractive = !!session && !isArchived && !isOffline;
+
   return (
     <div className="space-y-4">
 
@@ -178,20 +200,32 @@ export default function FicheSessionView({
 
       {/* ── Session banner ── */}
       {!session ? (
-        <div className="mx-4 lg:mx-8 bg-slate-50 border border-slate-200 rounded-xl p-4 flex items-center justify-between gap-4">
-          <div>
-            <p className="font-semibold text-slate-700 text-sm">Mode opérationnel</p>
-            <p className="text-xs text-slate-500 mt-0.5">Démarrez une session pour tracer vos actions.</p>
+        isOffline ? (
+          /* Hors ligne sans session : consultation uniquement */
+          <div className="mx-4 lg:mx-8 bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-center gap-3">
+            <WifiOff size={16} className="text-amber-600 flex-shrink-0" />
+            <div>
+              <p className="font-semibold text-amber-800 text-sm">Mode hors ligne — consultation uniquement</p>
+              <p className="text-xs text-amber-700 mt-0.5">Le suivi des actions n&apos;est pas disponible sans réseau.</p>
+            </div>
           </div>
-          <button
-            onClick={startSession}
-            disabled={starting}
-            className="flex items-center gap-2 bg-blue-800 hover:bg-blue-700 disabled:bg-blue-400 text-white text-sm font-semibold px-4 py-2 rounded-xl transition-colors flex-shrink-0"
-          >
-            <Play size={14} />
-            {starting ? "Démarrage…" : "Démarrer"}
-          </button>
-        </div>
+        ) : (
+          /* En ligne sans session : proposer de démarrer */
+          <div className="mx-4 lg:mx-8 bg-slate-50 border border-slate-200 rounded-xl p-4 flex items-center justify-between gap-4">
+            <div>
+              <p className="font-semibold text-slate-700 text-sm">Mode opérationnel</p>
+              <p className="text-xs text-slate-500 mt-0.5">Démarrez une session pour tracer vos actions.</p>
+            </div>
+            <button
+              onClick={startSession}
+              disabled={starting}
+              className="flex items-center gap-2 bg-blue-800 hover:bg-blue-700 disabled:bg-blue-400 text-white text-sm font-semibold px-4 py-2 rounded-xl transition-colors flex-shrink-0"
+            >
+              <Play size={14} />
+              {starting ? "Démarrage…" : "Démarrer"}
+            </button>
+          </div>
+        )
       ) : (
         <div className={`mx-4 lg:mx-8 rounded-xl p-4 border ${isArchived ? "bg-slate-50 border-slate-200" : "bg-green-50 border-green-200"}`}>
           <div className="flex items-start justify-between gap-4">
@@ -225,37 +259,51 @@ export default function FicheSessionView({
         </div>
       )}
 
-      {/* ── Étapes + actions avec checkboxes ── */}
-      {session && (
-        <div className="px-4 lg:px-8 space-y-3">
+      {/* ── Étapes + actions ── */}
+      {/* Toujours affiché : interactif si session active en ligne, lecture seule sinon */}
+      <div className="px-4 lg:px-8 space-y-3">
+        <div className="flex items-center justify-between">
           <h2 className="text-xs font-bold text-slate-500 uppercase tracking-wide">
             Conduite à tenir
           </h2>
-          {fiche.etapes.map((etape) => (
-            <div
-              key={etape.ordre}
-              className={`rounded-xl overflow-hidden border ${
-                etape.critique ? "border-red-200 bg-red-50" : "border-slate-200 bg-white"
-              }`}
-            >
-              <div className={`px-4 py-3 flex items-start gap-3 ${etape.critique ? "border-b border-red-200" : ""}`}>
-                <div
-                  className={`flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${
-                    etape.critique ? "bg-red-600 text-white" : "bg-blue-800 text-white"
-                  }`}
-                >
-                  {etape.ordre}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <h3 className="font-bold text-slate-800">{etape.titre}</h3>
-                    {etape.critique && <AlertTriangle size={14} className="text-red-600 flex-shrink-0" />}
-                  </div>
-                  <p className="text-sm text-slate-600 mt-1 leading-relaxed">{etape.description}</p>
-                </div>
-              </div>
+          {/* Indicateur discret quand session active mais hors ligne */}
+          {session && !isArchived && isOffline && (
+            <span className="flex items-center gap-1 text-xs text-amber-600 font-medium">
+              <WifiOff size={11} />
+              Lecture seule hors ligne
+            </span>
+          )}
+        </div>
 
-              {etape.actions && etape.actions.length > 0 && (
+        {fiche.etapes.map((etape) => (
+          <div
+            key={etape.ordre}
+            className={`rounded-xl overflow-hidden border ${
+              etape.critique ? "border-red-200 bg-red-50" : "border-slate-200 bg-white"
+            }`}
+          >
+            {/* En-tête de l'étape */}
+            <div className={`px-4 py-3 flex items-start gap-3 ${etape.critique ? "border-b border-red-200" : ""}`}>
+              <div
+                className={`flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${
+                  etape.critique ? "bg-red-600 text-white" : "bg-blue-800 text-white"
+                }`}
+              >
+                {etape.ordre}
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <h3 className="font-bold text-slate-800">{etape.titre}</h3>
+                  {etape.critique && <AlertTriangle size={14} className="text-red-600 flex-shrink-0" />}
+                </div>
+                <p className="text-sm text-slate-600 mt-1 leading-relaxed">{etape.description}</p>
+              </div>
+            </div>
+
+            {/* Actions */}
+            {etape.actions && etape.actions.length > 0 && (
+              isInteractive ? (
+                /* Mode interactif : checkboxes cliquables */
                 <div className="px-4 py-3 space-y-2">
                   {etape.actions.map((action, i) => {
                     const key = actionKey(etape.ordre, i);
@@ -264,40 +312,53 @@ export default function FicheSessionView({
                       <button
                         key={i}
                         onClick={() => toggleAction(etape.ordre, i, action, isChecked)}
-                        disabled={isArchived}
-                        className={`w-full flex items-start gap-3 p-2 rounded-lg text-left transition-colors ${
-                          isArchived
-                            ? "cursor-default"
-                            : "hover:bg-slate-50 active:bg-slate-100 cursor-pointer"
-                        } ${isChecked ? "opacity-60" : ""}`}
+                        className={`w-full flex items-start gap-3 p-2 rounded-lg text-left transition-colors hover:bg-slate-50 active:bg-slate-100 cursor-pointer ${isChecked ? "opacity-60" : ""}`}
                       >
                         {isChecked ? (
-                          <CheckSquare
-                            size={18}
-                            className={`flex-shrink-0 mt-0.5 ${etape.critique ? "text-red-500" : "text-blue-600"}`}
-                          />
+                          <CheckSquare size={18} className={`flex-shrink-0 mt-0.5 ${etape.critique ? "text-red-500" : "text-blue-600"}`} />
                         ) : (
-                          <Square
-                            size={18}
-                            className={`flex-shrink-0 mt-0.5 ${etape.critique ? "text-red-300" : "text-slate-300"}`}
-                          />
+                          <Square size={18} className={`flex-shrink-0 mt-0.5 ${etape.critique ? "text-red-300" : "text-slate-300"}`} />
                         )}
-                        <span
-                          className={`text-sm leading-snug ${
-                            isChecked ? "line-through text-slate-400" : "text-slate-700"
-                          }`}
-                        >
+                        <span className={`text-sm leading-snug ${isChecked ? "line-through text-slate-400" : "text-slate-700"}`}>
                           {action}
                         </span>
                       </button>
                     );
                   })}
                 </div>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
+              ) : (
+                /* Mode lecture seule : session archivée, hors ligne, ou pas de session */
+                <div className="px-4 py-3">
+                  <ul className="space-y-1.5">
+                    {etape.actions.map((action, i) => {
+                      const key = actionKey(etape.ordre, i);
+                      const isChecked = !!checked[key];
+                      return (
+                        <li key={i} className="flex items-start gap-2">
+                          {session ? (
+                            /* Session existante (archivée ou hors ligne) : état figé visible */
+                            isChecked ? (
+                              <CheckSquare size={14} className={`flex-shrink-0 mt-0.5 ${etape.critique ? "text-red-400" : "text-slate-400"}`} />
+                            ) : (
+                              <Square size={14} className="flex-shrink-0 mt-0.5 text-slate-300" />
+                            )
+                          ) : (
+                            /* Pas de session : icône neutre */
+                            <CheckCircle size={14} className={`flex-shrink-0 mt-0.5 ${etape.critique ? "text-red-400" : "text-blue-400"}`} />
+                          )}
+                          <span className={`text-sm leading-snug ${isChecked ? "line-through text-slate-400" : "text-slate-700"}`}>
+                            {action}
+                          </span>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </div>
+              )
+            )}
+          </div>
+        ))}
+      </div>
 
       {/* ── Journal ── */}
       {session && (
@@ -369,8 +430,8 @@ export default function FicheSessionView({
                 )}
               </div>
 
-              {/* Comment input */}
-              {!isArchived && (
+              {/* Comment input — masqué si archivé ou hors ligne */}
+              {!isArchived && !isOffline && (
                 <div className="border-t border-slate-200 p-3 bg-slate-50 space-y-1.5">
                   <div className="flex gap-2">
                     <input
