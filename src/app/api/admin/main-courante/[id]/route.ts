@@ -8,8 +8,7 @@ export async function PUT(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const check = await requireAdminSession();
-  if (check) return check;
+  await requireAdminSession();
 
   const { id } = await params;
   const entry = await getMainCouranteById(id);
@@ -45,8 +44,7 @@ export async function DELETE(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const check = await requireAdminSession();
-  if (check) return check;
+  await requireAdminSession();
 
   const { id } = await params;
   const entry = await getMainCouranteById(id);

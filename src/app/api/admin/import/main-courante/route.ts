@@ -14,8 +14,7 @@ interface MainCouranteImportRow {
 // Importe des entrées main courante validées en masse.
 // L'admin connecté devient auteur et validateur de toutes les entrées importées.
 export async function POST(req: NextRequest) {
-  const check = await requireAdminSession();
-  if (check) return check;
+  await requireAdminSession();
 
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });

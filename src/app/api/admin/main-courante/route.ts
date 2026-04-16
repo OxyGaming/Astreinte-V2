@@ -4,8 +4,7 @@ import { getAllMainCourantes } from "@/lib/db";
 
 // GET /api/admin/main-courante?status=pending&q=search
 export async function GET(req: NextRequest) {
-  const check = await requireAdminSession();
-  if (check) return check;
+  await requireAdminSession();
 
   const status = req.nextUrl.searchParams.get("status") ?? undefined;
   const q = req.nextUrl.searchParams.get("q") ?? undefined;
