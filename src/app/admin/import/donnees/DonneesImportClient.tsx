@@ -4,7 +4,7 @@ import { useState, useRef } from "react";
 import Link from "next/link";
 import {
   ChevronLeft, Download, Upload, Loader2, CheckCircle2, AlertTriangle,
-  X, Info, FileX, Phone, BookOpen, Hash, MapPin, Building2, ClipboardList, Layers,
+  X, Info, FileX, Phone, BookOpen, Hash, MapPin, Building2, ClipboardList, Layers, BookMarked,
 } from "lucide-react";
 
 // ─── Types de données ───────────────────────────────────────────────────────
@@ -16,6 +16,7 @@ interface AccesRow { ligne: string; pk: string; type?: string; identifiant?: str
 interface PosteRow { slug: string; nom: string; typePoste: string; lignes: string[]; adresse: string; horaires: string; electrification: string; systemeBlock: string; secteur_slug?: string; particularites: string[]; annuaire_json?: string; circuitsVoie_json?: string; pnSensibles_json?: string; proceduresCles_json?: string; dbc_json?: string; rex_json?: string; errors: string[]; warnings: string[] }
 interface ProcedureRow { slug: string; titre: string; typeProcedure: string; description?: string; version: string; etapes_json: string; postes_slugs?: string; errors: string[]; warnings: string[] }
 interface SecteurRow { slug: string; nom: string; ligne: string; trajet: string; description: string; pointsAcces_json?: string; procedures_json?: string; pn_json?: string; errors: string[]; warnings: string[] }
+interface MainCouranteRow { titre: string; description: string; editedDescription?: string; ficheSlug?: string; auteurUsername?: string; errors: string[]; warnings: string[] }
 
 interface ParsedData {
   contacts: ContactRow[];
@@ -25,6 +26,7 @@ interface ParsedData {
   postes: PosteRow[];
   procedures: ProcedureRow[];
   secteurs: SecteurRow[];
+  mainCourante: MainCouranteRow[];
 }
 
 interface ImportResult {
@@ -34,7 +36,7 @@ interface ImportResult {
   details: { status: string; reason?: string }[];
 }
 
-type TabId = "contacts" | "mnemoniques" | "abreviations" | "acces" | "postes" | "procedures" | "secteurs";
+type TabId = "contacts" | "mnemoniques" | "abreviations" | "acces" | "postes" | "procedures" | "secteurs" | "mainCourante";
 
 const TABS: { id: TabId; label: string; icon: React.ReactNode; color: string }[] = [
   { id: "contacts", label: "Numéros utiles", icon: <Phone size={15} />, color: "blue" },
@@ -44,6 +46,7 @@ const TABS: { id: TabId; label: string; icon: React.ReactNode; color: string }[]
   { id: "postes", label: "Postes", icon: <Building2 size={15} />, color: "orange" },
   { id: "secteurs", label: "Secteurs", icon: <Layers size={15} />, color: "teal" },
   { id: "procedures", label: "Procédures", icon: <ClipboardList size={15} />, color: "blue" },
+  { id: "mainCourante", label: "Main courante", icon: <BookMarked size={15} />, color: "indigo" },
 ];
 
 const CONTACT_CATEGORIES = ["urgence", "astreinte", "encadrement", "externe"];
@@ -251,7 +254,24 @@ async function parseFile(file: File): Promise<ParsedData> {
     return { slug, nom, ligne, trajet, description, ...secteurJsonFields, errors, warnings };
   });
 
-  return { contacts, mnemoniques, abreviations, acces, postes, procedures, secteurs };
+  // ── Main courante ──
+  const mcRaws = getSheet<Record<string, string>>("Main_Courante");
+  const mainCourante: MainCouranteRow[] = mcRaws.map((r) => {
+    const errors: string[] = [];
+    const warnings: string[] = [];
+    const titre = String(r.titre || "").trim();
+    const description = String(r.description || "").trim();
+    const editedDescription = String(r.editedDescription || "").trim() || undefined;
+    const ficheSlug = String(r.ficheSlug || "").trim() || undefined;
+    const auteurUsername = String(r.auteurUsername || "").trim() || undefined;
+    if (!titre) errors.push("Titre manquant");
+    if (!description) errors.push("Description manquante");
+    if (titre.length > 200) errors.push("Titre trop long (max 200 caractères)");
+    if (auteurUsername) warnings.push(`Auteur original : ${auteurUsername} (ignoré à l'import, remplacé par l'admin connecté)`);
+    return { titre, description, editedDescription, ficheSlug, auteurUsername, errors, warnings };
+  });
+
+  return { contacts, mnemoniques, abreviations, acces, postes, procedures, secteurs, mainCourante };
 }
 
 // ─── Composant principal ────────────────────────────────────────────────────
@@ -320,6 +340,7 @@ export default function DonneesImportClient() {
       postes: "/api/admin/import/postes",
       procedures: "/api/admin/import/procedures",
       secteurs: "/api/admin/import/secteurs",
+      mainCourante: "/api/admin/import/main-courante",
     };
     const BODY_KEYS: Record<TabId, string> = {
       contacts: "contacts",
@@ -329,6 +350,7 @@ export default function DonneesImportClient() {
       postes: "postes",
       procedures: "procedures",
       secteurs: "secteurs",
+      mainCourante: "entries",
     };
 
     setImporting((prev) => ({ ...prev, [tabId]: true }));
@@ -368,6 +390,7 @@ export default function DonneesImportClient() {
         postes: data.postes.length,
         procedures: data.procedures.length,
         secteurs: data.secteurs.length,
+        mainCourante: data.mainCourante.length,
       }
     : null;
 
@@ -419,6 +442,7 @@ export default function DonneesImportClient() {
             <li>• Onglet <strong>Postes</strong> : référentiels de postes (champs principaux)</li>
             <li>• Onglet <strong>Secteurs</strong> : secteurs ferroviaires (slug, nom, ligne, trajet, description)</li>
             <li>• Onglet <strong>Procedures</strong> : procédures guidées (JSON des étapes exporté automatiquement)</li>
+            <li>• Onglet <strong>Main_Courante</strong> : entrées validées de la mémoire collective (titre, description, version publiée)</li>
           </ul>
         </div>
       </div>
@@ -618,6 +642,7 @@ function TabContent({
         {tabId === "postes" && <PostesTable rows={data.postes} />}
         {tabId === "secteurs" && <SecteursTable rows={data.secteurs} />}
         {tabId === "procedures" && <ProceduresTable rows={data.procedures} />}
+        {tabId === "mainCourante" && <MainCouranteTable rows={data.mainCourante} />}
       </div>
 
       {/* Bouton d'import */}
@@ -864,6 +889,35 @@ function ProceduresTable({ rows }: { rows: ProcedureRow[] }) {
             </tr>
           );
         })}
+      </tbody>
+    </table>
+  );
+}
+
+function MainCouranteTable({ rows }: { rows: MainCouranteRow[] }) {
+  return (
+    <table className="w-full text-sm">
+      <thead className="bg-gray-50 border-b border-gray-200">
+        <tr>
+          <th className="text-left px-3 py-2.5 font-medium text-gray-600">Titre</th>
+          <th className="text-left px-3 py-2.5 font-medium text-gray-600">Description</th>
+          <th className="text-left px-3 py-2.5 font-medium text-gray-600 w-28">Version publiée</th>
+          <th className="text-left px-3 py-2.5 font-medium text-gray-600 w-28">Fiche liée</th>
+          <th className="text-left px-3 py-2.5 font-medium text-gray-600 w-24">Auteur original</th>
+          <th className="text-left px-3 py-2.5 font-medium text-gray-600">Statut</th>
+        </tr>
+      </thead>
+      <tbody className="divide-y divide-gray-50">
+        {rows.map((r, i) => (
+          <tr key={i} className={r.errors.length > 0 ? "bg-red-50/40" : "hover:bg-gray-50/60"}>
+            <td className="px-3 py-2 font-medium text-gray-800 truncate max-w-[180px]">{r.titre || <span className="text-red-400 italic">—</span>}</td>
+            <td className="px-3 py-2 text-gray-600 truncate max-w-[200px]">{r.description || <span className="text-red-400 italic">—</span>}</td>
+            <td className="px-3 py-2 text-xs text-gray-500">{r.editedDescription ? <span className="text-green-600">✓ Éditée</span> : <span className="text-gray-300">—</span>}</td>
+            <td className="px-3 py-2 text-xs font-mono text-gray-500">{r.ficheSlug || "—"}</td>
+            <td className="px-3 py-2 text-xs text-gray-500">{r.auteurUsername || "—"}</td>
+            <td className="px-3 py-2"><RowStatus errors={r.errors} warnings={r.warnings} /></td>
+          </tr>
+        ))}
       </tbody>
     </table>
   );

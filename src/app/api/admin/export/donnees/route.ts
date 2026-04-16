@@ -10,7 +10,7 @@ interface LettreAcronyme {
 
 export async function GET() {
   try {
-    const [contacts, mnemoniques, abreviations, acces, postes, secteurs, procedures] =
+    const [contacts, mnemoniques, abreviations, acces, postes, secteurs, procedures, mainCourantes] =
       await Promise.all([
         prisma.contact.findMany({ orderBy: { nom: "asc" } }),
         prisma.mnemonique.findMany({ orderBy: { acronyme: "asc" } }),
@@ -21,6 +21,11 @@ export async function GET() {
         prisma.procedure.findMany({
           orderBy: { titre: "asc" },
           include: { postes: { include: { poste: { select: { slug: true } } } } },
+        }),
+        prisma.mainCourante.findMany({
+          where: { status: "validated" },
+          orderBy: { validatedAt: "asc" },
+          include: { auteur: { select: { username: true } } },
         }),
       ]);
 
@@ -115,6 +120,17 @@ export async function GET() {
       ["version", "Numéro de version", "OUI", "1.0"],
       ["etapes_json", "JSON complet des étapes (ne pas modifier à la main)", "OUI", "[{\"id\":\"...\",\"titre\":\"...\"}]"],
       ["postes_slugs", "Slugs des postes associés, séparés par | (optionnel)", "NON", "givors-canal|saint-fons"],
+      [""],
+      ["═══ ONGLET MAIN_COURANTE (mémoire collective) ══════════════════════════════"],
+      ["Colonne", "Description", "Obligatoire", "Valeurs / Exemples"],
+      ["titre", "Titre court de l'entrée", "OUI", "Vérification voie avant reprise"],
+      ["description", "Contribution originale de l'auteur", "OUI", "Texte libre…"],
+      ["editedDescription", "Version publiée (éditée par admin). Si vide, utilise description.", "NON", "Texte retravaillé…"],
+      ["ficheSlug", "Slug de la fiche réflexe associée (optionnel)", "NON", "rupture-canalisation"],
+      ["auteurUsername", "Username de l'auteur (informatif, non importé)", "INFO", "jessie.achille"],
+      [""],
+      ["NOTE : A l'import, toutes les entrées sont créées avec status=validated."],
+      ["NOTE : L'auteurUsername est exporté pour référence uniquement. A l'import, c'est l'admin connecté qui devient auteur."],
       [""],
       ["IMPORTANT : Ne supprimez pas et ne renommez pas les onglets."],
       ["IMPORTANT : La ligne d'en-tête (première ligne) ne doit pas être modifiée."],
@@ -274,6 +290,23 @@ export async function GET() {
       { wch: 30 }, { wch: 40 }, { wch: 16 }, { wch: 40 }, { wch: 8 }, { wch: 80 }, { wch: 40 },
     ];
     XLSX.utils.book_append_sheet(wb, wsProcedures, "Procedures");
+
+    // ─── Onglet MAIN_COURANTE ───────────────────────────────────────────────────
+    const mcRows: unknown[][] = [
+      ["titre", "description", "editedDescription", "ficheSlug", "auteurUsername"],
+    ];
+    for (const mc of mainCourantes) {
+      mcRows.push([
+        mc.titre,
+        mc.description,
+        mc.editedDescription || "",
+        mc.ficheSlug || "",
+        mc.auteur.username,
+      ]);
+    }
+    const wsMC = XLSX.utils.aoa_to_sheet(mcRows);
+    wsMC["!cols"] = [{ wch: 40 }, { wch: 70 }, { wch: 70 }, { wch: 24 }, { wch: 20 }];
+    XLSX.utils.book_append_sheet(wb, wsMC, "Main_Courante");
 
     // ─── Générer le fichier ─────────────────────────────────────────────────────
     const buffer: Buffer = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });

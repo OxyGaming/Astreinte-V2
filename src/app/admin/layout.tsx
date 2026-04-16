@@ -17,27 +17,34 @@ import {
   Upload,
   ClipboardList,
   History,
+  BookMarked,
 } from "lucide-react";
 import { adminLogoutAction } from "./login/actions";
 import AdminMobileNav from "@/components/AdminMobileNav";
+import { countPendingRegistrations, countPendingMainCourantes } from "@/lib/db";
 
-const navItems = [
-  { href: "/admin", label: "Tableau de bord", icon: LayoutDashboard },
-  { href: "/admin/fiches", label: "Fiches réflexes", icon: FileText },
-  { href: "/admin/contacts", label: "Contacts", icon: Users },
-  { href: "/admin/secteurs", label: "Secteurs", icon: MapPin },
-  { href: "/admin/acces", label: "Points d'accès", icon: MapPinned },
-  { href: "/admin/postes", label: "Postes", icon: Building2 },
-  { href: "/admin/procedures", label: "Procédures guidées", icon: ClipboardList },
-  { href: "/admin/procedures/sessions", label: "Sessions procédures", icon: History },
-  { href: "/admin/mnemoniques", label: "Mnémoniques", icon: BookOpen },
-  { href: "/admin/abreviations", label: "Abréviations", icon: AlignLeft },
-  { href: "/admin/users", label: "Utilisateurs", icon: UserCog },
-  { href: "/admin/registrations", label: "Inscriptions", icon: ClipboardList },
-  { href: "/admin/import", label: "Import de données", icon: Upload },
-];
+export default async function AdminLayout({ children }: { children: ReactNode }) {
+  const [pendingRegistrations, pendingMainCourantes] = await Promise.all([
+    countPendingRegistrations(),
+    countPendingMainCourantes(),
+  ]);
 
-export default function AdminLayout({ children }: { children: ReactNode }) {
+  const navItems = [
+    { href: "/admin", label: "Tableau de bord", icon: LayoutDashboard },
+    { href: "/admin/fiches", label: "Fiches réflexes", icon: FileText },
+    { href: "/admin/contacts", label: "Contacts", icon: Users },
+    { href: "/admin/secteurs", label: "Secteurs", icon: MapPin },
+    { href: "/admin/acces", label: "Points d'accès", icon: MapPinned },
+    { href: "/admin/postes", label: "Postes", icon: Building2 },
+    { href: "/admin/procedures", label: "Procédures guidées", icon: ClipboardList },
+    { href: "/admin/procedures/sessions", label: "Sessions procédures", icon: History },
+    { href: "/admin/mnemoniques", label: "Mnémoniques", icon: BookOpen },
+    { href: "/admin/abreviations", label: "Abréviations", icon: AlignLeft },
+    { href: "/admin/main-courante", label: "Main courante", icon: BookMarked, badge: pendingMainCourantes },
+    { href: "/admin/users", label: "Utilisateurs", icon: UserCog },
+    { href: "/admin/registrations", label: "Inscriptions", icon: ClipboardList, badge: pendingRegistrations },
+    { href: "/admin/import", label: "Import de données", icon: Upload },
+  ];
   return (
     <div className="min-h-screen bg-gray-100 flex">
       {/* --- Sidebar desktop (lg+) --- */}
@@ -67,7 +74,12 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                 size={16}
                 className="text-gray-400 group-hover:text-blue-400 transition-colors flex-shrink-0"
               />
-              {item.label}
+              <span className="flex-1">{item.label}</span>
+              {"badge" in item && item.badge > 0 && (
+                <span className="bg-amber-500 text-white text-xs font-bold px-1.5 py-0.5 rounded-full min-w-[1.25rem] text-center leading-none">
+                  {item.badge}
+                </span>
+              )}
             </Link>
           ))}
         </nav>

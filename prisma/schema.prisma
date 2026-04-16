@@ -252,9 +252,11 @@ model User {
   status      String            @default("approved")
   poste       String?
   motif       String?
-  actionLogs  FicheActionLog[]
-  commentLogs FicheCommentLog[]
-  sessions    FicheSession[]
+  actionLogs          FicheActionLog[]
+  commentLogs         FicheCommentLog[]
+  sessions            FicheSession[]
+  mainCouranteSoumis  MainCourante[]    @relation("MainCouranteAuteur")
+  mainCouranteValidee MainCourante[]    @relation("MainCouranteValidatedBy")
 }
 
 model FicheSession {
@@ -296,6 +298,27 @@ model FicheCommentLog {
   message   String
   user      User         @relation(fields: [userId], references: [id])
   session   FicheSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+}
+
+model MainCourante {
+  id                  String    @id @default(cuid())
+  titre               String
+  description         String
+  ficheSlug           String?
+  auteurId            String
+  status              String    @default("pending")
+  editedDescription   String?
+  rejetMotif          String?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+  validatedAt         DateTime?
+  validatedByUserId   String?
+  auteur              User      @relation("MainCouranteAuteur", fields: [auteurId], references: [id])
+  validatedBy         User?     @relation("MainCouranteValidatedBy", fields: [validatedByUserId], references: [id])
+
+  @@index([status])
+  @@index([auteurId])
+  @@index([createdAt])
 }
 
 model AdminAuditLog {

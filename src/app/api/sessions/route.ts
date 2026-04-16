@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/user-auth";
-import { createFicheSession, getActiveSession, getAllSessions } from "@/lib/db";
+import { createFicheSession, getUserActiveSession, getAllSessions } from "@/lib/db";
 import { validateSessionCreate } from "@/lib/validate";
 
 // GET /api/sessions?ficheSlug=xxx  → active session for this fiche
@@ -40,8 +40,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "ficheSlug et ficheTitre requis et valides" }, { status: 400 });
   }
 
-  // Evite de créer une session doublon
-  const existing = await getActiveSession(data.ficheSlug);
+  // Evite de créer une session doublon pour le même utilisateur
+  const existing = await getUserActiveSession(data.ficheSlug, user.id);
   if (existing) {
     return NextResponse.json({ session: existing });
   }

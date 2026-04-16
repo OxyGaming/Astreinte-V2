@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, AlertTriangle, CheckCircle, ChevronRight, BookOpen } from "lucide-react";
-import { getFicheBySlug, getAllContacts, getActiveSession, getSessionJournal, getCheckedActionsForSession } from "@/lib/db";
+import { getFicheBySlug, getAllContacts, getUserActiveSession, getSessionJournal, getCheckedActionsForSession } from "@/lib/db";
 import ContactCard from "@/components/ContactCard";
 import FicheSessionView from "@/components/FicheSessionView";
 import { getCurrentUser } from "@/lib/user-auth";
@@ -24,8 +24,8 @@ export default async function FicheDetailPage({ params }: Props) {
     ? allContacts.filter((c) => fiche.contacts_lies!.includes(c.id))
     : [];
 
-  // Load active session if user is logged in
-  const session = user ? await getActiveSession(slug) : null;
+  // Load active session for this user (each user has their own independent session)
+  const session = user ? await getUserActiveSession(slug, user.id) : null;
 
   // Load journal + checked state for session
   const [journal, checkedLogs] = session

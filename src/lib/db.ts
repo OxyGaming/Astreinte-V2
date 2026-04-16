@@ -4,7 +4,7 @@
  */
 import { cache } from "react";
 import { prisma } from "./prisma";
-import type { Fiche, Contact, Secteur, Mnemonique, Abréviation, Etape, PointAcces, Procedure, PassageNiveau, LettreAcronyme, AccesRail, User, FicheSession, JournalEntry } from "./types";
+import type { Fiche, Contact, Secteur, Mnemonique, Abréviation, Etape, PointAcces, Procedure, PassageNiveau, LettreAcronyme, AccesRail, User, FicheSession, JournalEntry, MainCourante } from "./types";
 
 // ─── Helpers de désérialisation JSON ─────────────────────────────────────────
 
@@ -299,6 +299,10 @@ export async function countPendingRegistrations(): Promise<number> {
   return prisma.user.count({ where: { status: "pending" } });
 }
 
+export async function countPendingMainCourantes(): Promise<number> {
+  return prisma.mainCourante.count({ where: { status: "pending" } });
+}
+
 function dbToUser(row: {
   id: string; username: string; nom: string; prenom: string;
   email?: string | null; role: string; actif: boolean; status: string;
@@ -336,6 +340,15 @@ export async function createFicheSession(
 export async function getActiveSession(ficheSlug: string): Promise<FicheSession | null> {
   const row = await prisma.ficheSession.findFirst({
     where: { ficheSlug, status: "active" },
+    orderBy: { startedAt: "desc" },
+    include: { createdBy: { select: { nom: true, prenom: true } } },
+  });
+  return row ? dbToSession(row) : null;
+}
+
+export async function getUserActiveSession(ficheSlug: string, userId: string): Promise<FicheSession | null> {
+  const row = await prisma.ficheSession.findFirst({
+    where: { ficheSlug, status: "active", createdByUserId: userId },
     orderBy: { startedAt: "desc" },
     include: { createdBy: { select: { nom: true, prenom: true } } },
   });
@@ -468,4 +481,138 @@ export async function getCheckedActionsForSession(
     map.set(`${log.etapeOrdre}_${log.actionIndex}`, log);
   }
   return [...map.values()];
+}
+
+// ─── Main Courante ────────────────────────────────────────────────────────────
+
+function dbToMainCourante(row: {
+  id: string;
+  titre: string;
+  description: string;
+  ficheSlug: string | null;
+  auteurId: string;
+  status: string;
+  editedDescription: string | null;
+  rejetMotif: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+  validatedAt: Date | null;
+  validatedByUserId: string | null;
+  auteur: { nom: string; prenom: string };
+  validatedBy: { nom: string; prenom: string } | null;
+}): MainCourante {
+  return {
+    id: row.id,
+    titre: row.titre,
+    description: row.description,
+    ficheSlug: row.ficheSlug ?? undefined,
+    auteurId: row.auteurId,
+    auteurNom: row.auteur.nom,
+    auteurPrenom: row.auteur.prenom,
+    status: row.status as MainCourante["status"],
+    editedDescription: row.editedDescription ?? undefined,
+    rejetMotif: row.rejetMotif ?? undefined,
+    createdAt: row.createdAt.toISOString(),
+    updatedAt: row.updatedAt.toISOString(),
+    validatedAt: row.validatedAt?.toISOString(),
+    validatedByUserId: row.validatedByUserId ?? undefined,
+    validatedByNom: row.validatedBy?.nom,
+    validatedByPrenom: row.validatedBy?.prenom,
+  };
+}
+
+const MC_INCLUDE = {
+  auteur: { select: { nom: true, prenom: true } },
+  validatedBy: { select: { nom: true, prenom: true } },
+} as const;
+
+/** Entrées validées visibles de tous, avec recherche plein texte optionnelle */
+export async function getValidatedMainCourantes(search?: string): Promise<MainCourante[]> {
+  const where = search
+    ? {
+        status: "validated",
+        OR: [
+          { titre: { contains: search } },
+          { editedDescription: { contains: search } },
+          { description: { contains: search } },
+        ],
+      }
+    : { status: "validated" };
+  const rows = await prisma.mainCourante.findMany({
+    where,
+    orderBy: { validatedAt: "desc" },
+    include: MC_INCLUDE,
+  });
+  return rows.map(dbToMainCourante);
+}
+
+/** Toutes les entrées (admin) avec filtre status optionnel + recherche */
+export async function getAllMainCourantes(status?: string, search?: string): Promise<MainCourante[]> {
+  const where: Record<string, unknown> = {};
+  if (status) where.status = status;
+  if (search) {
+    where.OR = [
+      { titre: { contains: search } },
+      { description: { contains: search } },
+      { editedDescription: { contains: search } },
+    ];
+  }
+  const rows = await prisma.mainCourante.findMany({
+    where,
+    orderBy: { createdAt: "desc" },
+    include: MC_INCLUDE,
+  });
+  return rows.map(dbToMainCourante);
+}
+
+/** Entrées soumises par un utilisateur */
+export async function getUserMainCourantes(userId: string): Promise<MainCourante[]> {
+  const rows = await prisma.mainCourante.findMany({
+    where: { auteurId: userId },
+    orderBy: { createdAt: "desc" },
+    include: MC_INCLUDE,
+  });
+  return rows.map(dbToMainCourante);
+}
+
+export async function getMainCouranteById(id: string): Promise<MainCourante | null> {
+  const row = await prisma.mainCourante.findUnique({ where: { id }, include: MC_INCLUDE });
+  return row ? dbToMainCourante(row) : null;
+}
+
+export async function createMainCourante(
+  titre: string,
+  description: string,
+  auteurId: string,
+  ficheSlug?: string
+): Promise<MainCourante> {
+  const row = await prisma.mainCourante.create({
+    data: { titre, description, auteurId, ficheSlug: ficheSlug ?? null },
+    include: MC_INCLUDE,
+  });
+  return dbToMainCourante(row);
+}
+
+export async function updateMainCourante(
+  id: string,
+  data: { titre?: string; editedDescription?: string; status?: string; rejetMotif?: string; validatedByUserId?: string }
+): Promise<MainCourante> {
+  const validatedAt = data.status === "validated" ? new Date() : undefined;
+  const row = await prisma.mainCourante.update({
+    where: { id },
+    data: {
+      ...(data.titre !== undefined && { titre: data.titre }),
+      ...(data.editedDescription !== undefined && { editedDescription: data.editedDescription }),
+      ...(data.status !== undefined && { status: data.status }),
+      ...(data.rejetMotif !== undefined && { rejetMotif: data.rejetMotif }),
+      ...(data.validatedByUserId !== undefined && { validatedByUserId: data.validatedByUserId }),
+      ...(validatedAt && { validatedAt }),
+    },
+    include: MC_INCLUDE,
+  });
+  return dbToMainCourante(row);
+}
+
+export async function deleteMainCourante(id: string): Promise<void> {
+  await prisma.mainCourante.delete({ where: { id } });
 }

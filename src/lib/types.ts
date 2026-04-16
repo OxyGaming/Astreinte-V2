@@ -253,4 +253,25 @@ export interface JournalCommentEntry {
   message: string;
 }
 
+export type MainCouranteStatus = "pending" | "validated" | "rejected";
+
+export interface MainCourante {
+  id: string;
+  titre: string;
+  description: string;
+  ficheSlug?: string;
+  auteurId: string;
+  auteurNom: string;
+  auteurPrenom: string;
+  status: MainCouranteStatus;
+  editedDescription?: string;
+  rejetMotif?: string;
+  createdAt: string;
+  updatedAt: string;
+  validatedAt?: string;
+  validatedByUserId?: string;
+  validatedByNom?: string;
+  validatedByPrenom?: string;
+}
+
 export type JournalEntry = JournalActionEntry | JournalCommentEntry;
