@@ -75,7 +75,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
                 className="text-gray-400 group-hover:text-blue-400 transition-colors flex-shrink-0"
               />
               <span className="flex-1">{item.label}</span>
-              {"badge" in item && item.badge > 0 && (
+              {"badge" in item && (item.badge ?? 0) > 0 && (
                 <span className="bg-amber-500 text-white text-xs font-bold px-1.5 py-0.5 rounded-full min-w-[1.25rem] text-center leading-none">
                   {item.badge}
                 </span>
