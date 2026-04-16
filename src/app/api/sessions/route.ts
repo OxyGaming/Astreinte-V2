@@ -15,7 +15,7 @@ export async function GET(req: NextRequest) {
     if (!/^[a-z0-9-]{1,120}$/.test(ficheSlug)) {
       return NextResponse.json({ error: "Paramètre ficheSlug invalide" }, { status: 400 });
     }
-    const session = await getActiveSession(ficheSlug);
+    const session = await getUserActiveSession(ficheSlug, user.id);
     return NextResponse.json({ session });
   }
 
