@@ -31,8 +31,7 @@ function formatDate(iso: string) {
 }
 
 export default async function AdminMainCourantePage({ searchParams }: Props) {
-  const redirect = await requireAdminSession();
-  if (redirect) return redirect;
+  await requireAdminSession();
 
   const { status, q } = await searchParams;
   const entries = await getAllMainCourantes(status, q);

@@ -22,8 +22,7 @@ function formatDate(iso: string) {
 }
 
 export default async function AdminMainCouranteDetailPage({ params }: Props) {
-  const redirect = await requireAdminSession();
-  if (redirect) return redirect;
+  await requireAdminSession();
 
   const { id } = await params;
   const entry = await getMainCouranteById(id);
