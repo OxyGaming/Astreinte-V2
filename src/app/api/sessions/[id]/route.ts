@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getCurrentUser } from "@/lib/user-auth";
+import { getCurrentUser, canAccessSession } from "@/lib/user-auth";
 import { getSessionById, archiveFicheSession, getSessionJournal } from "@/lib/db";
 
 interface Params {
   params: Promise<{ id: string }>;
 }
 
-// GET /api/sessions/[id]  → session + journal
+// GET /api/sessions/[id]  → session + journal (cloisonnement par utilisateur)
 export async function GET(_req: NextRequest, { params }: Params) {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
@@ -14,6 +14,9 @@ export async function GET(_req: NextRequest, { params }: Params) {
   const { id } = await params;
   const session = await getSessionById(id);
   if (!session) return NextResponse.json({ error: "Session introuvable" }, { status: 404 });
+  if (!canAccessSession(user, session)) {
+    return NextResponse.json({ error: "Session introuvable" }, { status: 404 });
+  }
 
   const journal = await getSessionJournal(id);
   return NextResponse.json({ session, journal });

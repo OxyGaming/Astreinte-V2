@@ -159,6 +159,9 @@ async function precacheCriticalPages() {
   const { fiches, postes, secteurs } = await slugsRes.json();
 
   // 2. Construire la liste complète des URLs à précacher
+  // Note : /sessions et /main-courante sont user-spécifiques. La réponse
+  // cachée reflète l'utilisateur courant — un changement d'utilisateur sur
+  // le même appareil verrait l'ancien cache jusqu'à un retour réseau.
   const urls = [
     '/',
     '/contacts',
@@ -166,6 +169,9 @@ async function precacheCriticalPages() {
     '/postes',
     '/secteurs',
     '/mnemoniques',
+    '/sessions',
+    '/main-courante',
+    '/acces',
     ...fiches.map(s => `/fiches/${s}`),
     ...postes.map(s => `/postes/${s}`),
     ...secteurs.map(s => `/secteurs/${s}`),

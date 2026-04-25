@@ -46,27 +46,27 @@ export default async function AdminDashboard() {
   ];
 
   return (
-    <div className="p-8">
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900">Tableau de bord</h1>
+    <div className="p-4 sm:p-6 lg:p-8">
+      <div className="mb-6 lg:mb-8">
+        <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Tableau de bord</h1>
         <p className="text-gray-500 text-sm mt-1">Gérez les contenus de l&apos;application Astreinte</p>
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-4 mb-8">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-8 gap-3 sm:gap-4 mb-8">
         {stats.map((s) => (
           <Link
             key={s.href}
             href={s.href}
-            className="bg-white rounded-xl p-5 shadow-sm border border-gray-200 hover:border-blue-300 hover:shadow-md transition-all group"
+            className="bg-white rounded-xl p-4 sm:p-5 shadow-sm border border-gray-200 hover:border-blue-300 hover:shadow-md transition-all group min-h-[44px]"
           >
-            <div className="flex items-center gap-3 mb-3">
+            <div className="flex items-center gap-3 mb-2 sm:mb-3">
               <div className={`w-9 h-9 ${s.color} rounded-lg flex items-center justify-center`}>
                 <s.icon size={18} className="text-white" />
               </div>
             </div>
-            <p className="text-3xl font-bold text-gray-900">{s.count}</p>
-            <p className="text-sm text-gray-500 mt-1 group-hover:text-blue-600 transition-colors">{s.label}</p>
+            <p className="text-2xl sm:text-3xl font-bold text-gray-900">{s.count}</p>
+            <p className="text-xs sm:text-sm text-gray-500 mt-1 group-hover:text-blue-600 transition-colors">{s.label}</p>
           </Link>
         ))}
       </div>

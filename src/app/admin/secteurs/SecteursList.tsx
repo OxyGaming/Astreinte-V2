@@ -47,8 +47,8 @@ export default function SecteursList({ initialSecteurs }: { initialSecteurs: Sec
           {error}
         </div>
       )}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-        <table className="w-full text-sm">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-x-auto">
+        <table style={{ minWidth: 640 }} className="w-full text-sm">
           <thead className="bg-gray-50 border-b border-gray-200">
             <tr>
               <th className="text-left px-6 py-3.5 font-medium text-gray-600">Nom</th>

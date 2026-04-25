@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { requireAdminSession } from "@/lib/admin-auth";
 
 interface Props { params: Promise<{ id: string }> }
 
 export async function GET(_req: NextRequest, { params }: Props) {
+  await requireAdminSession();
   const { id } = await params;
   const point = await prisma.accesRail.findUnique({ where: { id } });
   if (!point) return NextResponse.json({ error: "Non trouvé" }, { status: 404 });
@@ -11,6 +13,7 @@ export async function GET(_req: NextRequest, { params }: Props) {
 }
 
 export async function PUT(req: NextRequest, { params }: Props) {
+  await requireAdminSession();
   const { id } = await params;
   const body = await req.json();
   const { ligne, pk, nomAffiche, nomComplet, latitude, longitude, type, identifiant, description } = body;
@@ -23,6 +26,9 @@ export async function PUT(req: NextRequest, { params }: Props) {
   const lon = parseFloat(longitude);
   if (isNaN(lat) || isNaN(lon)) {
     return NextResponse.json({ error: "Latitude et longitude invalides" }, { status: 400 });
+  }
+  if (lat < -90 || lat > 90 || lon < -180 || lon > 180) {
+    return NextResponse.json({ error: "Latitude (-90..90) ou longitude (-180..180) hors bornes" }, { status: 400 });
   }
 
   const existing = await prisma.accesRail.findUnique({ where: { id } });
@@ -47,6 +53,7 @@ export async function PUT(req: NextRequest, { params }: Props) {
 }
 
 export async function DELETE(_req: NextRequest, { params }: Props) {
+  await requireAdminSession();
   const { id } = await params;
   const existing = await prisma.accesRail.findUnique({ where: { id } });
   if (!existing) return NextResponse.json({ error: "Non trouvé" }, { status: 404 });

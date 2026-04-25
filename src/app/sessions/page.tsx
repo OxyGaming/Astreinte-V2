@@ -1,5 +1,5 @@
 import { requireUserSession } from "@/lib/user-auth";
-import { getAllSessions } from "@/lib/db";
+import { getSessionsForUser } from "@/lib/db";
 import Link from "next/link";
 import { Clock, Archive, Play, ChevronRight, FileText } from "lucide-react";
 
@@ -13,8 +13,9 @@ function formatDateTime(iso: string) {
 }
 
 export default async function SessionsPage() {
-  await requireUserSession();
-  const sessions = await getAllSessions();
+  const user = await requireUserSession();
+  const sessions = await getSessionsForUser(user.id, user.role as "USER" | "EDITOR" | "ADMIN");
+  const isSupervisor = user.role === "ADMIN" || user.role === "EDITOR";
 
   const active = sessions.filter((s) => s.status === "active");
   const archived = sessions.filter((s) => s.status === "archived");
@@ -23,7 +24,11 @@ export default async function SessionsPage() {
     <div className="max-w-2xl mx-auto lg:max-w-3xl px-4 py-5 lg:px-8 space-y-6">
       <div>
         <h1 className="text-xl font-bold text-slate-800">Événements</h1>
-        <p className="text-sm text-slate-500 mt-1">Sessions de fiches réflexes en cours et archivées.</p>
+        <p className="text-sm text-slate-500 mt-1">
+          {isSupervisor
+            ? "Sessions de tous les utilisateurs (mode supervision)."
+            : "Vos sessions de fiches réflexes en cours et archivées."}
+        </p>
       </div>
 
       {/* Sessions actives */}

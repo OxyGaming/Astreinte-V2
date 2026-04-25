@@ -111,7 +111,14 @@ function LoginPage() {
           <div className="p-6">
             {tab === "login" ? (
               /* ── LOGIN ── */
-              <form action={loginFormAction} className="space-y-4">
+              <form
+                action={loginFormAction}
+                onSubmit={() => {
+                  // Signal au OfflineIndicator de précacher immédiatement après redirect
+                  try { sessionStorage.setItem("astreinte:freshLogin", "1"); } catch {}
+                }}
+                className="space-y-4"
+              >
                 <input type="hidden" name="from" value={from} />
 
                 <div>

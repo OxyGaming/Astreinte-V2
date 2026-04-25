@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Archive, Play, Clock, User, CheckSquare, MessageSquare } from "lucide-react";
-import { requireUserSession } from "@/lib/user-auth";
+import { requireUserSession, canAccessSession } from "@/lib/user-auth";
 import { getSessionById, getSessionJournal } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
@@ -22,15 +22,13 @@ function formatTime(iso: string) {
 }
 
 export default async function SessionDetailPage({ params }: Props) {
-  await requireUserSession();
+  const user = await requireUserSession();
   const { id } = await params;
 
-  const [session, journal] = await Promise.all([
-    getSessionById(id),
-    getSessionJournal(id),
-  ]);
-
+  const session = await getSessionById(id);
   if (!session) notFound();
+  if (!canAccessSession(user, session)) notFound();
+  const journal = await getSessionJournal(id);
 
   const isArchived = session.status === "archived";
   const actionCount = journal.filter((e) => e.kind === "action" && e.type === "checked").length;

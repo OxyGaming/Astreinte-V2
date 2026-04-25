@@ -325,25 +325,47 @@ function dbToUser(row: {
 
 // ─── Sessions de fiche ─────────────────────────────────────────────────────────
 
+/**
+ * Crée une session, ou renvoie celle déjà créée pour ce clientOpId.
+ * Si clientOpId est fourni et qu'une session existe déjà avec cette clé,
+ * elle est retournée sans nouvelle insertion (idempotence cross-requête).
+ */
 export async function createFicheSession(
   ficheSlug: string,
   ficheTitre: string,
-  userId: string
+  userId: string,
+  clientOpId?: string | null
 ): Promise<FicheSession> {
-  const row = await prisma.ficheSession.create({
-    data: { ficheSlug, ficheTitre, createdByUserId: userId },
-    include: { createdBy: { select: { nom: true, prenom: true } } },
-  });
-  return dbToSession(row);
+  if (clientOpId) {
+    const existing = await prisma.ficheSession.findUnique({
+      where: { clientOpId },
+      include: { createdBy: { select: { nom: true, prenom: true } } },
+    });
+    if (existing) return dbToSession(existing);
+  }
+  try {
+    const row = await prisma.ficheSession.create({
+      data: { ficheSlug, ficheTitre, createdByUserId: userId, clientOpId: clientOpId ?? null },
+      include: { createdBy: { select: { nom: true, prenom: true } } },
+    });
+    return dbToSession(row);
+  } catch (err) {
+    // Race : une autre requête concurrente a inséré la même clientOpId
+    // pendant qu'on était entre findUnique et create. On relit et renvoie.
+    if (clientOpId && isUniqueConstraintError(err)) {
+      const existing = await prisma.ficheSession.findUnique({
+        where: { clientOpId },
+        include: { createdBy: { select: { nom: true, prenom: true } } },
+      });
+      if (existing) return dbToSession(existing);
+    }
+    throw err;
+  }
 }
 
-export async function getActiveSession(ficheSlug: string): Promise<FicheSession | null> {
-  const row = await prisma.ficheSession.findFirst({
-    where: { ficheSlug, status: "active" },
-    orderBy: { startedAt: "desc" },
-    include: { createdBy: { select: { nom: true, prenom: true } } },
-  });
-  return row ? dbToSession(row) : null;
+function isUniqueConstraintError(err: unknown): boolean {
+  // Prisma : code "P2002" sur violation de contrainte unique
+  return typeof err === "object" && err !== null && "code" in err && (err as { code: unknown }).code === "P2002";
 }
 
 export async function getUserActiveSession(ficheSlug: string, userId: string): Promise<FicheSession | null> {
@@ -363,8 +385,15 @@ export async function getSessionById(id: string): Promise<FicheSession | null> {
   return row ? dbToSession(row) : null;
 }
 
-export async function getAllSessions(): Promise<FicheSession[]> {
+/**
+ * Liste des sessions visibles pour un utilisateur donné.
+ * - USER : uniquement ses propres sessions
+ * - EDITOR / ADMIN : toutes les sessions (supervision)
+ */
+export async function getSessionsForUser(userId: string, role: "USER" | "EDITOR" | "ADMIN"): Promise<FicheSession[]> {
+  const where = role === "USER" ? { createdByUserId: userId } : {};
   const rows = await prisma.ficheSession.findMany({
+    where,
     orderBy: { startedAt: "desc" },
     include: { createdBy: { select: { nom: true, prenom: true } } },
   });
@@ -407,22 +436,35 @@ export async function addActionLog(
   actionIndex: number,
   actionLabel: string,
   userId: string,
-  type: "checked" | "unchecked"
+  type: "checked" | "unchecked",
+  clientOpId?: string | null
 ): Promise<void> {
-  await prisma.ficheActionLog.create({
-    data: { sessionId, ficheSlug, etapeOrdre, actionIndex, actionLabel, userId, type },
-  });
+  try {
+    await prisma.ficheActionLog.create({
+      data: { sessionId, ficheSlug, etapeOrdre, actionIndex, actionLabel, userId, type, clientOpId: clientOpId ?? null },
+    });
+  } catch (err) {
+    // Idempotence : doublon détecté par l'index unique sur clientOpId → no-op
+    if (clientOpId && isUniqueConstraintError(err)) return;
+    throw err;
+  }
 }
 
 export async function addCommentLog(
   sessionId: string,
   ficheSlug: string,
   userId: string,
-  message: string
+  message: string,
+  clientOpId?: string | null
 ): Promise<void> {
-  await prisma.ficheCommentLog.create({
-    data: { sessionId, ficheSlug, userId, message },
-  });
+  try {
+    await prisma.ficheCommentLog.create({
+      data: { sessionId, ficheSlug, userId, message, clientOpId: clientOpId ?? null },
+    });
+  } catch (err) {
+    if (clientOpId && isUniqueConstraintError(err)) return;
+    throw err;
+  }
 }
 
 export async function getSessionJournal(sessionId: string): Promise<JournalEntry[]> {

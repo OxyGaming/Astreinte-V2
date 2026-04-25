@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { requireAdminSession } from "@/lib/admin-auth";
+import { validatePkInput } from "@/lib/pkUtils";
 
 interface PointPayload {
   nomComplet: string;
@@ -14,6 +16,7 @@ interface PointPayload {
 }
 
 export async function POST(req: NextRequest) {
+  await requireAdminSession();
   try {
     const body = await req.json();
     const points: PointPayload[] = body.points;
@@ -34,6 +37,14 @@ export async function POST(req: NextRequest) {
         }
         if (p.latitude == null || p.longitude == null || isNaN(p.latitude) || isNaN(p.longitude)) {
           errors.push(`Point "${p.nomComplet}" ignoré : coordonnées invalides`);
+          continue;
+        }
+        if (p.latitude < -90 || p.latitude > 90 || p.longitude < -180 || p.longitude > 180) {
+          errors.push(`Point "${p.nomComplet}" ignoré : coordonnées hors bornes`);
+          continue;
+        }
+        if (p.pk?.trim() && validatePkInput(p.pk) !== null) {
+          errors.push(`Point "${p.nomComplet}" ignoré : PK "${p.pk}" au format invalide`);
           continue;
         }
 

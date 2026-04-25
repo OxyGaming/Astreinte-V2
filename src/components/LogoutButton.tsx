@@ -22,7 +22,8 @@ export default function LogoutButton({ variant = "sidebar" }: LogoutButtonProps)
       <button
         onClick={handleLogout}
         disabled={pending}
-        className="flex flex-col items-center justify-center py-2 gap-0.5 text-xs font-medium text-slate-400 hover:text-red-500 transition-colors disabled:opacity-50"
+        style={{ minHeight: 56 }}
+        className="flex-1 flex flex-col items-center justify-center py-2.5 gap-0.5 text-xs font-medium text-slate-400 hover:text-red-500 transition-colors disabled:opacity-50"
       >
         <LogOut size={22} strokeWidth={1.8} />
         <span>{pending ? "…" : "Quitter"}</span>

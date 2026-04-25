@@ -3,6 +3,21 @@
  * Toutes les fonctions retournent les données nettoyées ou null si invalide.
  */
 
+/**
+ * Extrait la clé d'idempotence optionnelle du corps de requête.
+ * Format attendu : UUID v4 (36 caractères, généré par crypto.randomUUID()).
+ * Retourne `null` si absente ou invalide — le serveur traite alors la requête
+ * sans dédup (compatibilité avec anciens clients).
+ */
+export function extractClientOpId(body: unknown): string | null {
+  if (typeof body !== "object" || body === null) return null;
+  const v = (body as Record<string, unknown>).clientOpId;
+  if (typeof v !== "string") return null;
+  // UUID strict (v1-v5) — empêche d'injecter des chaînes arbitraires
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(v)) return null;
+  return v;
+}
+
 /** Valide les paramètres de création d'une session */
 export function validateSessionCreate(body: unknown): {
   ficheSlug: string;

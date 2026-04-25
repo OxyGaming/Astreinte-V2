@@ -6,6 +6,7 @@ import {
   AlertCircle, ChevronLeft, Train, MapPin,
 } from "lucide-react";
 import type { AccesRail } from "@/lib/types";
+import { distanceKm } from "@/lib/geo";
 
 // ─── Utilitaires ──────────────────────────────────────────────────────────────
 
@@ -15,18 +16,6 @@ function normalize(s: string): string {
     .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase()
     .replace(/-/g, " ");
-}
-
-function haversine(lat1: number, lon1: number, lat2: number, lon2: number): number {
-  const R = 6371;
-  const dLat = ((lat2 - lat1) * Math.PI) / 180;
-  const dLon = ((lon2 - lon1) * Math.PI) / 180;
-  const a =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos((lat1 * Math.PI) / 180) *
-      Math.cos((lat2 * Math.PI) / 180) *
-      Math.sin(dLon / 2) ** 2;
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
 function matchesQuery(p: AccesRail, q: string): boolean {
@@ -143,6 +132,10 @@ export default function AccesClient({ points, lignes }: Props) {
   const [nearestPoints, setNearestPoints] = useState<NearestPoint[] | null>(null);
   const [geoError, setGeoError] = useState<string | null>(null);
   const [geoLoading, setGeoLoading] = useState(false);
+  // Avertissement quand même le 1er résultat est loin du réseau ferroviaire :
+  // l'utilisateur est probablement hors zone — on ne masque pas les résultats
+  // (un seul accès à 15 km vaut mieux que rien) mais on le signale.
+  const [farFromNetwork, setFarFromNetwork] = useState(false);
 
   // Points filtrés par ligne
   const ligneFiltered = useMemo(() => {
@@ -165,23 +158,38 @@ export default function AccesClient({ points, lignes }: Props) {
     setGeoLoading(true);
     setGeoError(null);
     setNearestPoints(null);
+    setFarFromNetwork(false);
 
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         const { latitude, longitude } = pos.coords;
         const pool = selectedLigne ? ligneFiltered : points;
         const withDist = pool
-          .map((p) => ({ ...p, distance: haversine(latitude, longitude, p.latitude, p.longitude) }))
+          .map((p) => ({ ...p, distance: distanceKm(latitude, longitude, p.latitude, p.longitude) }))
           .sort((a, b) => a.distance - b.distance)
           .slice(0, 10);
         setNearestPoints(withDist);
+        // Seuil "à proximité raisonnable du réseau" — au-delà l'utilisateur est probablement
+        // hors zone (mauvaise ligne sélectionnée ou intervention loin du ferroviaire).
+        setFarFromNetwork(withDist.length > 0 && withDist[0].distance > 10);
         setGeoLoading(false);
       },
-      () => {
-        setGeoError("Position GPS refusée ou indisponible. Vérifiez les permissions de localisation.");
+      (err) => {
+        // PositionError.code : 1 = PERMISSION_DENIED, 2 = POSITION_UNAVAILABLE, 3 = TIMEOUT
+        let msg: string;
+        if (err.code === 1) {
+          msg = "Permission de géolocalisation refusée. Autorisez l'accès dans les paramètres du navigateur.";
+        } else if (err.code === 2) {
+          msg = "Position GPS indisponible. Vérifiez le signal et réessayez à l'extérieur si possible.";
+        } else if (err.code === 3) {
+          msg = "Localisation trop longue (> 15 s). Réessayez avec une meilleure réception GPS.";
+        } else {
+          msg = "Erreur de géolocalisation. Réessayez.";
+        }
+        setGeoError(msg);
         setGeoLoading(false);
       },
-      { timeout: 10000, maximumAge: 60000 }
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 }
     );
   }, [points, ligneFiltered, selectedLigne]);
 
@@ -285,6 +293,15 @@ export default function AccesClient({ points, lignes }: Props) {
               Fermer
             </button>
           </div>
+
+          {farFromNetwork && (
+            <div className="flex items-start gap-2 text-xs text-amber-700 bg-amber-50 border border-amber-200 px-3 py-2 rounded-lg mb-3">
+              <AlertCircle size={14} className="flex-shrink-0 mt-0.5" />
+              <span>
+                Le plus proche est à plus de 10 km — vérifiez votre position ou la ligne sélectionnée.
+              </span>
+            </div>
+          )}
 
           <div className="card divide-y divide-slate-100">
             {nearestPoints.map((p, i) => (

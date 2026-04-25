@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getCurrentUser } from "@/lib/user-auth";
+import { getCurrentUser, canAccessSession } from "@/lib/user-auth";
 import { getSessionById, addCommentLog, getSessionJournal } from "@/lib/db";
-import { validateComment } from "@/lib/validate";
+import { validateComment, extractClientOpId } from "@/lib/validate";
 
 interface Params {
   params: Promise<{ id: string }>;
@@ -15,6 +15,9 @@ export async function POST(req: NextRequest, { params }: Params) {
   const { id } = await params;
   const session = await getSessionById(id);
   if (!session) return NextResponse.json({ error: "Session introuvable" }, { status: 404 });
+  if (!canAccessSession(user, session)) {
+    return NextResponse.json({ error: "Session introuvable" }, { status: 404 });
+  }
   if (session.status === "archived") {
     return NextResponse.json({ error: "Session archivée — modifications impossibles" }, { status: 400 });
   }
@@ -33,8 +36,9 @@ export async function POST(req: NextRequest, { params }: Params) {
       { status: 400 }
     );
   }
+  const clientOpId = extractClientOpId(body);
 
-  await addCommentLog(id, session.ficheSlug, user.id, data.message);
+  await addCommentLog(id, session.ficheSlug, user.id, data.message, clientOpId);
   const journal = await getSessionJournal(id);
   return NextResponse.json({ ok: true, journal }, { status: 201 });
 }

@@ -41,7 +41,7 @@ export default function UsersClient({ initialUsers }: { initialUsers: UserType[]
   }
 
   return (
-    <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+    <div className="bg-white rounded-2xl border border-gray-200 overflow-x-auto">
       {users.length === 0 ? (
         <div className="p-8 text-center text-gray-400">
           <User size={32} className="mx-auto mb-3 opacity-40" />
@@ -49,7 +49,7 @@ export default function UsersClient({ initialUsers }: { initialUsers: UserType[]
           <p className="text-sm mt-1">Créez le premier compte utilisateur.</p>
         </div>
       ) : (
-        <table className="w-full">
+        <table style={{ minWidth: 680 }} className="w-full">
           <thead>
             <tr className="border-b border-gray-200 bg-gray-50">
               <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Utilisateur</th>

@@ -109,7 +109,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
 
       {/* --- Contenu principal --- */}
       {/* pt-14 sur mobile pour compenser la barre de navigation fixe */}
-      <main className="flex-1 lg:ml-64 min-h-screen pt-14 lg:pt-0">
+      <main className="flex-1 min-w-0 lg:ml-64 min-h-screen pt-14 lg:pt-0">
         {children}
       </main>
     </div>

@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { requireAdminSession } from "@/lib/admin-auth";
 
 export async function GET(req: NextRequest) {
+  await requireAdminSession();
   const { searchParams } = new URL(req.url);
   const q = searchParams.get("q") ?? "";
   const ligne = searchParams.get("ligne") ?? "";
@@ -34,6 +36,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  await requireAdminSession();
   const body = await req.json();
   const { ligne, pk, nomAffiche, nomComplet, latitude, longitude, type, identifiant, description } = body;
 
@@ -45,6 +48,9 @@ export async function POST(req: NextRequest) {
   const lon = parseFloat(longitude);
   if (isNaN(lat) || isNaN(lon)) {
     return NextResponse.json({ error: "Latitude et longitude invalides" }, { status: 400 });
+  }
+  if (lat < -90 || lat > 90 || lon < -180 || lon > 180) {
+    return NextResponse.json({ error: "Latitude (-90..90) ou longitude (-180..180) hors bornes" }, { status: 400 });
   }
 
   const point = await prisma.accesRail.create({

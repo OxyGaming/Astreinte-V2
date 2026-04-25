@@ -1,9 +1,9 @@
 "use client";
 
+// nav mobile front-office (LogoutButton retiré — accessible via menu paramètres)
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Home, FileText, Phone, MapPin, Navigation, Building2, MapPinned, ClipboardList } from "lucide-react";
-import LogoutButton from "./LogoutButton";
 
 const navItems = [
   { href: "/", label: "Accueil", icon: Home },
@@ -29,7 +29,8 @@ export default function BottomNav() {
             <Link
               key={href}
               href={href}
-              className={`flex-1 flex flex-col items-center justify-center py-2 gap-0.5 text-xs font-medium transition-colors ${
+              style={{ minHeight: 56 }}
+              className={`flex-1 flex flex-col items-center justify-center py-2.5 gap-0.5 text-xs font-medium transition-colors relative ${
                 active
                   ? "text-blue-800"
                   : "text-slate-400 hover:text-slate-600"
@@ -40,14 +41,13 @@ export default function BottomNav() {
                 strokeWidth={active ? 2.5 : 1.8}
                 className={active ? "text-blue-800" : ""}
               />
-              <span className={active ? "font-semibold" : ""}>{label}</span>
+              <span className={`truncate max-w-full px-0.5 ${active ? "font-semibold" : ""}`}>{label}</span>
               {active && (
                 <span className="absolute bottom-0 w-8 h-0.5 bg-blue-800 rounded-t-full" />
               )}
             </Link>
           );
         })}
-        <LogoutButton variant="mobile" />
       </div>
       <div className="h-safe-bottom" style={{ height: "env(safe-area-inset-bottom)" }} />
     </nav>

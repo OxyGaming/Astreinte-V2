@@ -241,6 +241,8 @@ export interface JournalActionEntry {
   actionIndex: number;
   actionLabel: string;
   type: "checked" | "unchecked";
+  /** Vrai pour les entrées créées hors ligne, en attente de synchronisation. */
+  pending?: boolean;
 }
 
 export interface JournalCommentEntry {
@@ -251,6 +253,8 @@ export interface JournalCommentEntry {
   userNom: string;
   userPrenom: string;
   message: string;
+  /** Vrai pour les entrées créées hors ligne, en attente de synchronisation. */
+  pending?: boolean;
 }
 
 export type MainCouranteStatus = "pending" | "validated" | "rejected";

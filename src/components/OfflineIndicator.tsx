@@ -20,18 +20,23 @@
  */
 
 import { useEffect, useState, useCallback, useRef } from 'react';
+import { usePathname } from 'next/navigation';
 import { WifiOff, Wifi, RefreshCw, CheckCircle, AlertTriangle } from 'lucide-react';
 
 // ─── Constantes ───────────────────────────────────────────────────────────────
 
 const LS_LAST_ONLINE = 'astreinte:lastOnline';
 const LS_PRECACHE    = 'astreinte:precache'; // { timestamp, cached, failed }
+const SS_FRESH_LOGIN = 'astreinte:freshLogin'; // posé par le formulaire de login
 
 /** Au-delà de 6h, les données sont considérées "potentiellement obsolètes" */
 const STALE_MS = 6 * 60 * 60 * 1000;
 
 /** Délai initial avant le premier précache (évite de bloquer le rendu) */
 const PRECACHE_INITIAL_DELAY_MS = 4_000;
+
+/** Délai très court juste après login : on déclenche dès que possible */
+const PRECACHE_FRESH_LOGIN_DELAY_MS = 400;
 
 /** Délai avant précache automatique au retour en ligne */
 const PRECACHE_RECONNECT_DELAY_MS = 2_000;
@@ -86,6 +91,7 @@ function formatDate(ts: number): string {
 // ─── Composant ────────────────────────────────────────────────────────────────
 
 export default function OfflineIndicator() {
+  const pathname = usePathname();
   const [isOffline,       setIsOffline]       = useState(false);
   const [justReconnected, setJustReconnected] = useState(false);
   const [syncState,       setSyncState]       = useState<SyncState>('idle');
@@ -172,6 +178,7 @@ export default function OfflineIndicator() {
     } else {
       markOnline();
       // Premier précache différé si les données sont absentes ou obsolètes
+      // (le cas "fresh login" est traité par l'effet pathname plus bas)
       const info = readLS<PrecacheInfo>(LS_PRECACHE);
       if (isStale(info?.timestamp)) {
         setTimeout(triggerPrecache, PRECACHE_INITIAL_DELAY_MS);
@@ -192,6 +199,24 @@ export default function OfflineIndicator() {
       }
     };
   }, [triggerPrecache]);
+
+  // ─── Détection "fresh login" sur changement de route ─────────────────────
+  // Le redirect du server action est une soft-navigation : le composant ne
+  // remonte pas, mais usePathname() change → on re-vérifie le flag posé par
+  // le formulaire de login avant la soumission.
+  useEffect(() => {
+    if (!navigator.onLine) return;
+    let freshLogin = false;
+    try {
+      if (sessionStorage.getItem(SS_FRESH_LOGIN) === '1') {
+        freshLogin = true;
+        sessionStorage.removeItem(SS_FRESH_LOGIN);
+      }
+    } catch { /* navigation privée */ }
+    if (freshLogin) {
+      setTimeout(triggerPrecache, PRECACHE_FRESH_LOGIN_DELAY_MS);
+    }
+  }, [pathname, triggerPrecache]);
 
   // ─── Rendu ────────────────────────────────────────────────────────────────
 

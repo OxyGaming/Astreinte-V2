@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
+import { requireAdminSession } from "@/lib/admin-auth";
+import { validatePkInput } from "@/lib/pkUtils";
+import { distanceMeters } from "@/lib/geo";
 
 interface AccesData {
   ligne: string;
@@ -14,20 +17,8 @@ interface AccesData {
   description?: string;
 }
 
-// Distance approximative en mètres entre deux points GPS
-function distanceMetres(lat1: number, lon1: number, lat2: number, lon2: number): number {
-  const R = 6371000;
-  const dLat = ((lat2 - lat1) * Math.PI) / 180;
-  const dLon = ((lon2 - lon1) * Math.PI) / 180;
-  const a =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos((lat1 * Math.PI) / 180) *
-      Math.cos((lat2 * Math.PI) / 180) *
-      Math.sin(dLon / 2) ** 2;
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-}
-
 export async function POST(req: NextRequest) {
+  await requireAdminSession();
   try {
     const body = await req.json();
     const points: AccesData[] = body.points;
@@ -54,6 +45,12 @@ export async function POST(req: NextRequest) {
           details.push({ nom: p.nomAffiche || "?", status: "rejected", reason: "Champs obligatoires manquants (ligne, pk, nomAffiche, nomComplet)" });
           continue;
         }
+        const pkErr = validatePkInput(p.pk);
+        if (pkErr) {
+          rejected++;
+          details.push({ nom: p.nomAffiche, status: "rejected", reason: `PK "${p.pk}" invalide : ${pkErr}` });
+          continue;
+        }
         const lat = Number(p.latitude);
         const lon = Number(p.longitude);
         if (isNaN(lat) || isNaN(lon) || lat < -90 || lat > 90 || lon < -180 || lon > 180) {
@@ -66,7 +63,7 @@ export async function POST(req: NextRequest) {
         const duplicate = existing.find(
           (e) =>
             e.nomComplet === p.nomComplet.trim() ||
-            distanceMetres(e.latitude, e.longitude, lat, lon) < TOLERANCE_M
+            distanceMeters(e.latitude, e.longitude, lat, lon) < TOLERANCE_M
         );
 
         const data = {

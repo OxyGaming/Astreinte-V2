@@ -70,3 +70,15 @@ export async function requireUserSession(): Promise<SessionUser> {
 export async function hashPassword(password: string): Promise<string> {
   return bcrypt.hash(password, 12);
 }
+
+/**
+ * Autorise l'accès à une session de fiche.
+ * USER : uniquement le créateur. EDITOR/ADMIN : toutes les sessions (supervision).
+ */
+export function canAccessSession(
+  user: { id: string; role: string },
+  session: { createdByUserId: string }
+): boolean {
+  if (user.role === "ADMIN" || user.role === "EDITOR") return true;
+  return session.createdByUserId === user.id;
+}

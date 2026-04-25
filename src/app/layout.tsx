@@ -3,6 +3,7 @@ import "./globals.css";
 import BottomNav from "@/components/BottomNav";
 import SideNav from "@/components/SideNav";
 import OfflineIndicator from "@/components/OfflineIndicator";
+import PendingOpsBadge from "@/components/PendingOpsBadge";
 import ServiceWorkerRegister from "@/components/ServiceWorkerRegister";
 
 export const metadata: Metadata = {
@@ -43,6 +44,7 @@ export default function RootLayout({
         {/* Wrapper décalé de la sidebar, flex pour que OfflineIndicator pousse le contenu vers le bas */}
         <div className="lg:ml-64 flex flex-col min-h-screen">
           <OfflineIndicator />
+          <PendingOpsBadge />
           <main className="flex-1 pb-nav lg:pb-0">
             {children}
           </main>
