@@ -7,7 +7,7 @@ import PendingOpsBadge from "@/components/PendingOpsBadge";
 import ServiceWorkerRegister from "@/components/ServiceWorkerRegister";
 
 export const metadata: Metadata = {
-  title: "Astreinte — UOC Zone Diffuse",
+  title: "Astreinte",
   description: "Application d'aide à l'astreinte",
   manifest: "/manifest.json",
   icons: {

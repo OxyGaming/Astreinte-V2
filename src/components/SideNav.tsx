@@ -30,7 +30,6 @@ export default function SideNav() {
           </div>
           <div>
             <h1 className="font-bold text-lg leading-tight">Astreinte</h1>
-            <p className="text-blue-300 text-xs">UOC Zone Diffuse</p>
           </div>
         </div>
       </div>

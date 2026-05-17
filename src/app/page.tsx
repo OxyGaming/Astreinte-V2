@@ -34,7 +34,6 @@ export default async function Home() {
           </div>
           <div>
             <h1 className="text-xl font-bold">Astreinte</h1>
-            <p className="text-blue-300 text-sm">UOC Zone Diffuse</p>
           </div>
         </div>
         <SearchBar />

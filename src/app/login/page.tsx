@@ -78,7 +78,6 @@ function LoginPage() {
             <Shield size={40} className="text-amber-400" />
           </div>
           <h1 className="text-2xl font-bold text-white">Astreinte</h1>
-          <p className="text-blue-300 text-sm mt-1">UOC Zone Diffuse</p>
         </div>
 
         {/* Card */}
