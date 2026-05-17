@@ -4,7 +4,7 @@ import Link from "next/link";
 import { Shield, Phone, FileText, MapPin, AlignLeft, AlertTriangle, ChevronRight, BookOpen } from "lucide-react";
 import SearchBar from "@/components/SearchBar";
 import PhoneButton from "@/components/PhoneButton";
-import { getAllContacts, getAllFiches, getAllMnemoniques } from "@/lib/db";
+import { getAllContacts, getAllFiches, getAllMnemoniques, getAllSecteurs } from "@/lib/db";
 
 const CATEGORIE_COLOR: Record<string, string> = {
   accident: "bg-red-600",
@@ -15,10 +15,11 @@ const CATEGORIE_COLOR: Record<string, string> = {
 };
 
 export default async function Home() {
-  const [fiches, contacts, mnemoniques] = await Promise.all([
+  const [fiches, contacts, mnemoniques, secteurs] = await Promise.all([
     getAllFiches(),
     getAllContacts(),
     getAllMnemoniques(),
+    getAllSecteurs(),
   ]);
 
   const contactsUrgents = contacts.filter((c) => c.categorie === "urgence").slice(0, 3);
@@ -33,7 +34,7 @@ export default async function Home() {
           </div>
           <div>
             <h1 className="text-xl font-bold">Astreinte</h1>
-            <p className="text-blue-300 text-sm">UOC Zone Diffuse — Secteur Gier / RDN</p>
+            <p className="text-blue-300 text-sm">UOC Zone Diffuse</p>
           </div>
         </div>
         <SearchBar />
@@ -111,7 +112,7 @@ export default async function Home() {
             {[
               { href: "/fiches", icon: FileText, label: "Fiches réflexes", sub: `${fiches.length} fiches`, color: "text-blue-700 bg-blue-50" },
               { href: "/contacts", icon: Phone, label: "Contacts utiles", sub: `${contacts.length} contacts`, color: "text-green-700 bg-green-50" },
-              { href: "/secteurs", icon: MapPin, label: "Secteurs", sub: "Gier / RDN", color: "text-amber-700 bg-amber-50" },
+              { href: "/secteurs", icon: MapPin, label: "Secteurs", sub: `${secteurs.length} secteurs`, color: "text-amber-700 bg-amber-50" },
               { href: "/mnemoniques", icon: AlignLeft, label: "Mnémotechniques", sub: `${mnemoniques.length} acronymes`, color: "text-purple-700 bg-purple-50" },
             ].map(({ href, icon: Icon, label, sub, color }) => (
               <Link

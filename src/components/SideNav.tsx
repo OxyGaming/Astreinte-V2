@@ -74,7 +74,6 @@ export default function SideNav() {
           <Settings size={14} />
           Administration
         </Link>
-        <p className="text-blue-600 text-xs px-1">Secteur Gier / RDN</p>
       </div>
     </aside>
   );

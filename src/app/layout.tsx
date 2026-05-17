@@ -8,7 +8,7 @@ import ServiceWorkerRegister from "@/components/ServiceWorkerRegister";
 
 export const metadata: Metadata = {
   title: "Astreinte — UOC Zone Diffuse",
-  description: "Application d'aide à l'astreinte — Secteur Gier / Rive Droite Nord",
+  description: "Application d'aide à l'astreinte",
   manifest: "/manifest.json",
   icons: {
     // Apple touch icon pour iOS (Add to Home Screen)
