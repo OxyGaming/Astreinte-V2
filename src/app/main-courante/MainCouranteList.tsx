@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import Link from "next/link";
 import { Search, ChevronRight, BookOpen, Calendar, User, Tag } from "lucide-react";
 import type { MainCourante } from "@/lib/types";
+import { getNatureColors } from "@/lib/main-courante-colors";
 
 interface Props {
   initialEntries: MainCourante[];
@@ -89,7 +90,7 @@ export default function MainCouranteList({ initialEntries, initialQuery }: Props
                     {(entry.nature || entry.libelle) && (
                       <div className="flex items-center gap-1.5 mb-1.5 flex-wrap">
                         {entry.nature && (
-                          <span className="inline-flex items-center gap-1 bg-blue-100 text-blue-800 text-[10px] font-bold px-1.5 py-0.5 rounded">
+                          <span className={`inline-flex items-center gap-1 ${getNatureColors(entry.nature).chip} text-[10px] font-bold px-1.5 py-0.5 rounded`}>
                             <Tag size={9} />
                             {entry.nature}
                           </span>

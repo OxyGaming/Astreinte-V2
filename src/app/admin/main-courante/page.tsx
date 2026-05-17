@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Clock, CheckCircle, XCircle, ChevronRight, Upload, Tag } from "lucide-react";
 import { requireAdminSession } from "@/lib/admin-auth";
 import { getAllMainCourantes } from "@/lib/db";
+import { getNatureColors } from "@/lib/main-courante-colors";
 import type { MainCouranteStatus } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -112,7 +113,7 @@ export default async function AdminMainCourantePage({ searchParams }: Props) {
                     {STATUS_LABEL[entry.status]}
                   </span>
                   {entry.nature && (
-                    <span className="inline-flex items-center gap-1 bg-blue-100 text-blue-800 text-[11px] font-bold px-1.5 py-0.5 rounded">
+                    <span className={`inline-flex items-center gap-1 ${getNatureColors(entry.nature).chip} text-[11px] font-bold px-1.5 py-0.5 rounded`}>
                       <Tag size={9} />
                       {entry.nature}
                     </span>

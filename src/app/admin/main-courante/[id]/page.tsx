@@ -3,6 +3,7 @@ import Link from "next/link";
 import { ArrowLeft, User, Calendar, BookOpen, Tag } from "lucide-react";
 import { requireAdminSession } from "@/lib/admin-auth";
 import { getMainCouranteById, getFicheBySlug, getAllFiches } from "@/lib/db";
+import { getNatureColors } from "@/lib/main-courante-colors";
 import AdminMainCouranteForm from "./AdminMainCouranteForm";
 
 export const dynamic = "force-dynamic";
@@ -56,7 +57,7 @@ export default async function AdminMainCouranteDetailPage({ params }: Props) {
       {/* Méta */}
       <div className="flex flex-wrap gap-3 text-xs text-slate-500 mb-6 mt-2">
         {entry.nature && (
-          <span className="inline-flex items-center gap-1 bg-blue-100 text-blue-800 font-bold px-2 py-0.5 rounded-md">
+          <span className={`inline-flex items-center gap-1 ${getNatureColors(entry.nature).chip} font-bold px-2 py-0.5 rounded-md`}>
             <Tag size={10} />
             {entry.nature}
             {entry.libelle && <span className="font-normal opacity-80">— {entry.libelle}</span>}

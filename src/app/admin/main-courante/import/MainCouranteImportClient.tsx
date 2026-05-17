@@ -6,6 +6,7 @@ import {
   FileSpreadsheet, Upload, ChevronLeft, Info, AlertTriangle,
   CheckCircle2, Loader2, X, Eye, FileX, BookMarked,
 } from "lucide-react";
+import { getNatureColors } from "@/lib/main-courante-colors";
 
 interface ParsedRow {
   rowIndex: number; // index dans la feuille (1-based, en-tête = 1)
@@ -389,7 +390,7 @@ export default function MainCouranteImportClient() {
                       <td className="px-3 py-2 font-mono text-xs text-gray-400">{r.rowIndex}</td>
                       <td className="px-3 py-2">
                         {r.nature ? (
-                          <span className="inline-flex items-center bg-blue-100 text-blue-800 text-xs font-bold px-1.5 py-0.5 rounded">
+                          <span className={`inline-flex items-center ${getNatureColors(r.nature).chip} text-xs font-bold px-1.5 py-0.5 rounded`}>
                             {r.nature}
                           </span>
                         ) : (

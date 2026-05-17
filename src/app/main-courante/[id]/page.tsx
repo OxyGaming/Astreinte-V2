@@ -3,6 +3,7 @@ import Link from "next/link";
 import { ArrowLeft, BookOpen, Calendar, User, CheckCircle, Tag, ShieldAlert, Wrench, FileText, Lightbulb } from "lucide-react";
 import { getCurrentUser } from "@/lib/user-auth";
 import { getMainCouranteById, getFicheBySlug } from "@/lib/db";
+import { getNatureColors } from "@/lib/main-courante-colors";
 
 export const dynamic = "force-dynamic";
 
@@ -61,7 +62,7 @@ export default async function MainCouranteDetailPage({ params }: Props) {
         {(entry.nature || entry.libelle) && (
           <div className="flex items-center gap-2 mb-2 flex-wrap">
             {entry.nature && (
-              <span className="inline-flex items-center gap-1 bg-white/20 text-white text-xs font-bold px-2 py-0.5 rounded">
+              <span className={`inline-flex items-center gap-1 ${getNatureColors(entry.nature).chipOnDark} text-xs font-bold px-2 py-0.5 rounded`}>
                 <Tag size={11} />
                 {entry.nature}
               </span>
