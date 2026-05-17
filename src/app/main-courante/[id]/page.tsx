@@ -1,6 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, BookOpen, Calendar, User, CheckCircle } from "lucide-react";
+import { ArrowLeft, BookOpen, Calendar, User, CheckCircle, Tag, ShieldAlert, Wrench, FileText, Lightbulb } from "lucide-react";
 import { getCurrentUser } from "@/lib/user-auth";
 import { getMainCouranteById, getFicheBySlug } from "@/lib/db";
 
@@ -37,7 +37,9 @@ export default async function MainCouranteDetailPage({ params }: Props) {
   if (!canView) notFound();
 
   const ficheLinked = entry.ficheSlug ? await getFicheBySlug(entry.ficheSlug) : null;
-  const displayDescription = entry.editedDescription ?? entry.description;
+  // description publiée : si l'admin a édité l'editedDescription (legacy), on l'affiche en priorité ;
+  // sinon description.
+  const description = entry.editedDescription ?? entry.description;
 
   return (
     <div className="max-w-2xl mx-auto lg:max-w-3xl">
@@ -54,7 +56,27 @@ export default async function MainCouranteDetailPage({ params }: Props) {
           <CheckCircle size={16} className="opacity-70" />
           <span className="text-xs font-bold opacity-60 uppercase tracking-wide">Entrée validée</span>
         </div>
-        <h1 className="text-xl font-bold leading-tight">{entry.titre}</h1>
+
+        {/* Nature + Libellé */}
+        {(entry.nature || entry.libelle) && (
+          <div className="flex items-center gap-2 mb-2 flex-wrap">
+            {entry.nature && (
+              <span className="inline-flex items-center gap-1 bg-white/20 text-white text-xs font-bold px-2 py-0.5 rounded">
+                <Tag size={11} />
+                {entry.nature}
+              </span>
+            )}
+            {entry.libelle && (
+              <span className="text-xs opacity-80 font-medium">{entry.libelle}</span>
+            )}
+          </div>
+        )}
+
+        <h1 className="text-xl font-bold leading-tight">
+          {entry.titre ?? (
+            <span className="italic opacity-80 font-normal">Sans titre</span>
+          )}
+        </h1>
         <div className="flex flex-wrap gap-3 mt-2 text-xs opacity-70">
           <span className="flex items-center gap-1">
             <User size={11} />
@@ -74,13 +96,56 @@ export default async function MainCouranteDetailPage({ params }: Props) {
         </div>
       </div>
 
-      <div className="py-5 px-4 lg:px-8 space-y-5">
-        {/* Contenu */}
-        <div className="bg-white border border-slate-200 rounded-xl p-5">
+      <div className="py-5 px-4 lg:px-8 space-y-4">
+        {/* Description (situation) */}
+        <section className="bg-white border border-slate-200 rounded-xl p-5">
+          <div className="flex items-center gap-2 mb-3">
+            <FileText size={14} className="text-slate-500" />
+            <h2 className="text-xs font-bold text-slate-500 uppercase tracking-wide">Description</h2>
+          </div>
           <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap">
-            {displayDescription}
+            {description}
           </p>
-        </div>
+        </section>
+
+        {/* Solution */}
+        {entry.solution && (
+          <section className="bg-white border border-slate-200 rounded-xl p-5">
+            <div className="flex items-center gap-2 mb-3">
+              <Lightbulb size={14} className="text-green-600" />
+              <h2 className="text-xs font-bold text-slate-500 uppercase tracking-wide">Solution</h2>
+            </div>
+            <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap">
+              {entry.solution}
+            </p>
+          </section>
+        )}
+
+        {/* Avis sécurité */}
+        {entry.avisSecurite && (
+          <section className="bg-amber-50 border border-amber-200 rounded-xl p-5">
+            <div className="flex items-center gap-2 mb-3">
+              <ShieldAlert size={14} className="text-amber-600" />
+              <h2 className="text-xs font-bold text-amber-700 uppercase tracking-wide">Avis sécurité</h2>
+            </div>
+            <p className="text-sm text-amber-900 leading-relaxed whitespace-pre-wrap">
+              {entry.avisSecurite}
+            </p>
+          </section>
+        )}
+
+        {/* Avis production */}
+        {entry.avisProduction && (
+          <section className="bg-indigo-50 border border-indigo-200 rounded-xl p-5">
+            <div className="flex items-center gap-2 mb-3">
+              <Wrench size={14} className="text-indigo-600" />
+              <h2 className="text-xs font-bold text-indigo-700 uppercase tracking-wide">Avis production</h2>
+            </div>
+            <p className="text-sm text-indigo-900 leading-relaxed whitespace-pre-wrap">
+              {entry.avisProduction}
+            </p>
+          </section>
+        )}
 
         {/* Fiche liée */}
         {ficheLinked && (
@@ -99,18 +164,6 @@ export default async function MainCouranteDetailPage({ params }: Props) {
               <span className="text-xs text-blue-500">Ouvrir →</span>
             </Link>
           </div>
-        )}
-
-        {/* Contribution originale (si editedDescription différent) */}
-        {entry.editedDescription && entry.editedDescription !== entry.description && (
-          <details className="bg-slate-50 border border-slate-200 rounded-xl p-4">
-            <summary className="text-xs font-semibold text-slate-500 cursor-pointer select-none">
-              Voir la contribution originale
-            </summary>
-            <p className="text-sm text-slate-500 mt-3 leading-relaxed whitespace-pre-wrap">
-              {entry.description}
-            </p>
-          </details>
         )}
 
         <div className="pt-2">

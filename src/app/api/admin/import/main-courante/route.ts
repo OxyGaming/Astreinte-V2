@@ -4,15 +4,20 @@ import { getCurrentUser } from "@/lib/user-auth";
 import { prisma } from "@/lib/prisma";
 
 interface MainCouranteImportRow {
-  titre: string;
+  titre?: string;
+  nature?: string;
+  libelle?: string;
   description: string;
-  editedDescription?: string;
+  solution?: string;
+  avisSecurite?: string;
+  avisProduction?: string;
   ficheSlug?: string;
 }
 
 // POST /api/admin/import/main-courante
 // Importe des entrées main courante validées en masse.
 // L'admin connecté devient auteur et validateur de toutes les entrées importées.
+// Mode "upsert" : matche par (nature + description) ; mode "create" : crée systématiquement.
 export async function POST(req: NextRequest) {
   await requireAdminSession();
 
@@ -35,48 +40,58 @@ export async function POST(req: NextRequest) {
   let created = 0;
   let updated = 0;
   let rejected = 0;
-  const details: { status: string; reason?: string }[] = [];
+  const details: { status: string; reason?: string; row?: number }[] = [];
 
-  for (const row of entries) {
-    const titre = row.titre?.trim();
+  for (let i = 0; i < entries.length; i++) {
+    const row = entries[i];
     const description = row.description?.trim();
-    if (!titre || !description) {
+    if (!description) {
       rejected++;
-      details.push({ status: "rejected", reason: `Titre ou description manquant : "${titre || "—"}"` });
+      details.push({ status: "rejected", row: i + 1, reason: "Description manquante (ligne ignorée)" });
       continue;
     }
 
+    const data = {
+      titre: row.titre?.trim() || null,
+      nature: row.nature?.trim() || null,
+      libelle: row.libelle?.trim() || null,
+      description,
+      solution: row.solution?.trim() || null,
+      avisSecurite: row.avisSecurite?.trim() || null,
+      avisProduction: row.avisProduction?.trim() || null,
+      ficheSlug: row.ficheSlug?.trim() || null,
+    };
+
     try {
       if (mode === "upsert") {
-        // Cherche une entrée existante avec le même titre (correspondance exacte)
+        // Recherche par (nature + description) pour éviter les doublons d'import
         const existing = await prisma.mainCourante.findFirst({
-          where: { titre, auteurId: user.id },
+          where: {
+            description,
+            ...(data.nature ? { nature: data.nature } : {}),
+            auteurId: user.id,
+          },
         });
 
         if (existing) {
           await prisma.mainCourante.update({
             where: { id: existing.id },
             data: {
-              description,
-              editedDescription: row.editedDescription?.trim() || null,
-              ficheSlug: row.ficheSlug?.trim() || null,
+              ...data,
               status: "validated",
               validatedAt: now,
               validatedByUserId: user.id,
             },
           });
           updated++;
-          details.push({ status: "updated" });
+          details.push({ status: "updated", row: i + 1 });
           continue;
         }
       }
 
       await prisma.mainCourante.create({
         data: {
-          titre,
-          description,
-          editedDescription: row.editedDescription?.trim() || null,
-          ficheSlug: row.ficheSlug?.trim() || null,
+          ...data,
           auteurId: user.id,
           status: "validated",
           validatedAt: now,
@@ -84,10 +99,11 @@ export async function POST(req: NextRequest) {
         },
       });
       created++;
-      details.push({ status: "created" });
-    } catch {
+      details.push({ status: "created", row: i + 1 });
+    } catch (e) {
       rejected++;
-      details.push({ status: "rejected", reason: `Erreur lors de l'import de "${titre}"` });
+      const msg = e instanceof Error ? e.message : "Erreur inconnue";
+      details.push({ status: "rejected", row: i + 1, reason: msg });
     }
   }
 

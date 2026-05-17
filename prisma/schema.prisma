@@ -309,11 +309,24 @@ model FicheCommentLog {
 
 model MainCourante {
   id                  String    @id @default(cuid())
-  titre               String
+  /// Titre court — saisi/édité uniquement par l'admin lors de la validation.
+  titre               String?
+  /// Code court de la nature (ex "S1", "S9", "RH"). Texte libre éditable par l'admin.
+  nature              String?
+  /// Libellé long de la catégorie (ex "Signaux"). Texte libre éditable par l'admin.
+  libelle             String?
+  /// Situation/cas rencontré (saisi par le contributeur).
   description         String
+  /// Ce qui a été fait/conseillé (saisi par le contributeur, éditable par l'admin).
+  solution            String?
+  /// Avis de la filière sécurité — renseigné uniquement par l'admin.
+  avisSecurite        String?
+  /// Avis de la filière production — renseigné uniquement par l'admin.
+  avisProduction      String?
   ficheSlug           String?
   auteurId            String
   status              String    @default("pending")
+  /// Version éditée par l'admin de la description (legacy — conservée pour compat).
   editedDescription   String?
   rejetMotif          String?
   createdAt           DateTime  @default(now())
@@ -326,6 +339,7 @@ model MainCourante {
   @@index([status])
   @@index([auteurId])
   @@index([createdAt])
+  @@index([nature])
 }
 
 model AdminAuditLog {

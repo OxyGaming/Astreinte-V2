@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Send, CheckCircle } from "lucide-react";
+import { Send, CheckCircle, Info } from "lucide-react";
 import type { Fiche } from "@/lib/types";
 
 interface Props {
@@ -11,16 +11,26 @@ interface Props {
 
 export default function NewMainCouranteForm({ fiches }: Props) {
   const router = useRouter();
-  const [titre, setTitre] = useState("");
+  const [nature, setNature] = useState("");
+  const [libelle, setLibelle] = useState("");
   const [description, setDescription] = useState("");
+  const [solution, setSolution] = useState("");
   const [ficheSlug, setFicheSlug] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
 
+  const reset = () => {
+    setNature("");
+    setLibelle("");
+    setDescription("");
+    setSolution("");
+    setFicheSlug("");
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!titre.trim() || !description.trim()) return;
+    if (!description.trim()) return;
     setSubmitting(true);
     setError("");
     try {
@@ -28,8 +38,10 @@ export default function NewMainCouranteForm({ fiches }: Props) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          titre: titre.trim(),
+          nature: nature.trim() || undefined,
+          libelle: libelle.trim() || undefined,
           description: description.trim(),
+          solution: solution.trim() || undefined,
           ficheSlug: ficheSlug || undefined,
         }),
       });
@@ -51,11 +63,11 @@ export default function NewMainCouranteForm({ fiches }: Props) {
         <h2 className="font-semibold text-green-800">Contribution envoyée !</h2>
         <p className="text-sm text-green-700">
           Votre contribution a été transmise aux administrateurs pour validation.
-          Elle apparaîtra dans la main courante une fois approuvée.
+          Le titre, les avis sécurité et production seront ajoutés par eux avant publication.
         </p>
         <div className="flex gap-3 justify-center pt-2">
           <button
-            onClick={() => { setSuccess(false); setTitre(""); setDescription(""); setFicheSlug(""); }}
+            onClick={() => { setSuccess(false); reset(); }}
             className="text-sm text-blue-700 font-medium hover:underline"
           >
             Nouvelle contribution
@@ -74,36 +86,77 @@ export default function NewMainCouranteForm({ fiches }: Props) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
-      {/* Titre */}
-      <div>
-        <label className="block text-sm font-semibold text-slate-700 mb-1.5">
-          Titre <span className="text-red-500">*</span>
-        </label>
-        <input
-          type="text"
-          value={titre}
-          onChange={(e) => setTitre(e.target.value)}
-          maxLength={200}
-          required
-          placeholder="Ex : Procédure de reprise après coupure secteur…"
-          className="w-full px-4 py-3 text-sm bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400 transition"
-        />
-        <p className="text-xs text-slate-400 mt-1">{titre.length}/200 caractères</p>
+      {/* Info workflow */}
+      <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 flex items-start gap-2 text-xs text-blue-800">
+        <Info size={14} className="mt-0.5 flex-shrink-0" />
+        <p>
+          Décrivez la <strong>situation</strong> rencontrée et la <strong>solution</strong> apportée.
+          Un administrateur ajoutera ensuite le titre et, si nécessaire, les avis sécurité et production avant publication.
+        </p>
       </div>
 
-      {/* Description */}
+      {/* Nature + Libellé (sur une ligne sur desktop) */}
+      <div className="grid grid-cols-1 sm:grid-cols-[140px_1fr] gap-3">
+        <div>
+          <label className="block text-sm font-semibold text-slate-700 mb-1.5">
+            Nature <span className="text-slate-400 font-normal">(code)</span>
+          </label>
+          <input
+            type="text"
+            value={nature}
+            onChange={(e) => setNature(e.target.value)}
+            maxLength={50}
+            placeholder="S1, S9, RH…"
+            className="w-full px-4 py-3 text-sm bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400 transition uppercase"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-semibold text-slate-700 mb-1.5">
+            Libellé <span className="text-slate-400 font-normal">(catégorie)</span>
+          </label>
+          <input
+            type="text"
+            value={libelle}
+            onChange={(e) => setLibelle(e.target.value)}
+            maxLength={200}
+            placeholder="Ex : Signaux, Travaux sur les voies…"
+            className="w-full px-4 py-3 text-sm bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400 transition"
+          />
+        </div>
+      </div>
+
+      {/* Description (situation) */}
       <div>
         <label className="block text-sm font-semibold text-slate-700 mb-1.5">
           Description <span className="text-red-500">*</span>
+          <span className="text-xs text-slate-400 font-normal ml-2">(situation rencontrée)</span>
         </label>
         <textarea
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           required
           rows={6}
-          placeholder="Décrivez le cas rencontré, la bonne pratique ou le point de vigilance…"
+          maxLength={5000}
+          placeholder="Décrivez le cas rencontré : qui a appelé, ce qu'il s'est passé, le contexte…"
           className="w-full px-4 py-3 text-sm bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400 transition resize-none"
         />
+        <p className="text-xs text-slate-400 mt-1">{description.length}/5000 caractères</p>
+      </div>
+
+      {/* Solution */}
+      <div>
+        <label className="block text-sm font-semibold text-slate-700 mb-1.5">
+          Solution <span className="text-slate-400 font-normal">(ce qui a été fait)</span>
+        </label>
+        <textarea
+          value={solution}
+          onChange={(e) => setSolution(e.target.value)}
+          rows={5}
+          maxLength={5000}
+          placeholder="Quelle solution a été apportée ? Quelle procédure / consigne / article appliqué ?"
+          className="w-full px-4 py-3 text-sm bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400 transition resize-none"
+        />
+        <p className="text-xs text-slate-400 mt-1">{solution.length}/5000 caractères</p>
       </div>
 
       {/* Fiche liée (optionnel) */}
@@ -133,7 +186,7 @@ export default function NewMainCouranteForm({ fiches }: Props) {
 
       <button
         type="submit"
-        disabled={submitting || !titre.trim() || !description.trim()}
+        disabled={submitting || !description.trim()}
         className="w-full flex items-center justify-center gap-2 bg-blue-800 hover:bg-blue-700 disabled:bg-blue-300 text-white font-semibold py-3 rounded-xl transition-colors text-sm"
       >
         <Send size={14} />

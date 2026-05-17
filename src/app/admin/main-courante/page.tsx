@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Clock, CheckCircle, XCircle, ChevronRight, Plus } from "lucide-react";
+import { Clock, CheckCircle, XCircle, ChevronRight, Upload, Tag } from "lucide-react";
 import { requireAdminSession } from "@/lib/admin-auth";
 import { getAllMainCourantes } from "@/lib/db";
 import type { MainCouranteStatus } from "@/lib/types";
@@ -51,14 +51,21 @@ export default async function AdminMainCourantePage({ searchParams }: Props) {
   ];
 
   return (
-    <div>
-      <div className="flex items-center justify-between mb-6">
+    <div className="p-6">
+      <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
         <div>
           <h1 className="text-2xl font-bold text-slate-800">Main courante</h1>
           <p className="text-sm text-slate-500 mt-1">
-            Modérez les contributions des utilisateurs.
+            Modérez les contributions et complétez les avis sécurité / production.
           </p>
         </div>
+        <Link
+          href="/admin/main-courante/import"
+          className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors"
+        >
+          <Upload size={14} />
+          Importer Excel
+        </Link>
       </div>
 
       {/* Filtres */}
@@ -104,13 +111,26 @@ export default async function AdminMainCourantePage({ searchParams }: Props) {
                     {entry.status === "rejected" && <XCircle size={10} />}
                     {STATUS_LABEL[entry.status]}
                   </span>
+                  {entry.nature && (
+                    <span className="inline-flex items-center gap-1 bg-blue-100 text-blue-800 text-[11px] font-bold px-1.5 py-0.5 rounded">
+                      <Tag size={9} />
+                      {entry.nature}
+                    </span>
+                  )}
+                  {entry.libelle && (
+                    <span className="text-[11px] text-slate-500 font-medium truncate max-w-xs">
+                      {entry.libelle}
+                    </span>
+                  )}
                   <span className="text-xs text-slate-400">{formatDate(entry.createdAt)}</span>
                   <span className="text-xs text-slate-400">
                     par {entry.auteurPrenom} {entry.auteurNom}
                   </span>
                 </div>
                 <h3 className="font-semibold text-slate-800 text-sm group-hover:text-blue-800 transition-colors">
-                  {entry.titre}
+                  {entry.titre || (
+                    <span className="italic text-slate-400 font-normal">Sans titre</span>
+                  )}
                 </h3>
                 <p className="text-xs text-slate-500 mt-0.5 line-clamp-1">
                   {entry.description}

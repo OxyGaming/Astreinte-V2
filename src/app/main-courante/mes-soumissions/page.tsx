@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Clock, CheckCircle, XCircle, BookOpen } from "lucide-react";
+import { ArrowLeft, Clock, CheckCircle, XCircle, BookOpen, Tag } from "lucide-react";
 import { getCurrentUser } from "@/lib/user-auth";
 import { getUserMainCourantes } from "@/lib/db";
 import type { MainCouranteStatus } from "@/lib/types";
@@ -95,9 +95,26 @@ export default async function MesSoumissionsPage() {
                         {STATUS_ICON[entry.status]}
                         {STATUS_LABEL[entry.status]}
                       </span>
+                      {entry.nature && (
+                        <span className="inline-flex items-center gap-1 bg-blue-100 text-blue-800 text-[10px] font-bold px-1.5 py-0.5 rounded">
+                          <Tag size={9} />
+                          {entry.nature}
+                        </span>
+                      )}
+                      {entry.libelle && (
+                        <span className="text-[11px] text-slate-500 font-medium truncate max-w-[200px]">
+                          {entry.libelle}
+                        </span>
+                      )}
                       <span className="text-xs text-slate-400">{formatDate(entry.createdAt)}</span>
                     </div>
-                    <h3 className="font-semibold text-slate-800 text-sm">{entry.titre}</h3>
+                    <h3 className="font-semibold text-slate-800 text-sm">
+                      {entry.titre ?? (
+                        <span className="italic text-slate-400 font-normal">
+                          {entry.status === "pending" ? "En attente de titre par l'admin" : "Sans titre"}
+                        </span>
+                      )}
+                    </h3>
                     <p className="text-xs text-slate-500 mt-1 line-clamp-2">
                       {entry.description}
                     </p>

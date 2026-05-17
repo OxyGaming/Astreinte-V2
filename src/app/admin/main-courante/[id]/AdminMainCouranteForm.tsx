@@ -2,19 +2,24 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { CheckCircle, XCircle, Trash2, Save } from "lucide-react";
-import type { MainCourante } from "@/lib/types";
+import { CheckCircle, XCircle, Trash2, Save, ShieldAlert, Wrench } from "lucide-react";
+import type { MainCourante, Fiche } from "@/lib/types";
 
 interface Props {
   entry: MainCourante;
+  fiches: Fiche[];
 }
 
-export default function AdminMainCouranteForm({ entry }: Props) {
+export default function AdminMainCouranteForm({ entry, fiches }: Props) {
   const router = useRouter();
-  const [titre, setTitre] = useState(entry.titre);
-  const [editedDescription, setEditedDescription] = useState(
-    entry.editedDescription ?? entry.description
-  );
+  const [titre, setTitre] = useState(entry.titre ?? "");
+  const [nature, setNature] = useState(entry.nature ?? "");
+  const [libelle, setLibelle] = useState(entry.libelle ?? "");
+  const [description, setDescription] = useState(entry.description);
+  const [solution, setSolution] = useState(entry.solution ?? "");
+  const [avisSecurite, setAvisSecurite] = useState(entry.avisSecurite ?? "");
+  const [avisProduction, setAvisProduction] = useState(entry.avisProduction ?? "");
+  const [ficheSlug, setFicheSlug] = useState(entry.ficheSlug ?? "");
   const [rejetMotif, setRejetMotif] = useState(entry.rejetMotif ?? "");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -23,12 +28,18 @@ export default function AdminMainCouranteForm({ entry }: Props) {
     setSaving(true);
     setError("");
     try {
-      const body: Record<string, string> = {
-        titre: titre.trim(),
-        editedDescription: editedDescription.trim(),
+      const body: Record<string, string | undefined> = {
+        titre,
+        nature,
+        libelle,
+        description,
+        solution,
+        avisSecurite,
+        avisProduction,
+        ficheSlug,
       };
       if (status) body.status = status;
-      if (status === "rejected") body.rejetMotif = rejetMotif.trim();
+      if (status === "rejected") body.rejetMotif = rejetMotif;
 
       const res = await fetch(`/api/admin/main-courante/${entry.id}`, {
         method: "PUT",
@@ -62,42 +73,137 @@ export default function AdminMainCouranteForm({ entry }: Props) {
     }
   };
 
+  const canValidate = description.trim().length > 0;
+
   return (
     <div className="space-y-5">
-      <div className="bg-white border border-slate-200 rounded-xl p-5 space-y-4">
+      <div className="bg-white border border-slate-200 rounded-xl p-5 space-y-5">
         <p className="text-xs font-bold text-slate-400 uppercase tracking-wide">
-          Modération
+          Modération & édition
         </p>
 
-        {/* Titre éditable */}
+        {/* Nature + Libellé */}
+        <div className="grid grid-cols-1 sm:grid-cols-[140px_1fr] gap-3">
+          <div>
+            <label className="block text-sm font-semibold text-slate-700 mb-1.5">Nature</label>
+            <input
+              type="text"
+              value={nature}
+              onChange={(e) => setNature(e.target.value)}
+              maxLength={50}
+              placeholder="Ex : S1"
+              className="w-full px-4 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400 transition uppercase"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-semibold text-slate-700 mb-1.5">Libellé</label>
+            <input
+              type="text"
+              value={libelle}
+              onChange={(e) => setLibelle(e.target.value)}
+              maxLength={200}
+              placeholder="Ex : Signaux"
+              className="w-full px-4 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400 transition"
+            />
+          </div>
+        </div>
+
+        {/* Titre (admin uniquement) */}
         <div>
-          <label className="block text-sm font-semibold text-slate-700 mb-1.5">Titre</label>
+          <label className="block text-sm font-semibold text-slate-700 mb-1.5">
+            Titre <span className="text-xs text-slate-400 font-normal ml-2">(résumé court — admin uniquement)</span>
+          </label>
           <input
             type="text"
             value={titre}
             onChange={(e) => setTitre(e.target.value)}
             maxLength={200}
+            placeholder="Résumé court de la situation"
             className="w-full px-4 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400 transition"
           />
         </div>
 
-        {/* Description éditée */}
+        {/* Description */}
         <div>
           <label className="block text-sm font-semibold text-slate-700 mb-1.5">
-            Description publiée
-            <span className="text-xs text-slate-400 font-normal ml-2">
-              (version qui sera visible de tous)
-            </span>
+            Description <span className="text-red-500">*</span>
+            <span className="text-xs text-slate-400 font-normal ml-2">(situation rencontrée)</span>
           </label>
           <textarea
-            value={editedDescription}
-            onChange={(e) => setEditedDescription(e.target.value)}
-            rows={8}
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            rows={6}
+            maxLength={5000}
             className="w-full px-4 py-3 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400 transition resize-none"
           />
         </div>
 
-        {/* Motif de rejet (affiché si on veut rejeter ou si déjà rejeté) */}
+        {/* Solution */}
+        <div>
+          <label className="block text-sm font-semibold text-slate-700 mb-1.5">
+            Solution <span className="text-xs text-slate-400 font-normal ml-2">(ce qui a été fait)</span>
+          </label>
+          <textarea
+            value={solution}
+            onChange={(e) => setSolution(e.target.value)}
+            rows={5}
+            maxLength={5000}
+            className="w-full px-4 py-3 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400 transition resize-none"
+          />
+        </div>
+
+        {/* Avis sécurité — admin uniquement */}
+        <div>
+          <label className="flex items-center gap-2 text-sm font-semibold text-slate-700 mb-1.5">
+            <ShieldAlert size={14} className="text-amber-600" />
+            Avis sécurité
+            <span className="text-xs text-slate-400 font-normal">(admin uniquement)</span>
+          </label>
+          <textarea
+            value={avisSecurite}
+            onChange={(e) => setAvisSecurite(e.target.value)}
+            rows={3}
+            maxLength={2000}
+            placeholder="Commentaire de la filière sécurité…"
+            className="w-full px-4 py-3 text-sm bg-amber-50 border border-amber-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-400 transition resize-none"
+          />
+        </div>
+
+        {/* Avis production — admin uniquement */}
+        <div>
+          <label className="flex items-center gap-2 text-sm font-semibold text-slate-700 mb-1.5">
+            <Wrench size={14} className="text-indigo-600" />
+            Avis production
+            <span className="text-xs text-slate-400 font-normal">(admin uniquement)</span>
+          </label>
+          <textarea
+            value={avisProduction}
+            onChange={(e) => setAvisProduction(e.target.value)}
+            rows={3}
+            maxLength={2000}
+            placeholder="Commentaire de la filière production…"
+            className="w-full px-4 py-3 text-sm bg-indigo-50 border border-indigo-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400 transition resize-none"
+          />
+        </div>
+
+        {/* Fiche liée */}
+        <div>
+          <label className="block text-sm font-semibold text-slate-700 mb-1.5">Fiche réflexe associée</label>
+          <select
+            value={ficheSlug}
+            onChange={(e) => setFicheSlug(e.target.value)}
+            className="w-full px-4 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400 transition"
+          >
+            <option value="">— Aucune —</option>
+            {fiches.map((f) => (
+              <option key={f.slug} value={f.slug}>
+                {f.numero.toString().padStart(2, "0")} — {f.titre}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Motif de rejet */}
         {(entry.status === "rejected" || entry.status === "pending") && (
           <div>
             <label className="block text-sm font-semibold text-slate-700 mb-1.5">
@@ -126,7 +232,7 @@ export default function AdminMainCouranteForm({ entry }: Props) {
         {entry.status !== "validated" && (
           <button
             onClick={() => submit("validated")}
-            disabled={saving || !titre.trim() || !editedDescription.trim()}
+            disabled={saving || !canValidate}
             className="flex items-center gap-2 bg-green-600 hover:bg-green-700 disabled:bg-green-300 text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition-colors"
           >
             <CheckCircle size={15} />
@@ -137,7 +243,7 @@ export default function AdminMainCouranteForm({ entry }: Props) {
         {entry.status === "validated" && (
           <button
             onClick={() => submit()}
-            disabled={saving}
+            disabled={saving || !canValidate}
             className="flex items-center gap-2 bg-blue-800 hover:bg-blue-700 disabled:bg-blue-300 text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition-colors"
           >
             <Save size={15} />
@@ -159,7 +265,7 @@ export default function AdminMainCouranteForm({ entry }: Props) {
         {entry.status === "rejected" && (
           <button
             onClick={() => submit("validated")}
-            disabled={saving || !titre.trim() || !editedDescription.trim()}
+            disabled={saving || !canValidate}
             className="flex items-center gap-2 bg-green-600 hover:bg-green-700 disabled:bg-green-300 text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition-colors"
           >
             <CheckCircle size={15} />

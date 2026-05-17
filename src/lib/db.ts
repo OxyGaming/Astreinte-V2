@@ -529,8 +529,13 @@ export async function getCheckedActionsForSession(
 
 function dbToMainCourante(row: {
   id: string;
-  titre: string;
+  titre: string | null;
+  nature: string | null;
+  libelle: string | null;
   description: string;
+  solution: string | null;
+  avisSecurite: string | null;
+  avisProduction: string | null;
   ficheSlug: string | null;
   auteurId: string;
   status: string;
@@ -545,8 +550,13 @@ function dbToMainCourante(row: {
 }): MainCourante {
   return {
     id: row.id,
-    titre: row.titre,
+    titre: row.titre ?? undefined,
+    nature: row.nature ?? undefined,
+    libelle: row.libelle ?? undefined,
     description: row.description,
+    solution: row.solution ?? undefined,
+    avisSecurite: row.avisSecurite ?? undefined,
+    avisProduction: row.avisProduction ?? undefined,
     ficheSlug: row.ficheSlug ?? undefined,
     auteurId: row.auteurId,
     auteurNom: row.auteur.nom,
@@ -575,8 +585,13 @@ export async function getValidatedMainCourantes(search?: string): Promise<MainCo
         status: "validated",
         OR: [
           { titre: { contains: search } },
-          { editedDescription: { contains: search } },
+          { nature: { contains: search } },
+          { libelle: { contains: search } },
           { description: { contains: search } },
+          { solution: { contains: search } },
+          { avisSecurite: { contains: search } },
+          { avisProduction: { contains: search } },
+          { editedDescription: { contains: search } },
         ],
       }
     : { status: "validated" };
@@ -595,7 +610,12 @@ export async function getAllMainCourantes(status?: string, search?: string): Pro
   if (search) {
     where.OR = [
       { titre: { contains: search } },
+      { nature: { contains: search } },
+      { libelle: { contains: search } },
       { description: { contains: search } },
+      { solution: { contains: search } },
+      { avisSecurite: { contains: search } },
+      { avisProduction: { contains: search } },
       { editedDescription: { contains: search } },
     ];
   }
@@ -622,28 +642,61 @@ export async function getMainCouranteById(id: string): Promise<MainCourante | nu
   return row ? dbToMainCourante(row) : null;
 }
 
-export async function createMainCourante(
-  titre: string,
-  description: string,
-  auteurId: string,
-  ficheSlug?: string
-): Promise<MainCourante> {
+export interface MainCouranteCreateInput {
+  description: string;
+  auteurId: string;
+  nature?: string;
+  libelle?: string;
+  solution?: string;
+  ficheSlug?: string;
+}
+
+export async function createMainCourante(input: MainCouranteCreateInput): Promise<MainCourante> {
   const row = await prisma.mainCourante.create({
-    data: { titre, description, auteurId, ficheSlug: ficheSlug ?? null },
+    data: {
+      description: input.description,
+      auteurId: input.auteurId,
+      nature: input.nature ?? null,
+      libelle: input.libelle ?? null,
+      solution: input.solution ?? null,
+      ficheSlug: input.ficheSlug ?? null,
+    },
     include: MC_INCLUDE,
   });
   return dbToMainCourante(row);
 }
 
+export interface MainCouranteUpdateInput {
+  titre?: string | null;
+  nature?: string | null;
+  libelle?: string | null;
+  description?: string;
+  solution?: string | null;
+  avisSecurite?: string | null;
+  avisProduction?: string | null;
+  ficheSlug?: string | null;
+  editedDescription?: string | null;
+  status?: string;
+  rejetMotif?: string | null;
+  validatedByUserId?: string;
+}
+
 export async function updateMainCourante(
   id: string,
-  data: { titre?: string; editedDescription?: string; status?: string; rejetMotif?: string; validatedByUserId?: string }
+  data: MainCouranteUpdateInput
 ): Promise<MainCourante> {
   const validatedAt = data.status === "validated" ? new Date() : undefined;
   const row = await prisma.mainCourante.update({
     where: { id },
     data: {
       ...(data.titre !== undefined && { titre: data.titre }),
+      ...(data.nature !== undefined && { nature: data.nature }),
+      ...(data.libelle !== undefined && { libelle: data.libelle }),
+      ...(data.description !== undefined && { description: data.description }),
+      ...(data.solution !== undefined && { solution: data.solution }),
+      ...(data.avisSecurite !== undefined && { avisSecurite: data.avisSecurite }),
+      ...(data.avisProduction !== undefined && { avisProduction: data.avisProduction }),
+      ...(data.ficheSlug !== undefined && { ficheSlug: data.ficheSlug }),
       ...(data.editedDescription !== undefined && { editedDescription: data.editedDescription }),
       ...(data.status !== undefined && { status: data.status }),
       ...(data.rejetMotif !== undefined && { rejetMotif: data.rejetMotif }),

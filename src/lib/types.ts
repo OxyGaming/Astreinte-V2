@@ -261,13 +261,26 @@ export type MainCouranteStatus = "pending" | "validated" | "rejected";
 
 export interface MainCourante {
   id: string;
-  titre: string;
+  /** Titre — saisi/édité uniquement par l'admin lors de la validation (nullable). */
+  titre?: string;
+  /** Code court de la nature (ex "S1", "S9", "RH"). Texte libre. */
+  nature?: string;
+  /** Libellé long de la catégorie (ex "Signaux"). Texte libre. */
+  libelle?: string;
+  /** Situation/cas rencontré (saisi par le contributeur). */
   description: string;
+  /** Ce qui a été fait/conseillé. */
+  solution?: string;
+  /** Avis sécurité — renseigné uniquement par l'admin. */
+  avisSecurite?: string;
+  /** Avis production — renseigné uniquement par l'admin. */
+  avisProduction?: string;
   ficheSlug?: string;
   auteurId: string;
   auteurNom: string;
   auteurPrenom: string;
   status: MainCouranteStatus;
+  /** Legacy : version éditée libre de la description (conservée pour compat). */
   editedDescription?: string;
   rejetMotif?: string;
   createdAt: string;

@@ -1,8 +1,8 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, User, Calendar, BookOpen } from "lucide-react";
+import { ArrowLeft, User, Calendar, BookOpen, Tag } from "lucide-react";
 import { requireAdminSession } from "@/lib/admin-auth";
-import { getMainCouranteById, getFicheBySlug } from "@/lib/db";
+import { getMainCouranteById, getFicheBySlug, getAllFiches } from "@/lib/db";
 import AdminMainCouranteForm from "./AdminMainCouranteForm";
 
 export const dynamic = "force-dynamic";
@@ -25,13 +25,16 @@ export default async function AdminMainCouranteDetailPage({ params }: Props) {
   await requireAdminSession();
 
   const { id } = await params;
-  const entry = await getMainCouranteById(id);
+  const [entry, fiches] = await Promise.all([
+    getMainCouranteById(id),
+    getAllFiches(),
+  ]);
   if (!entry) notFound();
 
   const ficheLinked = entry.ficheSlug ? await getFicheBySlug(entry.ficheSlug) : null;
 
   return (
-    <div className="max-w-2xl">
+    <div className="max-w-3xl p-6">
       <div className="flex items-center gap-3 mb-6">
         <Link
           href="/admin/main-courante"
@@ -42,10 +45,23 @@ export default async function AdminMainCouranteDetailPage({ params }: Props) {
         </Link>
       </div>
 
-      <h1 className="text-xl font-bold text-slate-800 mb-1">{entry.titre}</h1>
+      <h1 className="text-xl font-bold text-slate-800 mb-1">
+        {entry.titre || (
+          <span className="italic text-slate-400 font-normal">
+            Sans titre — à compléter
+          </span>
+        )}
+      </h1>
 
       {/* Méta */}
-      <div className="flex flex-wrap gap-3 text-xs text-slate-500 mb-6">
+      <div className="flex flex-wrap gap-3 text-xs text-slate-500 mb-6 mt-2">
+        {entry.nature && (
+          <span className="inline-flex items-center gap-1 bg-blue-100 text-blue-800 font-bold px-2 py-0.5 rounded-md">
+            <Tag size={10} />
+            {entry.nature}
+            {entry.libelle && <span className="font-normal opacity-80">— {entry.libelle}</span>}
+          </span>
+        )}
         <span className="flex items-center gap-1">
           <User size={11} />
           {entry.auteurPrenom} {entry.auteurNom}
@@ -62,20 +78,33 @@ export default async function AdminMainCouranteDetailPage({ params }: Props) {
         )}
       </div>
 
-      {/* Contribution originale */}
-      <div className="mb-6">
-        <p className="text-xs font-bold text-slate-400 uppercase tracking-wide mb-2">
-          Contribution originale
-        </p>
-        <div className="bg-slate-50 border border-slate-200 rounded-xl p-4">
-          <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap">
-            {entry.description}
-          </p>
+      {/* Contribution originale (snapshot — non modifiable) */}
+      <details className="mb-6 bg-slate-50 border border-slate-200 rounded-xl p-4">
+        <summary className="text-xs font-bold text-slate-500 uppercase tracking-wide cursor-pointer select-none">
+          Contribution originale (snapshot avant édition)
+        </summary>
+        <div className="mt-3 space-y-3 text-sm">
+          {entry.nature && (
+            <p><span className="font-semibold text-slate-600">Nature :</span> {entry.nature}</p>
+          )}
+          {entry.libelle && (
+            <p><span className="font-semibold text-slate-600">Libellé :</span> {entry.libelle}</p>
+          )}
+          <div>
+            <p className="font-semibold text-slate-600 mb-1">Description :</p>
+            <p className="text-slate-700 leading-relaxed whitespace-pre-wrap">{entry.description}</p>
+          </div>
+          {entry.solution && (
+            <div>
+              <p className="font-semibold text-slate-600 mb-1">Solution :</p>
+              <p className="text-slate-700 leading-relaxed whitespace-pre-wrap">{entry.solution}</p>
+            </div>
+          )}
         </div>
-      </div>
+      </details>
 
       {/* Formulaire de modération */}
-      <AdminMainCouranteForm entry={entry} />
+      <AdminMainCouranteForm entry={entry} fiches={fiches} />
     </div>
   );
 }
