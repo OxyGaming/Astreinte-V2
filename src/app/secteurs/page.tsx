@@ -30,16 +30,12 @@ function groupByLigne(secteurs: Secteur[]): Map<string, Secteur[]> {
 export default async function SecteursPage() {
   const secteurs = await getAllSecteurs();
   const groups = groupByLigne(secteurs);
-  const lignesLabel = [...groups.keys()].filter((l) => l !== "Sans ligne").join(" & ");
 
   return (
     <div className="max-w-2xl mx-auto lg:max-w-3xl">
       {/* Header */}
       <div className="bg-white border-b border-slate-100 px-4 pt-6 pb-4 lg:px-8">
         <h1 className="text-xl font-bold text-slate-900">Secteurs</h1>
-        <p className="text-sm text-slate-500 mt-1">
-          Gier / Rive Droite Nord{lignesLabel ? ` — Lignes ${lignesLabel}` : ""}
-        </p>
       </div>
 
       <div className="px-4 py-5 space-y-3 lg:px-8">
