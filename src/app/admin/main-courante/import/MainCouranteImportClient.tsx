@@ -102,7 +102,7 @@ async function parseExcelFile(file: File): Promise<ParsedRow[]> {
       if (!field) continue;
       const str = String(value ?? "").trim();
       if (str === "") continue;
-      (out as Record<string, string>)[field] = str;
+      out[field] = str;
     }
 
     // Validation
