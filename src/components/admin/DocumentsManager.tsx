@@ -58,8 +58,8 @@ export default function DocumentsManager({ target, initialDocuments }: Props) {
       else formData.append("posteId", target.posteId);
 
       const res = await fetch("/api/admin/documents", { method: "POST", body: formData });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Erreur lors de l'envoi");
+      const data = await parseJsonOrThrow(res, file.size);
+      if (!res.ok) throw new Error(data.error || `Erreur ${res.status}`);
 
       setDocuments((prev) => [data, ...prev]);
       if (fileInput.current) fileInput.current.value = "";
@@ -69,6 +69,27 @@ export default function DocumentsManager({ target, initialDocuments }: Props) {
     } finally {
       setUploading(false);
     }
+  }
+
+  /**
+   * Parse la réponse en JSON ou produit une erreur lisible.
+   * Cas spécial 413 (Request Entity Too Large) renvoyé en HTML par Nginx :
+   * détection via status + content-type ou via le texte brut.
+   */
+  async function parseJsonOrThrow(res: Response, uploadedSize: number): Promise<{ error?: string } & Record<string, unknown>> {
+    const contentType = res.headers.get("Content-Type") || "";
+    if (contentType.includes("application/json")) {
+      return res.json();
+    }
+    const text = await res.text();
+    if (res.status === 413 || /413|too large|entity too large/i.test(text)) {
+      throw new Error(
+        `Fichier rejeté par le serveur (${formatSize(uploadedSize)}). ` +
+        `Limite probablement appliquée par le reverse proxy (Nginx). ` +
+        `Vérifiez la directive client_max_body_size.`,
+      );
+    }
+    throw new Error(`Réponse inattendue du serveur (HTTP ${res.status}). Vérifiez les logs.`);
   }
 
   async function handleDelete(doc: DocumentRow) {
