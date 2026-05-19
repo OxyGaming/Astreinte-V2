@@ -46,7 +46,8 @@
       "Bash(node -e \"const { PrismaClient } = require\\(''''./src/generated/prisma/client''''\\); console.log\\(''''ok''''\\)\")",
       "Bash(npx tsx:*)",
       "Bash(dir \"C:\\\\Users\\\\PC\\\\Desktop\\\\Astreinte V2\\\\src\\\\middleware.ts\")",
-      "Bash(dir \"C:\\\\Users\\\\PC\\\\Desktop\\\\Astreinte V2\\\\src\\\\proxy.ts\")"
+      "Bash(dir \"C:\\\\Users\\\\PC\\\\Desktop\\\\Astreinte V2\\\\src\\\\proxy.ts\")",
+      "Bash(python -c \"import openpyxl; wb = openpyxl.load_workbook\\(r'C:\\\\Users\\\\PC\\\\Downloads\\\\data.xlsx', data_only=True\\); print\\('Sheets:', wb.sheetnames\\)\")"
     ]
   }
 }

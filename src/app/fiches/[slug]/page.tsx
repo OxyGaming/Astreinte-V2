@@ -1,10 +1,12 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, AlertTriangle, CheckCircle, ChevronRight, BookOpen } from "lucide-react";
+import { ArrowLeft, AlertTriangle, CheckCircle, ChevronRight, BookOpen, FileText, Link2, Download } from "lucide-react";
 import { getFicheBySlug, getAllContacts, getUserActiveSession, getSessionJournal, getCheckedActionsForSession } from "@/lib/db";
+import { prisma } from "@/lib/prisma";
 import ContactCard from "@/components/ContactCard";
 import FicheSessionView from "@/components/FicheSessionView";
 import { getCurrentUser } from "@/lib/user-auth";
+import { formatFileSize } from "@/lib/documents";
 
 export const dynamic = "force-dynamic";
 
@@ -23,6 +25,27 @@ export default async function FicheDetailPage({ params }: Props) {
   const contactsLies = fiche.contacts_lies
     ? allContacts.filter((c) => fiche.contacts_lies!.includes(c.id))
     : [];
+
+  // Documents + fiches liées (par id Prisma de la fiche)
+  const ficheRow = await prisma.fiche.findUnique({
+    where: { slug },
+    select: { id: true },
+  });
+  const [documents, liens] = ficheRow
+    ? await Promise.all([
+        prisma.document.findMany({
+          where: { ficheId: ficheRow.id },
+          orderBy: { createdAt: "desc" },
+          select: { id: true, originalName: true, size: true },
+        }),
+        prisma.ficheLien.findMany({
+          where: { ficheSourceId: ficheRow.id },
+          select: {
+            cible: { select: { slug: true, numero: true, titre: true, priorite: true } },
+          },
+        }),
+      ])
+    : [[], []];
 
   // Load active session for this user (each user has their own independent session)
   const session = user ? await getUserActiveSession(slug, user.id) : null;
@@ -89,6 +112,35 @@ export default async function FicheDetailPage({ params }: Props) {
                 >
                   {a}
                 </span>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Fiches liées — bascule rapide vers une autre fiche (ex. mode dégradé) */}
+        {liens.length > 0 && (
+          <div className="mx-4 lg:mx-8 bg-blue-50 border border-blue-200 rounded-xl p-4">
+            <p className="text-xs font-bold text-blue-800 uppercase tracking-wide mb-3 flex items-center gap-1.5">
+              <Link2 size={12} />
+              Fiches liées
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {liens.map(({ cible }) => (
+                <Link
+                  key={cible.slug}
+                  href={`/fiches/${cible.slug}`}
+                  className={`inline-flex items-center gap-2 text-sm font-semibold px-3 py-1.5 rounded-lg border transition-colors ${
+                    cible.priorite === "urgente"
+                      ? "bg-red-50 text-red-800 border-red-200 hover:bg-red-100"
+                      : "bg-white text-blue-800 border-blue-200 hover:bg-blue-100"
+                  }`}
+                >
+                  <span className="text-xs font-mono opacity-60">
+                    #{cible.numero.toString().padStart(2, "0")}
+                  </span>
+                  {cible.titre}
+                  <ChevronRight size={14} className="opacity-60" />
+                </Link>
               ))}
             </div>
           </div>
@@ -173,6 +225,33 @@ export default async function FicheDetailPage({ params }: Props) {
                 <span className="text-sm font-medium">Tous les contacts</span>
                 <ChevronRight size={16} />
               </Link>
+            </div>
+          </section>
+        )}
+
+        {/* Documents téléchargeables */}
+        {documents.length > 0 && (
+          <section className="px-4 lg:px-8">
+            <h2 className="text-xs font-bold text-slate-500 uppercase tracking-wide mb-3">
+              Documents
+            </h2>
+            <div className="card divide-y divide-slate-100">
+              {documents.map((doc) => (
+                <a
+                  key={doc.id}
+                  href={`/api/documents/${doc.id}/download`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-3 px-4 py-3 hover:bg-slate-50 transition-colors"
+                >
+                  <FileText size={20} className="text-red-500 flex-shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-slate-800 truncate">{doc.originalName}</p>
+                    <p className="text-xs text-slate-400">{formatFileSize(doc.size)}</p>
+                  </div>
+                  <Download size={16} className="text-blue-600 flex-shrink-0" />
+                </a>
+              ))}
             </div>
           </section>
         )}

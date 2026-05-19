@@ -4,6 +4,8 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { ChevronLeft, ExternalLink } from "lucide-react";
 import FicheForm from "../FicheForm";
+import DocumentsManager from "@/components/admin/DocumentsManager";
+import FicheLiensManager from "../FicheLiensManager";
 
 interface Props { params: Promise<{ id: string }> }
 
@@ -11,7 +13,7 @@ export default async function EditFichePage({ params }: Props) {
   await requireAdminSession();
   const { id } = await params;
 
-  const [fiche, contacts, secteurs] = await Promise.all([
+  const [fiche, contacts, secteurs, allFiches, documents, liens] = await Promise.all([
     prisma.fiche.findUnique({
       where: { id },
       include: {
@@ -21,6 +23,16 @@ export default async function EditFichePage({ params }: Props) {
     }),
     prisma.contact.findMany({ orderBy: { nom: "asc" }, select: { id: true, nom: true, categorie: true } }),
     prisma.secteur.findMany({ orderBy: { nom: "asc" }, select: { id: true, nom: true, ligne: true } }),
+    prisma.fiche.findMany({ orderBy: { numero: "asc" }, select: { id: true, numero: true, titre: true, slug: true } }),
+    prisma.document.findMany({
+      where: { ficheId: id },
+      orderBy: { createdAt: "desc" },
+      select: { id: true, originalName: true, mimeType: true, size: true, createdAt: true },
+    }),
+    prisma.ficheLien.findMany({
+      where: { ficheSourceId: id },
+      select: { ficheCibleId: true },
+    }),
   ]);
 
   if (!fiche) notFound();
@@ -48,16 +60,28 @@ export default async function EditFichePage({ params }: Props) {
           </Link>
         </div>
       </div>
-      <FicheForm
-        mode="edit"
-        fiche={{
-          ...fiche,
-          contacts: fiche.contacts.map((fc) => ({ contactId: fc.contactId, contact: fc.contact })),
-          secteurs: fiche.secteurs.map((fs) => ({ secteurId: fs.secteurId, secteur: fs.secteur })),
-        }}
-        contacts={contacts}
-        secteurs={secteurs}
-      />
+      <div className="max-w-3xl space-y-6">
+        <FicheForm
+          mode="edit"
+          fiche={{
+            ...fiche,
+            contacts: fiche.contacts.map((fc) => ({ contactId: fc.contactId, contact: fc.contact })),
+            secteurs: fiche.secteurs.map((fs) => ({ secteurId: fs.secteurId, secteur: fs.secteur })),
+          }}
+          contacts={contacts}
+          secteurs={secteurs}
+        />
+        <DocumentsManager
+          target={{ ficheId: fiche.id }}
+          initialDocuments={documents}
+        />
+        <FicheLiensManager
+          ficheId={fiche.id}
+          ficheTitre={fiche.titre}
+          allFiches={allFiches.filter((f) => f.id !== fiche.id)}
+          initialCibleIds={liens.map((l) => l.ficheCibleId)}
+        />
+      </div>
     </div>
   );
 }

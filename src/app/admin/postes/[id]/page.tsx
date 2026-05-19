@@ -10,6 +10,7 @@ import PosteProceduresClesEditor from "./PosteProceduresClesEditor";
 import PosteCircuitsVoieEditor from "./PosteCircuitsVoieEditor";
 import { PosteDbcEditor, PosteRexEditor } from "./PosteDbcRexEditor";
 import PosteParticularitesEditor from "./PosteParticularitesEditor";
+import DocumentsManager from "@/components/admin/DocumentsManager";
 import type { PNSensiblePoste, ProcedureCle, CircuitVoie, Dbc } from "@/lib/types";
 import { normalizeAnnuaire } from "@/lib/annuaire";
 
@@ -104,7 +105,7 @@ export default async function EditPostePage({ params }: Props) {
   await requireAdminSession();
   const { id } = await params;
 
-  const [poste, secteurs] = await Promise.all([
+  const [poste, secteurs, documents] = await Promise.all([
     prisma.poste.findUnique({
       where: { id },
       include: {
@@ -112,6 +113,11 @@ export default async function EditPostePage({ params }: Props) {
       },
     }),
     prisma.secteur.findMany({ orderBy: { nom: "asc" }, select: { id: true, slug: true, nom: true } }),
+    prisma.document.findMany({
+      where: { posteId: id },
+      orderBy: { createdAt: "desc" },
+      select: { id: true, originalName: true, mimeType: true, size: true, createdAt: true },
+    }),
   ]);
 
   if (!poste) notFound();
@@ -143,6 +149,7 @@ export default async function EditPostePage({ params }: Props) {
         <PosteDbcEditor posteId={poste.id} initialEntries={initialDbc} />
         <PosteRexEditor posteId={poste.id} initialEntries={initialRex} />
         <PosteAnnuaireEditor posteId={poste.id} initialAnnuaire={initialAnnuaire} />
+        <DocumentsManager target={{ posteId: poste.id }} initialDocuments={documents} />
       </div>
     </div>
   );

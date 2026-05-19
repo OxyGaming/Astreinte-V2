@@ -58,6 +58,45 @@ model Fiche {
   featured         Boolean        @default(false)
   contacts         FicheContact[]
   secteurs         FicheSecteur[]
+  documents        Document[]
+  liensSource      FicheLien[]    @relation("FicheLienSource")
+  liensCible       FicheLien[]    @relation("FicheLienCible")
+}
+
+/// Lien symétrique entre deux fiches (ex. fiche chapeau ↔ fiche dégradée).
+/// L'auto-bidirectionnalité est garantie côté API : à chaque insertion d'un lien A→B,
+/// le lien B→A est inséré dans la même transaction. Idem pour la suppression.
+model FicheLien {
+  id            String   @id @default(cuid())
+  ficheSourceId String
+  ficheCibleId  String
+  createdAt     DateTime @default(now())
+  source        Fiche    @relation("FicheLienSource", fields: [ficheSourceId], references: [id], onDelete: Cascade)
+  cible         Fiche    @relation("FicheLienCible", fields: [ficheCibleId], references: [id], onDelete: Cascade)
+
+  @@unique([ficheSourceId, ficheCibleId])
+  @@index([ficheSourceId])
+  @@index([ficheCibleId])
+}
+
+/// Document PDF téléchargeable, attaché à une Fiche OU à un Poste.
+/// Le fichier physique est stocké sous ./uploads/documents/<id>.pdf (hors public/).
+model Document {
+  id               String   @id @default(cuid())
+  filename         String
+  originalName     String
+  mimeType         String
+  size             Int
+  ficheId          String?
+  posteId          String?
+  uploadedByUserId String
+  createdAt        DateTime @default(now())
+  fiche            Fiche?   @relation(fields: [ficheId], references: [id], onDelete: Cascade)
+  poste            Poste?   @relation(fields: [posteId], references: [id], onDelete: Cascade)
+  uploadedBy       User     @relation(fields: [uploadedByUserId], references: [id])
+
+  @@index([ficheId])
+  @@index([posteId])
 }
 
 model FicheContact {
@@ -120,6 +159,7 @@ model Poste {
   secteurs         PosteSecteur[]
   proceduresMetier PosteProcedure[]
   sessionsMetier   SessionProcedure[]
+  documents        Document[]
 }
 
 model PosteSecteur {
@@ -257,6 +297,7 @@ model User {
   sessions            FicheSession[]
   mainCouranteSoumis  MainCourante[]    @relation("MainCouranteAuteur")
   mainCouranteValidee MainCourante[]    @relation("MainCouranteValidatedBy")
+  documentsUploaded   Document[]
 }
 
 model FicheSession {

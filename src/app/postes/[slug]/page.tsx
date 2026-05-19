@@ -21,8 +21,11 @@ import {
   ClipboardCheck,
   CheckCircle2,
   Wrench,
+  FileText,
+  Download,
 } from "lucide-react";
 import PhoneButton from "@/components/PhoneButton";
+import { formatFileSize } from "@/lib/documents";
 
 const TYPE_PROCEDURE_META: Record<string, { label: string; sublabel: string; icon: React.ElementType; bg: string; iconColor: string }> = {
   cessation: { label: "Cessation de service", sublabel: "Lancer la procédure guidée", icon: ClipboardCheck, bg: "bg-blue-700 hover:bg-blue-800", iconColor: "text-amber-400" },
@@ -39,14 +42,23 @@ export default async function PosteDetailPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const [poste, procedureTypes] = await Promise.all([
+  const [poste, procedureTypes, posteRow] = await Promise.all([
     getPosteBySlug(slug),
     prisma.posteProcedure.findMany({
       where: { poste: { slug } },
       include: { procedure: { select: { typeProcedure: true } } },
     }).then((rows) => [...new Set(rows.map((r) => r.procedure.typeProcedure))]),
+    prisma.poste.findUnique({ where: { slug }, select: { id: true } }),
   ]);
   if (!poste) notFound();
+
+  const documents = posteRow
+    ? await prisma.document.findMany({
+        where: { posteId: posteRow.id },
+        orderBy: { createdAt: "desc" },
+        select: { id: true, originalName: true, size: true },
+      })
+    : [];
 
   // ── Résolution des contacts liés ────────────────────────────────────────────
   // On collecte tous les contactIds référencés dans l'annuaire, puis on résout
@@ -376,6 +388,34 @@ export default async function PosteDetailPage({
                 <AlertTriangle size={14} className="flex-shrink-0 mt-0.5 text-red-500" />
                 <p className="text-sm text-red-800 leading-snug">{item}</p>
               </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* Documents téléchargeables */}
+      {documents.length > 0 && (
+        <section>
+          <h2 className="flex items-center gap-2 text-base font-bold text-slate-800 mb-3">
+            <FileText size={18} className="text-blue-700" />
+            Documents
+          </h2>
+          <div className="bg-white rounded-xl border border-slate-200 divide-y divide-slate-100">
+            {documents.map((doc) => (
+              <a
+                key={doc.id}
+                href={`/api/documents/${doc.id}/download`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-3 px-4 py-3 hover:bg-slate-50 transition-colors"
+              >
+                <FileText size={20} className="text-red-500 flex-shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-slate-800 truncate">{doc.originalName}</p>
+                  <p className="text-xs text-slate-400">{formatFileSize(doc.size)}</p>
+                </div>
+                <Download size={16} className="text-blue-600 flex-shrink-0" />
+              </a>
             ))}
           </div>
         </section>
