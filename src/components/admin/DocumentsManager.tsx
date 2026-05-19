@@ -59,9 +59,12 @@ export default function DocumentsManager({ target, initialDocuments }: Props) {
 
       const res = await fetch("/api/admin/documents", { method: "POST", body: formData });
       const data = await parseJsonOrThrow(res, file.size);
-      if (!res.ok) throw new Error(data.error || `Erreur ${res.status}`);
+      if (!res.ok) {
+        const errMsg = typeof data === "object" && data && "error" in data ? String((data as { error: unknown }).error) : `Erreur ${res.status}`;
+        throw new Error(errMsg);
+      }
 
-      setDocuments((prev) => [data, ...prev]);
+      setDocuments((prev) => [data as DocumentRow, ...prev]);
       if (fileInput.current) fileInput.current.value = "";
       router.refresh();
     } catch (e: unknown) {
@@ -76,7 +79,7 @@ export default function DocumentsManager({ target, initialDocuments }: Props) {
    * Cas spécial 413 (Request Entity Too Large) renvoyé en HTML par Nginx :
    * détection via status + content-type ou via le texte brut.
    */
-  async function parseJsonOrThrow(res: Response, uploadedSize: number): Promise<{ error?: string } & Record<string, unknown>> {
+  async function parseJsonOrThrow(res: Response, uploadedSize: number): Promise<unknown> {
     const contentType = res.headers.get("Content-Type") || "";
     if (contentType.includes("application/json")) {
       return res.json();
