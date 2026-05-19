@@ -6,7 +6,7 @@ import { prisma } from "@/lib/prisma";
 import ContactCard from "@/components/ContactCard";
 import FicheSessionView from "@/components/FicheSessionView";
 import { getCurrentUser } from "@/lib/user-auth";
-import { formatFileSize } from "@/lib/documents";
+import { formatFileSize, formatDocumentDate } from "@/lib/documents";
 
 export const dynamic = "force-dynamic";
 
@@ -36,7 +36,7 @@ export default async function FicheDetailPage({ params }: Props) {
         prisma.document.findMany({
           where: { ficheId: ficheRow.id },
           orderBy: { createdAt: "desc" },
-          select: { id: true, originalName: true, size: true },
+          select: { id: true, originalName: true, size: true, createdAt: true },
         }),
         prisma.ficheLien.findMany({
           where: { ficheSourceId: ficheRow.id },
@@ -247,7 +247,9 @@ export default async function FicheDetailPage({ params }: Props) {
                   <FileText size={20} className="text-red-500 flex-shrink-0" />
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-slate-800 truncate">{doc.originalName}</p>
-                    <p className="text-xs text-slate-400">{formatFileSize(doc.size)}</p>
+                    <p className="text-xs text-slate-400">
+                      {formatFileSize(doc.size)} · ajouté le {formatDocumentDate(doc.createdAt)}
+                    </p>
                   </div>
                   <Download size={16} className="text-blue-600 flex-shrink-0" />
                 </a>

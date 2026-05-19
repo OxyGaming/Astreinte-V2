@@ -3,6 +3,7 @@
 import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { FileText, Upload, Trash2, Download, AlertTriangle, Loader2 } from "lucide-react";
+import { formatDocumentDate } from "@/lib/document-formatters";
 
 interface DocumentRow {
   id: string;
@@ -23,11 +24,6 @@ function formatSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} o`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} Ko`;
   return `${(bytes / 1024 / 1024).toFixed(2)} Mo`;
-}
-
-function formatDate(d: string | Date): string {
-  const date = typeof d === "string" ? new Date(d) : d;
-  return date.toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit", year: "numeric" });
 }
 
 export default function DocumentsManager({ target, initialDocuments }: Props) {
@@ -169,7 +165,7 @@ export default function DocumentsManager({ target, initialDocuments }: Props) {
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-gray-800 truncate">{doc.originalName}</p>
                   <p className="text-xs text-gray-400">
-                    {formatSize(doc.size)} · ajouté le {formatDate(doc.createdAt)}
+                    {formatSize(doc.size)} · ajouté le {formatDocumentDate(doc.createdAt)}
                   </p>
                 </div>
                 <a

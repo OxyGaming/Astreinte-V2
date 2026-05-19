@@ -25,7 +25,7 @@ import {
   Download,
 } from "lucide-react";
 import PhoneButton from "@/components/PhoneButton";
-import { formatFileSize } from "@/lib/documents";
+import { formatFileSize, formatDocumentDate } from "@/lib/documents";
 
 const TYPE_PROCEDURE_META: Record<string, { label: string; sublabel: string; icon: React.ElementType; bg: string; iconColor: string }> = {
   cessation: { label: "Cessation de service", sublabel: "Lancer la procédure guidée", icon: ClipboardCheck, bg: "bg-blue-700 hover:bg-blue-800", iconColor: "text-amber-400" },
@@ -56,7 +56,7 @@ export default async function PosteDetailPage({
     ? await prisma.document.findMany({
         where: { posteId: posteRow.id },
         orderBy: { createdAt: "desc" },
-        select: { id: true, originalName: true, size: true },
+        select: { id: true, originalName: true, size: true, createdAt: true },
       })
     : [];
 
@@ -412,7 +412,9 @@ export default async function PosteDetailPage({
                 <FileText size={20} className="text-red-500 flex-shrink-0" />
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-slate-800 truncate">{doc.originalName}</p>
-                  <p className="text-xs text-slate-400">{formatFileSize(doc.size)}</p>
+                  <p className="text-xs text-slate-400">
+                    {formatFileSize(doc.size)} · ajouté le {formatDocumentDate(doc.createdAt)}
+                  </p>
                 </div>
                 <Download size={16} className="text-blue-600 flex-shrink-0" />
               </a>

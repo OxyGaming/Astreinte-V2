@@ -1,3 +1,5 @@
+// ⚠️  Fichier serveur uniquement (utilise fs/path). Pour les helpers de
+// formatage utilisables côté client, voir `./document-formatters.ts`.
 import path from "path";
 import fs from "fs/promises";
 
@@ -18,9 +20,5 @@ export async function ensureDocumentsDir(): Promise<void> {
   await fs.mkdir(getDocumentsDir(), { recursive: true });
 }
 
-/** Formate une taille en octets en chaîne lisible (Ko / Mo). */
-export function formatFileSize(bytes: number): string {
-  if (bytes < 1024) return `${bytes} o`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} Ko`;
-  return `${(bytes / 1024 / 1024).toFixed(2)} Mo`;
-}
+// Re-export pour rétrocompatibilité des imports existants côté serveur.
+export { formatFileSize, formatDocumentDate } from "./document-formatters";
