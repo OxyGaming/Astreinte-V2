@@ -4,7 +4,7 @@ import { useState, useCallback } from "react";
 import { useSession } from "@/lib/procedure/hooks/useSession";
 import { etapesVisibles } from "@/lib/procedure/engine";
 import type { ValeurReponse } from "@/lib/procedure/types";
-import type { Contact } from "@/lib/types";
+import type { Contact, Lien } from "@/lib/types";
 import EtapeRenderer from "./EtapeRenderer";
 import ProcedureSummary from "./ProcedureSummary";
 import { CheckCircle2, Circle, Loader2 } from "lucide-react";
@@ -15,9 +15,11 @@ interface Props {
   contactsIndex: Record<string, string>;
   /** Liste complète des contacts (pour les actions contact_recherche) */
   allContacts?: Contact[];
+  /** Collection de liens (résolution des liens d'étape) */
+  liensCollection?: Lien[];
 }
 
-export default function ProcedureWizard({ sessionId, contactsIndex, allContacts = [] }: Props) {
+export default function ProcedureWizard({ sessionId, contactsIndex, allContacts = [], liensCollection = [] }: Props) {
   const { session, loading, error, repondre, avancer, abandonner, completer } =
     useSession(sessionId);
   const [synthese, setSynthese] = useState<ReturnType<typeof completer> extends Promise<infer T> ? T : never>(null);
@@ -162,6 +164,7 @@ export default function ProcedureWizard({ sessionId, contactsIndex, allContacts 
           onTerminer={handleTerminer}
           contactsIndex={contactsIndex}
           allContacts={allContacts}
+          liensCollection={liensCollection}
         />
       )}
     </div>

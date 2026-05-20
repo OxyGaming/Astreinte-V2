@@ -3,9 +3,10 @@
 import type { EtapeMetier, EtatEtape, ValeurReponse } from "@/lib/procedure/types";
 import { actionsVisibles, etapeFranchissable } from "@/lib/procedure/engine";
 import type { EtatSession } from "@/lib/procedure/types";
-import type { Contact } from "@/lib/types";
+import type { Contact, Lien } from "@/lib/types";
+import { resolveLienRefs } from "@/lib/liens";
 import ActionRenderer from "./ActionRenderer";
-import { AlertTriangle, ChevronRight, ChevronLeft } from "lucide-react";
+import { AlertTriangle, ChevronRight, ChevronLeft, Link2, ExternalLink } from "lucide-react";
 
 interface Props {
   etape: EtapeMetier;
@@ -20,13 +21,16 @@ interface Props {
   contactsIndex: Record<string, string>;
   /** Liste complète des contacts (pour les actions contact_recherche) */
   allContacts?: Contact[];
+  /** Collection de liens (résolution des liens d'étape) */
+  liensCollection?: Lien[];
 }
 
 export default function EtapeRenderer({
   etape, etatEtape, etat, estDerniere,
-  onRepondre, onSuivant, onPrecedent, onTerminer, contactsIndex, allContacts = [],
+  onRepondre, onSuivant, onPrecedent, onTerminer, contactsIndex, allContacts = [], liensCollection = [],
 }: Props) {
   const actions = actionsVisibles(etape, etat);
+  const etapeLiens = resolveLienRefs(etape.liens ?? [], liensCollection);
   const { ok, actionsBloques } = etapeFranchissable(etape, etat);
 
   return (
@@ -38,6 +42,34 @@ export default function EtapeRenderer({
           <p className="text-sm text-slate-500 mt-0.5">{etape.description}</p>
         )}
       </div>
+
+      {/* Liens utiles de l'étape */}
+      {etapeLiens.length > 0 && (
+        <div className="bg-blue-50 border border-blue-200 rounded-xl p-3">
+          <p className="text-xs font-bold text-blue-800 uppercase tracking-wide mb-2 flex items-center gap-1.5">
+            <Link2 size={12} />
+            Liens utiles
+          </p>
+          <div className="space-y-1.5">
+            {etapeLiens.map((lien, i) =>
+              lien.orphan || !lien.url ? (
+                <p key={i} className="text-xs text-slate-400">{lien.libelle} — indisponible</p>
+              ) : (
+                <a
+                  key={i}
+                  href={lien.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1.5 text-sm font-medium text-blue-700 hover:underline"
+                >
+                  <ExternalLink size={13} className="flex-shrink-0" />
+                  {lien.libelle}
+                </a>
+              )
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Actions */}
       <div className="space-y-3">

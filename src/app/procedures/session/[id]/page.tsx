@@ -15,7 +15,7 @@
 export const dynamic = "force-dynamic";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import { getAllContacts } from "@/lib/db";
+import { getAllContacts, getAllLiens } from "@/lib/db";
 import ProcedureWizard from "@/components/procedure/ProcedureWizard";
 
 export default async function SessionPage({
@@ -33,8 +33,8 @@ export default async function SessionPage({
 
   if (!session) notFound();
 
-  // Charger tous les contacts une seule fois
-  const allContacts = await getAllContacts();
+  // Charger tous les contacts + la collection de liens
+  const [allContacts, liensCollection] = await Promise.all([getAllContacts(), getAllLiens()]);
 
   // Construire l'index id→telephone pour enrichir ActionConfirmation
   const contactsIndex: Record<string, string> = {};
@@ -48,6 +48,7 @@ export default async function SessionPage({
         sessionId={id}
         contactsIndex={contactsIndex}
         allContacts={allContacts}
+        liensCollection={liensCollection}
       />
     </div>
   );

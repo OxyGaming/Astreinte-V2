@@ -2,14 +2,18 @@
 import { useState } from "react";
 import type { EtapeForm, ActionForm } from "@/lib/procedure/form-types";
 import { emptyAction, actionIdFromLabel, makeKey, ICONE_OPTIONS } from "@/lib/procedure/form-types";
+import type { Lien, LienRef } from "@/lib/types";
+import { resolveLienRefs } from "@/lib/liens";
 import ActionCard from "./ActionCard";
-import { ChevronDown, ChevronUp, ChevronRight, Copy, Trash2, Plus } from "lucide-react";
+import LienForm from "@/components/admin/LienForm";
+import { ChevronDown, ChevronUp, ChevronRight, Copy, Trash2, Plus, Link2, PenLine, AlertTriangle, Pencil } from "lucide-react";
 
 interface Props {
   etape: EtapeForm;
   index: number;
   total: number;
   allActionIds: string[];
+  collection: Lien[];
   onUpdate: (etape: EtapeForm) => void;
   onDelete: () => void;
   onMoveUp: () => void;
@@ -18,10 +22,11 @@ interface Props {
 }
 
 export default function EtapeCard({
-  etape, index, total, allActionIds,
+  etape, index, total, allActionIds, collection,
   onUpdate, onDelete, onMoveUp, onMoveDown, onDuplicate,
 }: Props) {
   const [expanded, setExpanded] = useState(true);
+  const [lienModal, setLienModal] = useState<{ mode: "add" } | { mode: "edit"; index: number } | null>(null);
 
   const set = (key: keyof EtapeForm, value: unknown) => onUpdate({ ...etape, [key]: value });
 
@@ -60,6 +65,13 @@ export default function EtapeCard({
     actions.splice(i + 1, 0, newAction);
     onUpdate({ ...etape, actions });
   };
+
+  const addLien = (ref: LienRef) => { onUpdate({ ...etape, liens: [...etape.liens, ref] }); setLienModal(null); };
+  const editLien = (i: number, ref: LienRef) => {
+    onUpdate({ ...etape, liens: etape.liens.map((l, idx) => (idx === i ? ref : l)) });
+    setLienModal(null);
+  };
+  const removeLien = (i: number) => onUpdate({ ...etape, liens: etape.liens.filter((_, idx) => idx !== i) });
 
   // actionIdFromLabel is available if needed for future use
   void actionIdFromLabel;
@@ -150,7 +162,49 @@ export default function EtapeCard({
               Ajouter une action
             </button>
           </div>
+
+          {/* Liens utiles */}
+          <div className="space-y-2 border-t border-gray-100 pt-4">
+            <label className="block text-xs font-semibold text-gray-600">Liens utiles</label>
+            {etape.liens.length > 0 && (
+              <div className="space-y-1">
+                {resolveLienRefs(etape.liens, collection).map((r, i) => (
+                  <div key={i} className="flex items-center gap-2 text-sm border border-gray-200 rounded-lg px-2.5 py-1.5">
+                    {r.orphan ? (
+                      <AlertTriangle size={13} className="text-red-400 flex-shrink-0" />
+                    ) : r.linked ? (
+                      <Link2 size={13} className="text-blue-400 flex-shrink-0" />
+                    ) : (
+                      <PenLine size={13} className="text-gray-400 flex-shrink-0" />
+                    )}
+                    <span className="flex-1 truncate text-gray-700">{r.libelle}</span>
+                    <button type="button" onClick={() => setLienModal({ mode: "edit", index: i })}
+                      className="p-1 text-gray-400 hover:text-blue-600" title="Modifier"><Pencil size={12} /></button>
+                    <button type="button" onClick={() => removeLien(i)}
+                      className="p-1 text-gray-400 hover:text-red-600" title="Retirer"><Trash2 size={12} /></button>
+                  </div>
+                ))}
+              </div>
+            )}
+            <button
+              type="button"
+              onClick={() => setLienModal({ mode: "add" })}
+              className="w-full flex items-center justify-center gap-1.5 py-2 rounded-lg border border-dashed border-gray-300 text-xs font-medium text-gray-400 hover:border-blue-400 hover:text-blue-600 transition-colors"
+            >
+              <Plus size={13} />
+              Ajouter un lien
+            </button>
+          </div>
         </div>
+      )}
+
+      {lienModal && (
+        <LienForm
+          entry={lienModal.mode === "edit" ? etape.liens[lienModal.index] : null}
+          collection={collection}
+          onSave={(ref) => { if (lienModal.mode === "add") addLien(ref); else editLien(lienModal.index, ref); }}
+          onClose={() => setLienModal(null)}
+        />
       )}
     </div>
   );

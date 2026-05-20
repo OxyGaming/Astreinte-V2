@@ -81,6 +81,10 @@ export interface EtapeMetier {
   ordre: number;
   actions: ActionMetier[];
 
+  // Liens utiles rattachés à l'étape — structurellement identique à LienRef
+  // (src/lib/types). Type inline pour conserver l'autonomie de ce fichier.
+  liens?: { lienId?: string; libelle?: string; url?: string }[];
+
   // V2 : présent dans le JSON, ignoré par le moteur V1
   conditionAffichage?: ConditionExpr;
 }

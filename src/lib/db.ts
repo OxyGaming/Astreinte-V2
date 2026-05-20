@@ -4,7 +4,8 @@
  */
 import { cache } from "react";
 import { prisma } from "./prisma";
-import type { Fiche, Contact, Secteur, Mnemonique, Abréviation, Etape, PointAcces, Procedure, PassageNiveau, LettreAcronyme, AccesRail, User, FicheSession, JournalEntry, MainCourante } from "./types";
+import { parseLienRefs } from "./liens";
+import type { Fiche, Contact, Secteur, Mnemonique, Abréviation, Etape, PointAcces, Procedure, PassageNiveau, LettreAcronyme, AccesRail, User, FicheSession, JournalEntry, MainCourante, Lien, LienRef, ResolvedLien } from "./types";
 
 // ─── Helpers de désérialisation JSON ─────────────────────────────────────────
 
@@ -77,13 +78,14 @@ export async function getSecteurBySlug(slug: string): Promise<Secteur | null> {
 
 function dbToSecteur(row: {
   id: string; slug: string; nom: string; ligne: string; trajet: string; description: string;
-  pointsAcces: string; procedures: string; pn: string | null;
+  pointsAcces: string; procedures: string; pn: string | null; liens: string | null;
 }): Secteur {
   return {
     id: row.id, slug: row.slug, nom: row.nom, ligne: row.ligne, trajet: row.trajet, description: row.description,
     points_acces: parseJson<PointAcces[]>(row.pointsAcces, []),
     procedures: parseJson<Procedure[]>(row.procedures, []),
     pn: parseJson<PassageNiveau[]>(row.pn, []),
+    liens: parseLienRefs(row.liens),
   };
 }
 
@@ -108,7 +110,7 @@ export const getFicheBySlug = cache(async (slug: string): Promise<Fiche | null> 
 function dbToFiche(row: {
   id: string; slug: string; numero: number; titre: string; categorie: string; priorite: string;
   mnemonique: string | null; resume: string; etapes: string; references: string | null;
-  avisObligatoires: string | null; featured: boolean; contacts: { contactId: string }[];
+  avisObligatoires: string | null; liens: string | null; featured: boolean; contacts: { contactId: string }[];
 }): Fiche {
   return {
     id: row.id, slug: row.slug, numero: row.numero, titre: row.titre,
@@ -120,6 +122,7 @@ function dbToFiche(row: {
     contacts_lies: row.contacts.map((c) => c.contactId),
     references: parseJson<string[]>(row.references, []),
     avis_obligatoires: parseJson<string[]>(row.avisObligatoires, []),
+    liens: parseLienRefs(row.liens),
     featured: row.featured,
   };
 }
@@ -208,7 +211,7 @@ function dbToPoste(row: {
   id: string; slug: string; nom: string; typePoste: string; lignes: string;
   adresse: string; horaires: string; electrification: string; systemeBlock: string;
   annuaire: string; circuitsVoie: string; pnSensibles: string; particularites: string;
-  proceduresCles: string; dbc: string | null; rex: string | null;
+  proceduresCles: string; dbc: string | null; rex: string | null; liens: string | null;
   secteurs: { secteur: { slug: string } }[];
 }): Poste {
   return {
@@ -225,6 +228,7 @@ function dbToPoste(row: {
     dbc: parseJson<Dbc[]>(row.dbc, []),
     rex: parseJson<string[]>(row.rex, []),
     secteur_slugs: row.secteurs.map((ps) => ps.secteur.slug),
+    liens: parseLienRefs(row.liens),
   };
 }
 
@@ -710,4 +714,59 @@ export async function updateMainCourante(
 
 export async function deleteMainCourante(id: string): Promise<void> {
   await prisma.mainCourante.delete({ where: { id } });
+}
+
+// ─── Liens utiles ─────────────────────────────────────────────────────────────
+
+/** Collection centrale de liens (référentiel), triée par ordre puis libellé. */
+export const getAllLiens = cache(async (): Promise<Lien[]> => {
+  const rows = await prisma.lien.findMany({ orderBy: [{ ordre: "asc" }, { libelle: "asc" }] });
+  return rows.map((r) => ({ id: r.id, libelle: r.libelle, url: r.url, ordre: r.ordre }));
+});
+
+export async function getLienById(id: string): Promise<Lien | null> {
+  const row = await prisma.lien.findUnique({ where: { id } });
+  return row ? { id: row.id, libelle: row.libelle, url: row.url, ordre: row.ordre } : null;
+}
+
+/**
+ * Résout des LienRef[] en ResolvedLien[] : récupère en une requête les liens de
+ * la collection référencés par lienId, applique les libellés d'affichage et
+ * marque les références orphelines (lien supprimé de la collection).
+ */
+export async function resolveLiens(refs: LienRef[]): Promise<ResolvedLien[]> {
+  if (!refs.length) return [];
+  const ids = [...new Set(refs.filter((r) => r.lienId).map((r) => r.lienId as string))];
+  const collection = ids.length
+    ? await prisma.lien.findMany({ where: { id: { in: ids } } })
+    : [];
+  const byId = new Map(collection.map((l) => [l.id, l]));
+
+  return refs.map((ref): ResolvedLien => {
+    if (ref.lienId) {
+      const lien = byId.get(ref.lienId);
+      if (lien) {
+        return {
+          libelle: ref.libelle?.trim() || lien.libelle,
+          url: lien.url,
+          lienId: lien.id,
+          linked: true,
+          orphan: false,
+        };
+      }
+      return {
+        libelle: ref.libelle?.trim() || "Lien indisponible",
+        url: "",
+        lienId: ref.lienId,
+        linked: true,
+        orphan: true,
+      };
+    }
+    return {
+      libelle: ref.libelle?.trim() || ref.url || "",
+      url: (ref.url ?? "").trim(),
+      linked: false,
+      orphan: false,
+    };
+  });
 }

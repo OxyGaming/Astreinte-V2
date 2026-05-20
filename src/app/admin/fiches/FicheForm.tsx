@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Save, Trash2, AlertTriangle, Info } from "lucide-react";
+import { Save, Trash2, AlertTriangle } from "lucide-react";
 
 interface Contact { id: string; nom: string; categorie: string }
 interface Secteur { id: string; nom: string; ligne: string }
@@ -16,7 +16,6 @@ interface Fiche {
   priorite?: string;
   mnemonique?: string | null;
   resume?: string;
-  etapes?: string;
   references?: string | null;
   avisObligatoires?: string | null;
   featured?: boolean;
@@ -50,7 +49,6 @@ export default function FicheForm({ fiche, contacts, secteurs, mode }: Props) {
     priorite: fiche?.priorite || "urgente",
     mnemonique: fiche?.mnemonique || "",
     resume: fiche?.resume || "",
-    etapes: fiche?.etapes ? (typeof fiche.etapes === "string" ? fiche.etapes : JSON.stringify(fiche.etapes, null, 2)) : "[]",
     references: safeParseArray(fiche?.references).join("\n"),
     avisObligatoires: safeParseArray(fiche?.avisObligatoires).join("\n"),
     featured: fiche?.featured ?? false,
@@ -80,18 +78,8 @@ export default function FicheForm({ fiche, contacts, secteurs, mode }: Props) {
     }));
   }
 
-  // Valide le JSON des étapes
-  function validateEtapes(): boolean {
-    try { JSON.parse(form.etapes); return true; }
-    catch { return false; }
-  }
-
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
-    if (!validateEtapes()) {
-      setError("Le JSON des étapes est invalide. Vérifiez la syntaxe.");
-      return;
-    }
     setSaving(true);
     setError(null);
     try {
@@ -106,7 +94,6 @@ export default function FicheForm({ fiche, contacts, secteurs, mode }: Props) {
         body: JSON.stringify({
           ...form,
           numero: Number(form.numero),
-          etapes: form.etapes,
           references: JSON.stringify(referencesArr),
           avisObligatoires: JSON.stringify(avisArr),
         }),
@@ -202,30 +189,6 @@ export default function FicheForm({ fiche, contacts, secteurs, mode }: Props) {
               className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none" />
           </div>
         </div>
-      </div>
-
-      {/* Étapes */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 space-y-4">
-        <div className="flex items-center gap-2">
-          <h2 className="font-semibold text-gray-800 text-base">Étapes *</h2>
-          <div className="relative group">
-            <Info size={14} className="text-gray-400 cursor-help" />
-            <div className="absolute left-6 top-0 w-64 bg-gray-800 text-white text-xs rounded-lg p-3 hidden group-hover:block z-10">
-              Format JSON : [{"{"}ordre, titre, description, critique?, actions?{"}"}]
-            </div>
-          </div>
-        </div>
-        <p className="text-xs text-gray-500">Format JSON — tableau d&apos;objets {"{"}ordre, titre, description, critique?, actions?{"}"}</p>
-        <textarea
-          value={form.etapes}
-          onChange={(e) => update("etapes", e.target.value)}
-          rows={10}
-          required
-          className={`w-full border rounded-lg px-3 py-2.5 text-xs font-mono focus:outline-none focus:ring-2 focus:ring-blue-500 resize-y ${!validateEtapes() && form.etapes.length > 2 ? "border-red-400 bg-red-50" : "border-gray-300"}`}
-        />
-        {!validateEtapes() && form.etapes.length > 2 && (
-          <p className="text-xs text-red-600">JSON invalide — vérifiez la syntaxe</p>
-        )}
       </div>
 
       {/* Références et avis */}

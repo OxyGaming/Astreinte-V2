@@ -1,10 +1,11 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, AlertTriangle, CheckCircle, ChevronRight, BookOpen, FileText, Link2, Download } from "lucide-react";
-import { getFicheBySlug, getAllContacts, getUserActiveSession, getSessionJournal, getCheckedActionsForSession } from "@/lib/db";
+import { getFicheBySlug, getAllContacts, getUserActiveSession, getSessionJournal, getCheckedActionsForSession, resolveLiens } from "@/lib/db";
 import { prisma } from "@/lib/prisma";
 import ContactCard from "@/components/ContactCard";
 import FicheSessionView from "@/components/FicheSessionView";
+import LiensList from "@/components/LiensList";
 import { getCurrentUser } from "@/lib/user-auth";
 import { formatFileSize, formatDocumentDate } from "@/lib/documents";
 
@@ -22,6 +23,7 @@ export default async function FicheDetailPage({ params }: Props) {
     getAllContacts(),
   ]);
   if (!fiche) notFound();
+  const liensUtiles = await resolveLiens(fiche.liens ?? []);
   const contactsLies = fiche.contacts_lies
     ? allContacts.filter((c) => fiche.contacts_lies!.includes(c.id))
     : [];
@@ -255,6 +257,16 @@ export default async function FicheDetailPage({ params }: Props) {
                 </a>
               ))}
             </div>
+          </section>
+        )}
+
+        {/* Liens utiles */}
+        {liensUtiles.length > 0 && (
+          <section className="px-4 lg:px-8">
+            <h2 className="text-xs font-bold text-slate-500 uppercase tracking-wide mb-3">
+              Liens utiles
+            </h2>
+            <LiensList liens={liensUtiles} />
           </section>
         )}
 

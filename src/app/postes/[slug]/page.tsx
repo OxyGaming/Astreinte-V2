@@ -1,6 +1,6 @@
 export const dynamic = "force-dynamic";
 
-import { getPosteBySlug } from "@/lib/db";
+import { getPosteBySlug, resolveLiens } from "@/lib/db";
 import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import Link from "next/link";
@@ -23,8 +23,10 @@ import {
   Wrench,
   FileText,
   Download,
+  Link2,
 } from "lucide-react";
 import PhoneButton from "@/components/PhoneButton";
+import LiensList from "@/components/LiensList";
 import { formatFileSize, formatDocumentDate } from "@/lib/documents";
 
 const TYPE_PROCEDURE_META: Record<string, { label: string; sublabel: string; icon: React.ElementType; bg: string; iconColor: string }> = {
@@ -51,6 +53,7 @@ export default async function PosteDetailPage({
     prisma.poste.findUnique({ where: { slug }, select: { id: true } }),
   ]);
   if (!poste) notFound();
+  const liensUtiles = await resolveLiens(poste.liens ?? []);
 
   const documents = posteRow
     ? await prisma.document.findMany({
@@ -420,6 +423,17 @@ export default async function PosteDetailPage({
               </a>
             ))}
           </div>
+        </section>
+      )}
+
+      {/* Liens utiles */}
+      {liensUtiles.length > 0 && (
+        <section>
+          <h2 className="flex items-center gap-2 text-base font-bold text-slate-800 mb-3">
+            <Link2 size={18} className="text-blue-700" />
+            Liens utiles
+          </h2>
+          <LiensList liens={liensUtiles} />
         </section>
       )}
 

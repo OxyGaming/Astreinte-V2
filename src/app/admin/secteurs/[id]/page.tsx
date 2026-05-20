@@ -7,6 +7,9 @@ import SecteurForm from "./SecteurForm";
 import SecteurPointsAccesEditor from "./SecteurPointsAccesEditor";
 import SecteurProceduresEditor from "./SecteurProceduresEditor";
 import SecteurPNEditor from "./SecteurPNEditor";
+import LiensEditor from "@/components/admin/LiensEditor";
+import { getAllLiens } from "@/lib/db";
+import { parseLienRefs } from "@/lib/liens";
 import type { PointAcces, Procedure, PassageNiveau } from "@/lib/types";
 
 function parsePointsAcces(raw: string): PointAcces[] {
@@ -59,6 +62,7 @@ export default async function EditSecteurPage({ params }: Props) {
 
   if (!secteur) notFound();
 
+  const liensCollection = await getAllLiens();
   const initialPointsAcces = parsePointsAcces(secteur.pointsAcces);
   const initialProcedures = parseProcedures(secteur.procedures);
   const initialPN = parsePNSecteur(secteur.pn);
@@ -91,6 +95,11 @@ export default async function EditSecteurPage({ params }: Props) {
         <SecteurPointsAccesEditor secteurId={secteur.id} initialEntries={initialPointsAcces} />
         <SecteurProceduresEditor secteurId={secteur.id} initialEntries={initialProcedures} />
         <SecteurPNEditor secteurId={secteur.id} initialEntries={initialPN} />
+        <LiensEditor
+          endpoint={`/api/admin/secteurs/${secteur.id}/liens-utiles`}
+          initialEntries={parseLienRefs(secteur.liens)}
+          collection={liensCollection}
+        />
       </div>
     </div>
   );

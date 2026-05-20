@@ -3,6 +3,8 @@
  * Séparé de types.ts (runtime) pour ne pas polluer le moteur.
  */
 import type { TypeAction, NiveauAction, TypeProcedure } from "./types";
+import type { LienRef } from "@/lib/types";
+import { toLienRefs } from "@/lib/liens";
 
 // ─── Form model ──────────────────────────────────────────────────────────────
 
@@ -24,6 +26,7 @@ export type EtapeForm = {
   description: string; // Ajout v2
   icone: string;
   actions: ActionForm[];
+  liens: LienRef[];
 };
 
 export type ActionForm = {
@@ -153,6 +156,7 @@ export function emptyEtape(existingEtapeIds: string[]): EtapeForm {
     description: "",
     icone: "Eye",
     actions: [],
+    liens: [],
   };
 }
 
@@ -186,6 +190,7 @@ export function formToMetier(form: ProcedureForm): ProcedureMetier {
       description: etape.description || undefined,
       icone: etape.icone || undefined,
       ordre: i,
+      liens: etape.liens.length > 0 ? etape.liens : undefined,
       actions: etape.actions.map((action) => ({
         id: action.id || `action-${i}`,
         type: action.type,
@@ -226,6 +231,7 @@ export function metierToForm(
       titre: etape.titre,
       description: (etape as { description?: string }).description ?? "",
       icone: etape.icone ?? "Eye",
+      liens: toLienRefs((etape as { liens?: unknown }).liens),
       actions: (etape.actions ?? []).map((action) => ({
         _key: makeKey(),
         id: action.id,

@@ -4,8 +4,24 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { ChevronLeft, ExternalLink } from "lucide-react";
 import FicheForm from "../FicheForm";
+import FicheEtapesEditor from "./FicheEtapesEditor";
 import DocumentsManager from "@/components/admin/DocumentsManager";
 import FicheLiensManager from "../FicheLiensManager";
+import LiensEditor from "@/components/admin/LiensEditor";
+import { getAllLiens } from "@/lib/db";
+import { parseLienRefs } from "@/lib/liens";
+import type { Etape } from "@/lib/types";
+
+function parseEtapes(raw: string): Etape[] {
+  try {
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    if (parsed.length > 0 && typeof (parsed[0] as Record<string, unknown>).titre !== "string") return [];
+    return parsed as Etape[];
+  } catch {
+    return [];
+  }
+}
 
 interface Props { params: Promise<{ id: string }> }
 
@@ -13,7 +29,7 @@ export default async function EditFichePage({ params }: Props) {
   await requireAdminSession();
   const { id } = await params;
 
-  const [fiche, contacts, secteurs, allFiches, documents, liens] = await Promise.all([
+  const [fiche, contacts, secteurs, allFiches, documents, liens, liensCollection] = await Promise.all([
     prisma.fiche.findUnique({
       where: { id },
       include: {
@@ -33,6 +49,7 @@ export default async function EditFichePage({ params }: Props) {
       where: { ficheSourceId: id },
       select: { ficheCibleId: true },
     }),
+    getAllLiens(),
   ]);
 
   if (!fiche) notFound();
@@ -71,9 +88,15 @@ export default async function EditFichePage({ params }: Props) {
           contacts={contacts}
           secteurs={secteurs}
         />
+        <FicheEtapesEditor ficheId={fiche.id} initialEntries={parseEtapes(fiche.etapes)} />
         <DocumentsManager
           target={{ ficheId: fiche.id }}
           initialDocuments={documents}
+        />
+        <LiensEditor
+          endpoint={`/api/admin/fiches/${fiche.id}/liens-utiles`}
+          initialEntries={parseLienRefs(fiche.liens)}
+          collection={liensCollection}
         />
         <FicheLiensManager
           ficheId={fiche.id}

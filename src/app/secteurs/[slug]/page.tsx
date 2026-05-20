@@ -3,8 +3,9 @@ export const dynamic = "force-dynamic";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, MapPin, Navigation, AlertTriangle, ChevronRight, Phone, BookOpen } from "lucide-react";
-import { getSecteurBySlug } from "@/lib/db";
+import { getSecteurBySlug, resolveLiens } from "@/lib/db";
 import Accordion from "@/components/Accordion";
+import LiensList from "@/components/LiensList";
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -14,6 +15,7 @@ export default async function SecteurDetailPage({ params }: Props) {
   const { slug } = await params;
   const secteur = await getSecteurBySlug(slug);
   if (!secteur) notFound();
+  const liensUtiles = await resolveLiens(secteur.liens ?? []);
 
   return (
     <div className="max-w-2xl mx-auto lg:max-w-3xl">
@@ -161,6 +163,16 @@ export default async function SecteurDetailPage({ params }: Props) {
                 </Accordion>
               ))}
             </div>
+          </section>
+        )}
+
+        {/* Liens utiles */}
+        {liensUtiles.length > 0 && (
+          <section>
+            <h2 className="text-xs font-bold text-slate-500 uppercase tracking-wide mb-3">
+              Liens utiles
+            </h2>
+            <LiensList liens={liensUtiles} />
           </section>
         )}
       </div>

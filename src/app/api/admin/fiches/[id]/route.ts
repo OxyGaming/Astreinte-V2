@@ -35,7 +35,7 @@ export async function PUT(req: NextRequest, { params }: Params) {
     data: {
       slug, numero: Number(numero), titre, categorie, priorite,
       mnemonique: mnemonique || null, resume, featured: featured === true,
-      etapes: typeof etapes === "string" ? etapes : JSON.stringify(etapes),
+      ...(etapes !== undefined ? { etapes: typeof etapes === "string" ? etapes : JSON.stringify(etapes) } : {}),
       references: references ? (typeof references === "string" ? references : JSON.stringify(references)) : null,
       avisObligatoires: avisObligatoires ? (typeof avisObligatoires === "string" ? avisObligatoires : JSON.stringify(avisObligatoires)) : null,
       contacts: {

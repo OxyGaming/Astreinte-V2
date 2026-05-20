@@ -11,6 +11,9 @@ import PosteCircuitsVoieEditor from "./PosteCircuitsVoieEditor";
 import { PosteDbcEditor, PosteRexEditor } from "./PosteDbcRexEditor";
 import PosteParticularitesEditor from "./PosteParticularitesEditor";
 import DocumentsManager from "@/components/admin/DocumentsManager";
+import LiensEditor from "@/components/admin/LiensEditor";
+import { getAllLiens } from "@/lib/db";
+import { parseLienRefs } from "@/lib/liens";
 import type { PNSensiblePoste, ProcedureCle, CircuitVoie, Dbc } from "@/lib/types";
 import { normalizeAnnuaire } from "@/lib/annuaire";
 
@@ -105,7 +108,7 @@ export default async function EditPostePage({ params }: Props) {
   await requireAdminSession();
   const { id } = await params;
 
-  const [poste, secteurs, documents] = await Promise.all([
+  const [poste, secteurs, documents, liensCollection] = await Promise.all([
     prisma.poste.findUnique({
       where: { id },
       include: {
@@ -118,6 +121,7 @@ export default async function EditPostePage({ params }: Props) {
       orderBy: { createdAt: "desc" },
       select: { id: true, originalName: true, mimeType: true, size: true, createdAt: true },
     }),
+    getAllLiens(),
   ]);
 
   if (!poste) notFound();
@@ -150,6 +154,11 @@ export default async function EditPostePage({ params }: Props) {
         <PosteRexEditor posteId={poste.id} initialEntries={initialRex} />
         <PosteAnnuaireEditor posteId={poste.id} initialAnnuaire={initialAnnuaire} />
         <DocumentsManager target={{ posteId: poste.id }} initialDocuments={documents} />
+        <LiensEditor
+          endpoint={`/api/admin/postes/${poste.id}/liens-utiles`}
+          initialEntries={parseLienRefs(poste.liens)}
+          collection={liensCollection}
+        />
       </div>
     </div>
   );

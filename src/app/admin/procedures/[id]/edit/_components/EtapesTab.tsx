@@ -1,15 +1,17 @@
 "use client";
 import type { ProcedureForm, EtapeForm } from "@/lib/procedure/form-types";
 import { emptyEtape, makeKey } from "@/lib/procedure/form-types";
+import type { Lien } from "@/lib/types";
 import EtapeCard from "./EtapeCard";
 import { Plus } from "lucide-react";
 
 interface Props {
   form: ProcedureForm;
   onChange: (form: ProcedureForm) => void;
+  collection: Lien[];
 }
 
-export default function EtapesTab({ form, onChange }: Props) {
+export default function EtapesTab({ form, onChange, collection }: Props) {
   const updateEtape = (index: number, etape: EtapeForm) => {
     const etapes = [...form.etapes];
     etapes[index] = etape;
@@ -76,6 +78,7 @@ export default function EtapesTab({ form, onChange }: Props) {
           index={i}
           total={form.etapes.length}
           allActionIds={form.etapes.flatMap((e) => e.actions.map((a) => a.id))}
+          collection={collection}
           onUpdate={(e) => updateEtape(i, e)}
           onDelete={() => deleteEtape(i)}
           onMoveUp={() => moveEtape(i, -1)}

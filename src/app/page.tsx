@@ -1,7 +1,7 @@
 export const dynamic = "force-dynamic";
 
 import Link from "next/link";
-import { Shield, Phone, FileText, MapPin, AlignLeft, AlertTriangle, ChevronRight, BookOpen } from "lucide-react";
+import { Shield, Phone, FileText, MapPin, AlignLeft, AlertTriangle, ChevronRight, BookOpen, Link2 } from "lucide-react";
 import SearchBar from "@/components/SearchBar";
 import PhoneButton from "@/components/PhoneButton";
 import { getAllContacts, getAllFiches, getAllMnemoniques, getAllSecteurs } from "@/lib/db";
@@ -151,6 +151,25 @@ export default async function Home() {
                 Main courante
               </p>
               <p className="text-xs text-slate-500">Mémoire collective — bonnes pratiques et points de vigilance</p>
+            </div>
+          </div>
+          <ChevronRight size={16} className="text-slate-300 group-hover:text-blue-400 transition-colors flex-shrink-0" />
+        </Link>
+
+        {/* Liens utiles */}
+        <Link
+          href="/liens-utiles"
+          className="flex items-center justify-between px-4 py-3.5 bg-white border border-slate-200 rounded-xl hover:border-blue-300 hover:shadow-sm transition-all group"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-blue-50 text-blue-700 flex items-center justify-center flex-shrink-0">
+              <Link2 size={18} />
+            </div>
+            <div>
+              <p className="font-semibold text-sm text-slate-800 group-hover:text-blue-800 transition-colors">
+                Liens utiles
+              </p>
+              <p className="text-xs text-slate-500">Portails, outils et documentation de référence</p>
             </div>
           </div>
           <ChevronRight size={16} className="text-slate-300 group-hover:text-blue-400 transition-colors flex-shrink-0" />

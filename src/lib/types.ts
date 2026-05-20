@@ -27,6 +27,7 @@ export interface Fiche {
   contacts_lies?: string[];
   references?: string[];
   avis_obligatoires?: string[];
+  liens?: LienRef[];
   featured?: boolean;
 }
 
@@ -77,6 +78,7 @@ export interface Secteur {
   points_acces: PointAcces[];
   procedures: Procedure[];
   pn?: PassageNiveau[];
+  liens?: LienRef[];
 }
 
 export interface LettreAcronyme {
@@ -177,6 +179,7 @@ export interface Poste {
   dbc?: Dbc[];
   rex?: string[];
   secteur_slugs: string[];
+  liens?: LienRef[];
 }
 
 // ─── Points d'accès ferroviaires (GPS) ────────────────────────────────────────
@@ -292,3 +295,39 @@ export interface MainCourante {
 }
 
 export type JournalEntry = JournalActionEntry | JournalCommentEntry;
+
+// ─── Liens utiles ──────────────────────────────────────────────────────────────
+
+/** Entrée de la collection centrale de liens (référentiel). */
+export interface Lien {
+  id: string;
+  libelle: string;
+  url: string;
+  ordre: number;
+}
+
+/**
+ * Rattachement d'un lien à une fiche, un secteur, un poste ou une étape de
+ * procédure guidée. Calqué sur AnnuaireEntry : soit une référence à la
+ * collection (lienId), soit un lien saisi librement (libelle + url).
+ */
+export interface LienRef {
+  /** Si défini : référence à un lien de la collection. */
+  lienId?: string;
+  /** Libellé d'affichage. Surcharge le libellé du lien lié, ou libellé du lien libre. */
+  libelle?: string;
+  /** URL — uniquement pour un lien libre (ignoré si lienId est défini). */
+  url?: string;
+}
+
+/** Lien résolu, prêt à l'affichage (référence collection résolue ou lien libre). */
+export interface ResolvedLien {
+  libelle: string;
+  url: string;
+  /** Id du lien de la collection si l'entrée y est rattachée. */
+  lienId?: string;
+  /** true si l'entrée est rattachée à la collection. */
+  linked: boolean;
+  /** true si rattachée à la collection mais lien introuvable (supprimé). */
+  orphan: boolean;
+}

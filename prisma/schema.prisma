@@ -34,6 +34,7 @@ model Secteur {
   pointsAcces String
   procedures  String
   pn          String?
+  liens       String?
   createdAt   DateTime       @default(now())
   updatedAt   DateTime       @updatedAt
   fiches      FicheSecteur[]
@@ -53,6 +54,7 @@ model Fiche {
   etapes           String
   references       String?
   avisObligatoires String?
+  liens            String?
   createdAt        DateTime       @default(now())
   updatedAt        DateTime       @updatedAt
   featured         Boolean        @default(false)
@@ -154,6 +156,7 @@ model Poste {
   proceduresCles   String
   dbc              String?
   rex              String?
+  liens            String?
   createdAt        DateTime           @default(now())
   updatedAt        DateTime           @updatedAt
   secteurs         PosteSecteur[]
@@ -396,4 +399,15 @@ model AdminAuditLog {
   @@index([resource, resourceId])
   @@index([userId])
   @@index([timestamp])
+}
+
+/// Collection de liens utiles (référentiel). Fiches, secteurs, postes et étapes
+/// de procédure peuvent référencer une entrée via son id (cf. type LienRef).
+model Lien {
+  id        String   @id @default(cuid())
+  libelle   String
+  url       String
+  ordre     Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }

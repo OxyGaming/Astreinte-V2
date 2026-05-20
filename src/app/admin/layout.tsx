@@ -18,6 +18,7 @@ import {
   ClipboardList,
   History,
   BookMarked,
+  Link2,
 } from "lucide-react";
 import { adminLogoutAction } from "./login/actions";
 import AdminMobileNav from "@/components/AdminMobileNav";
@@ -40,6 +41,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
     { href: "/admin/procedures/sessions", label: "Sessions procédures", icon: History },
     { href: "/admin/mnemoniques", label: "Mnémoniques", icon: BookOpen },
     { href: "/admin/abreviations", label: "Abréviations", icon: AlignLeft },
+    { href: "/admin/liens", label: "Liens utiles", icon: Link2 },
     { href: "/admin/main-courante", label: "Main courante", icon: BookMarked, badge: pendingMainCourantes },
     { href: "/admin/users", label: "Utilisateurs", icon: UserCog },
     { href: "/admin/registrations", label: "Inscriptions", icon: ClipboardList, badge: pendingRegistrations },

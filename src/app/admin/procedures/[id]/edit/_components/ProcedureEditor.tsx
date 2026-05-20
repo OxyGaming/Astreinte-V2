@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { ProcedureForm } from "@/lib/procedure/form-types";
+import type { Lien } from "@/lib/types";
 import { validateProcedureForm } from "@/lib/procedure/form-types";
 import MetaTab from "./MetaTab";
 import EtapesTab from "./EtapesTab";
@@ -13,11 +14,12 @@ import Link from "next/link";
 interface Props {
   initialForm: ProcedureForm;
   postes: { id: string; nom: string; slug: string }[];
+  collection: Lien[];
 }
 
 type Tab = "meta" | "etapes" | "postes";
 
-export default function ProcedureEditor({ initialForm, postes }: Props) {
+export default function ProcedureEditor({ initialForm, postes, collection }: Props) {
   const router = useRouter();
   const [form, setForm] = useState<ProcedureForm>(initialForm);
   const [activeTab, setActiveTab] = useState<Tab>("meta");
@@ -49,6 +51,7 @@ export default function ProcedureEditor({ initialForm, postes }: Props) {
           description: etape.description || undefined,
           icone: etape.icone || undefined,
           ordre: form.etapes.indexOf(etape),
+          liens: etape.liens.length > 0 ? etape.liens : undefined,
           actions: etape.actions.map((action) => ({
             id: action.id,
             type: action.type,
@@ -182,7 +185,7 @@ export default function ProcedureEditor({ initialForm, postes }: Props) {
       {/* Tab content */}
       <div className="bg-white rounded-xl border border-gray-200 p-6">
         {activeTab === "meta" && <MetaTab form={form} onChange={setForm} />}
-        {activeTab === "etapes" && <EtapesTab form={form} onChange={setForm} />}
+        {activeTab === "etapes" && <EtapesTab form={form} onChange={setForm} collection={collection} />}
         {activeTab === "postes" && <PostesTab form={form} onChange={setForm} postes={postes} />}
       </div>
 
