@@ -15,6 +15,7 @@ export async function PUT(req: NextRequest, { params }: Params) {
   const body = await req.json();
   const libelle = typeof body.libelle === "string" ? body.libelle.trim() : "";
   const url = typeof body.url === "string" ? body.url.trim() : "";
+  const categorieId = typeof body.categorieId === "string" && body.categorieId ? body.categorieId : null;
 
   if (!libelle) {
     return NextResponse.json({ error: "Le libellé est obligatoire" }, { status: 400 });
@@ -28,7 +29,7 @@ export async function PUT(req: NextRequest, { params }: Params) {
     return NextResponse.json({ error: "Lien introuvable" }, { status: 404 });
   }
 
-  const lien = await prisma.lien.update({ where: { id }, data: { libelle, url } });
+  const lien = await prisma.lien.update({ where: { id }, data: { libelle, url, categorieId } });
   return NextResponse.json(lien);
 }
 

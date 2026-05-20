@@ -1,12 +1,12 @@
 import { requireAdminSession } from "@/lib/admin-auth";
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
-import { FileText, Users, MapPin, BookOpen, AlignLeft, Plus, TrendingUp, Building2, MapPinned, ClipboardList } from "lucide-react";
+import { FileText, Users, MapPin, BookOpen, AlignLeft, Plus, TrendingUp, Building2, MapPinned, ClipboardList, Link2, BookMarked } from "lucide-react";
 
 export default async function AdminDashboard() {
   await requireAdminSession();
 
-  const [fichesCount, contactsCount, secteursCount, postesCount, accesCount, mnemoniquesCount, abreviationsCount, proceduresCount] =
+  const [fichesCount, contactsCount, secteursCount, postesCount, accesCount, mnemoniquesCount, abreviationsCount, proceduresCount, liensCount, mainCourantesCount, mainCourantesPending] =
     await Promise.all([
       prisma.fiche.count(),
       prisma.contact.count(),
@@ -16,6 +16,9 @@ export default async function AdminDashboard() {
       prisma.mnemonique.count(),
       prisma.abreviation.count(),
       prisma.procedure.count(),
+      prisma.lien.count(),
+      prisma.mainCourante.count(),
+      prisma.mainCourante.count({ where: { status: "pending" } }),
     ]);
 
   const recentFiches = await prisma.fiche.findMany({
@@ -38,6 +41,8 @@ export default async function AdminDashboard() {
     { label: "Mnémoniques", count: mnemoniquesCount, icon: BookOpen, href: "/admin/mnemoniques", color: "bg-purple-500" },
     { label: "Abréviations", count: abreviationsCount, icon: AlignLeft, href: "/admin/abreviations", color: "bg-gray-500" },
     { label: "Procédures guidées", count: proceduresCount, icon: ClipboardList, href: "/admin/procedures", color: "bg-indigo-500" },
+    { label: "Liens utiles", count: liensCount, icon: Link2, href: "/admin/liens", color: "bg-teal-500" },
+    { label: "Mains courantes", count: mainCourantesCount, icon: BookMarked, href: "/admin/main-courante", color: "bg-rose-500" },
   ];
 
   const quickActions = [
@@ -64,6 +69,14 @@ export default async function AdminDashboard() {
               <div className={`w-9 h-9 ${s.color} rounded-lg flex items-center justify-center`}>
                 <s.icon size={18} className="text-white" />
               </div>
+              {s.href === "/admin/main-courante" && mainCourantesPending > 0 && (
+                <span
+                  title="Entrées en attente de validation"
+                  className="text-xs font-bold text-white bg-amber-500 px-1.5 py-0.5 rounded-full leading-none min-w-[1.25rem] text-center"
+                >
+                  {mainCourantesPending}
+                </span>
+              )}
             </div>
             <p className="text-2xl sm:text-3xl font-bold text-gray-900">{s.count}</p>
             <p className="text-xs sm:text-sm text-gray-500 mt-1 group-hover:text-blue-600 transition-colors">{s.label}</p>

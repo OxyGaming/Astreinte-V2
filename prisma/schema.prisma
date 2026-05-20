@@ -404,10 +404,27 @@ model AdminAuditLog {
 /// Collection de liens utiles (référentiel). Fiches, secteurs, postes et étapes
 /// de procédure peuvent référencer une entrée via son id (cf. type LienRef).
 model Lien {
+  id          String         @id @default(cuid())
+  libelle     String
+  url         String
+  ordre       Int            @default(0)
+  categorieId String?
+  categorie   LienCategorie? @relation(fields: [categorieId], references: [id], onDelete: SetNull)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  @@index([categorieId])
+}
+
+/// Thématique de la page « Liens utiles » (hub). Porte un nom, une icône
+/// (clé Lucide) et une couleur d'accent.
+model LienCategorie {
   id        String   @id @default(cuid())
-  libelle   String
-  url       String
+  nom       String
+  icon      String   @default("Link2")
+  couleur   String   @default("blue")
   ordre     Int      @default(0)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  liens     Lien[]
 }

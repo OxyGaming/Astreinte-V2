@@ -46,7 +46,7 @@ const TABS: { id: TabId; label: string; icon: React.ReactNode; color: string }[]
   { id: "postes", label: "Postes", icon: <Building2 size={15} />, color: "orange" },
   { id: "secteurs", label: "Secteurs", icon: <Layers size={15} />, color: "teal" },
   { id: "procedures", label: "Procédures", icon: <ClipboardList size={15} />, color: "blue" },
-  { id: "mainCourante", label: "Main courante", icon: <BookMarked size={15} />, color: "indigo" },
+  { id: "mainCourante", label: "Mains courantes", icon: <BookMarked size={15} />, color: "indigo" },
 ];
 
 const CONTACT_CATEGORIES = ["urgence", "astreinte", "encadrement", "externe"];

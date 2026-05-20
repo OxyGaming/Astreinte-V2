@@ -51,7 +51,7 @@ export default async function MainCouranteDetailPage({ params }: Props) {
           className="flex items-center gap-1 text-sm opacity-80 hover:opacity-100 mb-4 transition-opacity"
         >
           <ArrowLeft size={16} />
-          Main courante
+          Mains courantes
         </Link>
         <div className="flex items-center gap-2 mb-2">
           <CheckCircle size={16} className="opacity-70" />

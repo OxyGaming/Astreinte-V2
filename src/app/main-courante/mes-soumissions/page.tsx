@@ -48,7 +48,7 @@ export default async function MesSoumissionsPage() {
           className="flex items-center gap-1 text-sm opacity-80 hover:opacity-100 mb-4 transition-opacity"
         >
           <ArrowLeft size={16} />
-          Main courante
+          Mains courantes
         </Link>
         <h1 className="text-xl font-bold leading-tight">Mes soumissions</h1>
         <p className="text-sm opacity-80 mt-1">

@@ -55,7 +55,7 @@ export default async function AdminMainCourantePage({ searchParams }: Props) {
     <div className="p-6">
       <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-slate-800">Main courante</h1>
+          <h1 className="text-2xl font-bold text-slate-800">Mains courantes</h1>
           <p className="text-sm text-slate-500 mt-1">
             Modérez les contributions et complétez les avis sécurité / production.
           </p>

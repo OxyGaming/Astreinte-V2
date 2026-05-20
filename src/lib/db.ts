@@ -5,7 +5,7 @@
 import { cache } from "react";
 import { prisma } from "./prisma";
 import { parseLienRefs } from "./liens";
-import type { Fiche, Contact, Secteur, Mnemonique, Abréviation, Etape, PointAcces, Procedure, PassageNiveau, LettreAcronyme, AccesRail, User, FicheSession, JournalEntry, MainCourante, Lien, LienRef, ResolvedLien } from "./types";
+import type { Fiche, Contact, Secteur, Mnemonique, Abréviation, Etape, PointAcces, Procedure, PassageNiveau, LettreAcronyme, AccesRail, User, FicheSession, JournalEntry, MainCourante, Lien, LienCategorie, LienRef, ResolvedLien } from "./types";
 
 // ─── Helpers de désérialisation JSON ─────────────────────────────────────────
 
@@ -305,6 +305,10 @@ export async function countPendingRegistrations(): Promise<number> {
 
 export async function countPendingMainCourantes(): Promise<number> {
   return prisma.mainCourante.count({ where: { status: "pending" } });
+}
+
+export async function countValidatedMainCourantes(): Promise<number> {
+  return prisma.mainCourante.count({ where: { status: "validated" } });
 }
 
 function dbToUser(row: {
@@ -721,12 +725,12 @@ export async function deleteMainCourante(id: string): Promise<void> {
 /** Collection centrale de liens (référentiel), triée par ordre puis libellé. */
 export const getAllLiens = cache(async (): Promise<Lien[]> => {
   const rows = await prisma.lien.findMany({ orderBy: [{ ordre: "asc" }, { libelle: "asc" }] });
-  return rows.map((r) => ({ id: r.id, libelle: r.libelle, url: r.url, ordre: r.ordre }));
+  return rows.map((r) => ({ id: r.id, libelle: r.libelle, url: r.url, ordre: r.ordre, categorieId: r.categorieId ?? undefined }));
 });
 
 export async function getLienById(id: string): Promise<Lien | null> {
   const row = await prisma.lien.findUnique({ where: { id } });
-  return row ? { id: row.id, libelle: row.libelle, url: row.url, ordre: row.ordre } : null;
+  return row ? { id: row.id, libelle: row.libelle, url: row.url, ordre: row.ordre, categorieId: row.categorieId ?? undefined } : null;
 }
 
 /**
@@ -769,4 +773,53 @@ export async function resolveLiens(refs: LienRef[]): Promise<ResolvedLien[]> {
       orphan: false,
     };
   });
+}
+
+// ─── Thématiques de liens ─────────────────────────────────────────────────────
+
+/** Toutes les thématiques, triées par ordre puis nom. */
+export const getAllLienCategories = cache(async (): Promise<LienCategorie[]> => {
+  const rows = await prisma.lienCategorie.findMany({ orderBy: [{ ordre: "asc" }, { nom: "asc" }] });
+  return rows.map((r) => ({ id: r.id, nom: r.nom, icon: r.icon, couleur: r.couleur, ordre: r.ordre }));
+});
+
+export interface LienCategorieAvecLiens extends LienCategorie {
+  liens: Lien[];
+}
+
+/**
+ * Données du hub /liens-utiles : thématiques ordonnées avec leurs liens,
+ * plus les liens sans thématique (section « Autres »).
+ */
+export async function getLiensHub(): Promise<{
+  categories: LienCategorieAvecLiens[];
+  autres: Lien[];
+}> {
+  const [cats, liens] = await Promise.all([
+    prisma.lienCategorie.findMany({ orderBy: [{ ordre: "asc" }, { nom: "asc" }] }),
+    prisma.lien.findMany({ orderBy: [{ ordre: "asc" }, { libelle: "asc" }] }),
+  ]);
+  const catIds = new Set(cats.map((c) => c.id));
+  const byCat = new Map<string, Lien[]>();
+  const autres: Lien[] = [];
+  for (const r of liens) {
+    const lien: Lien = {
+      id: r.id, libelle: r.libelle, url: r.url, ordre: r.ordre,
+      categorieId: r.categorieId ?? undefined,
+    };
+    if (r.categorieId && catIds.has(r.categorieId)) {
+      const arr = byCat.get(r.categorieId) ?? [];
+      arr.push(lien);
+      byCat.set(r.categorieId, arr);
+    } else {
+      autres.push(lien);
+    }
+  }
+  return {
+    categories: cats.map((c) => ({
+      id: c.id, nom: c.nom, icon: c.icon, couleur: c.couleur, ordre: c.ordre,
+      liens: byCat.get(c.id) ?? [],
+    })),
+    autres,
+  };
 }

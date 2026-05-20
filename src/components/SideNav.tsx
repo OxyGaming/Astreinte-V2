@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, FileText, Phone, MapPin, AlignLeft, Shield, Building2, Settings, MapPinned, ClipboardList, BookOpen } from "lucide-react";
+import { Home, FileText, Phone, MapPin, Shield, Building2, Settings, MapPinned, ClipboardList, BookOpen, BookMarked, Link2 } from "lucide-react";
 import LogoutButton from "./LogoutButton";
 
 const navItems = [
@@ -13,7 +13,8 @@ const navItems = [
   { href: "/secteurs", label: "Secteurs", icon: MapPin },
   { href: "/acces", label: "Points d'accès", icon: MapPinned },
   { href: "/postes", label: "Référentiels postes", icon: Building2 },
-  { href: "/mnemoniques", label: "Mnémotechniques", icon: AlignLeft },
+  { href: "/main-courante", label: "Mains courantes", icon: BookMarked },
+  { href: "/liens-utiles", label: "Liens utiles", icon: Link2 },
 ];
 
 export default function SideNav() {

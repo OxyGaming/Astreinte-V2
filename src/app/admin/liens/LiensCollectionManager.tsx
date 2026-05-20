@@ -6,19 +6,25 @@ import {
   Plus, Pencil, Trash2, ExternalLink, AlertTriangle, X, Link2, Loader2,
 } from "lucide-react";
 import { isValidHttpUrl } from "@/lib/liens";
-import type { Lien } from "@/lib/types";
+import { getLienIcon, getLienColor } from "@/lib/lien-ui";
+import type { Lien, LienCategorie } from "@/lib/types";
 
 interface Props {
   initialLiens: Lien[];
+  categories: LienCategorie[];
 }
 
 type ModalState = { mode: "add" } | { mode: "edit"; lien: Lien } | null;
 
-function sortLiens(list: Lien[]): Lien[] {
-  return [...list].sort((a, b) => a.ordre - b.ordre || a.libelle.localeCompare(b.libelle));
+interface Groupe {
+  key: string;
+  nom: string;
+  couleur: string;
+  icon: string;
+  liens: Lien[];
 }
 
-export default function LiensCollectionManager({ initialLiens }: Props) {
+export default function LiensCollectionManager({ initialLiens, categories }: Props) {
   const router = useRouter();
   const [liens, setLiens] = useState<Lien[]>(initialLiens);
   const [modal, setModal] = useState<ModalState>(null);
@@ -26,9 +32,7 @@ export default function LiensCollectionManager({ initialLiens }: Props) {
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   function handleSaved(saved: Lien, mode: "add" | "edit") {
-    setLiens((prev) =>
-      sortLiens(mode === "edit" ? prev.map((l) => (l.id === saved.id ? saved : l)) : [...prev, saved])
-    );
+    setLiens((prev) => (mode === "edit" ? prev.map((l) => (l.id === saved.id ? saved : l)) : [...prev, saved]));
     setModal(null);
     router.refresh();
   }
@@ -50,13 +54,26 @@ export default function LiensCollectionManager({ initialLiens }: Props) {
     }
   }
 
+  // Regroupement par thématique (ordre des catégories) + « Sans thématique ».
+  const sort = (list: Lien[]) => [...list].sort((a, b) => a.libelle.localeCompare(b.libelle));
+  const catIds = new Set(categories.map((c) => c.id));
+  const groupes: Groupe[] = [];
+  for (const cat of categories) {
+    const catLiens = sort(liens.filter((l) => l.categorieId === cat.id));
+    if (catLiens.length) groupes.push({ key: cat.id, nom: cat.nom, couleur: cat.couleur, icon: cat.icon, liens: catLiens });
+  }
+  const sansCat = sort(liens.filter((l) => !l.categorieId || !catIds.has(l.categorieId)));
+  if (sansCat.length) {
+    groupes.push({ key: "__none__", nom: "Sans thématique", couleur: "slate", icon: "Link2", liens: sansCat });
+  }
+
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-200">
       <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
         <div>
-          <h2 className="font-semibold text-gray-900">Collection de liens</h2>
+          <h2 className="font-semibold text-gray-900">Liens</h2>
           <p className="text-xs text-gray-400 mt-0.5">
-            {liens.length} lien{liens.length !== 1 ? "s" : ""}
+            {liens.length} lien{liens.length !== 1 ? "s" : ""} dans la collection
           </p>
         </div>
         <button onClick={() => setModal({ mode: "add" })}
@@ -81,33 +98,50 @@ export default function LiensCollectionManager({ initialLiens }: Props) {
             <p className="text-xs mt-1">Cliquez sur « Ajouter » pour commencer.</p>
           </div>
         ) : (
-          <div className="space-y-0.5">
-            {liens.map((lien) => (
-              <div key={lien.id} className="flex items-center gap-3 px-3 py-3 rounded-lg hover:bg-gray-50 group">
-                <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center flex-shrink-0">
-                  <Link2 size={15} />
+          <div className="space-y-5">
+            {groupes.map((g) => {
+              const color = getLienColor(g.couleur);
+              const GroupIcon = getLienIcon(g.icon);
+              return (
+                <div key={g.key}>
+                  <div className="flex items-center gap-2 px-1 mb-1.5">
+                    <div className={`w-6 h-6 rounded-md flex items-center justify-center flex-shrink-0 ${color.head}`}>
+                      <GroupIcon size={13} />
+                    </div>
+                    <span className="text-xs font-bold text-slate-500 uppercase tracking-wide">{g.nom}</span>
+                    <span className="text-xs text-gray-400">· {g.liens.length}</span>
+                  </div>
+                  <div className="space-y-0.5">
+                    {g.liens.map((lien) => (
+                      <div key={lien.id} className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-50 group">
+                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${color.tile}`}>
+                          <Link2 size={14} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-gray-900 text-sm truncate">{lien.libelle}</p>
+                          <p className="text-xs text-gray-400 truncate">{lien.url}</p>
+                        </div>
+                        <a href={lien.url} target="_blank" rel="noopener noreferrer"
+                          className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800 px-2.5 py-1.5 rounded-md hover:bg-blue-50 flex-shrink-0">
+                          <ExternalLink size={13} />
+                          Ouvrir
+                        </a>
+                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
+                          <button onClick={() => setModal({ mode: "edit", lien })} title="Modifier"
+                            className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
+                            <Pencil size={14} />
+                          </button>
+                          <button onClick={() => handleDelete(lien)} disabled={deletingId === lien.id} title="Supprimer"
+                            className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50">
+                            {deletingId === lien.id ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="font-medium text-gray-900 text-sm truncate">{lien.libelle}</p>
-                  <p className="text-xs text-gray-400 truncate">{lien.url}</p>
-                </div>
-                <a href={lien.url} target="_blank" rel="noopener noreferrer"
-                  className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800 px-2.5 py-1.5 rounded-md hover:bg-blue-50 flex-shrink-0">
-                  <ExternalLink size={13} />
-                  Ouvrir
-                </a>
-                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
-                  <button onClick={() => setModal({ mode: "edit", lien })} title="Modifier"
-                    className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
-                    <Pencil size={14} />
-                  </button>
-                  <button onClick={() => handleDelete(lien)} disabled={deletingId === lien.id} title="Supprimer"
-                    className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50">
-                    {deletingId === lien.id ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
-                  </button>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
@@ -115,6 +149,7 @@ export default function LiensCollectionManager({ initialLiens }: Props) {
       {modal && (
         <LienCollectionFormModal
           lien={modal.mode === "edit" ? modal.lien : null}
+          categories={categories}
           onSaved={handleSaved}
           onClose={() => setModal(null)}
         />
@@ -123,14 +158,16 @@ export default function LiensCollectionManager({ initialLiens }: Props) {
   );
 }
 
-function LienCollectionFormModal({ lien, onSaved, onClose }: {
+function LienCollectionFormModal({ lien, categories, onSaved, onClose }: {
   lien: Lien | null;
+  categories: LienCategorie[];
   onSaved: (lien: Lien, mode: "add" | "edit") => void;
   onClose: () => void;
 }) {
   const libelleRef = useRef<HTMLInputElement>(null);
   const [libelle, setLibelle] = useState(lien?.libelle ?? "");
   const [url, setUrl] = useState(lien?.url ?? "");
+  const [categorieId, setCategorieId] = useState(lien?.categorieId ?? "");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -150,7 +187,7 @@ function LienCollectionFormModal({ lien, onSaved, onClose }: {
       const res = await fetch(endpoint, {
         method: lien ? "PUT" : "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ libelle: l, url: u }),
+        body: JSON.stringify({ libelle: l, url: u, categorieId: categorieId || null }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Erreur lors de la sauvegarde");
@@ -188,7 +225,7 @@ function LienCollectionFormModal({ lien, onSaved, onClose }: {
             </label>
             <input ref={libelleRef} type="text" value={libelle}
               onChange={(e) => setLibelle(e.target.value)}
-              placeholder="ex : Portail SNCF Réseau"
+              placeholder="ex : SharePoint Astreinte"
               className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
           </div>
           <div>
@@ -199,6 +236,21 @@ function LienCollectionFormModal({ lien, onSaved, onClose }: {
               onChange={(e) => setUrl(e.target.value)}
               placeholder="https://…"
               className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">Thématique</label>
+            <select value={categorieId} onChange={(e) => setCategorieId(e.target.value)}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+              <option value="">— Sans thématique —</option>
+              {categories.map((c) => (
+                <option key={c.id} value={c.id}>{c.nom}</option>
+              ))}
+            </select>
+            {categories.length === 0 && (
+              <p className="text-xs text-gray-400 mt-1">
+                Aucune thématique — créez-en dans la section ci-dessus pour classer ce lien.
+              </p>
+            )}
           </div>
           <div className="flex justify-end gap-3 pt-2">
             <button type="button" onClick={onClose}

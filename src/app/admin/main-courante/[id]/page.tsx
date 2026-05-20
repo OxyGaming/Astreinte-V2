@@ -42,7 +42,7 @@ export default async function AdminMainCouranteDetailPage({ params }: Props) {
           className="flex items-center gap-1 text-sm text-slate-500 hover:text-slate-700 transition-colors"
         >
           <ArrowLeft size={14} />
-          Main courante
+          Mains courantes
         </Link>
       </div>
 

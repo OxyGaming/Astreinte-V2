@@ -35,7 +35,7 @@ export default async function MainCourantePage({ searchParams }: Props) {
               <BookOpen size={18} className="opacity-80" />
               <span className="text-xs font-bold opacity-60 uppercase tracking-wide">Mémoire collective</span>
             </div>
-            <h1 className="text-xl font-bold leading-tight">Main courante</h1>
+            <h1 className="text-xl font-bold leading-tight">Mains courantes</h1>
             <p className="text-sm opacity-80 mt-1">
               Bonnes pratiques et points de vigilance validés par les administrateurs.
             </p>

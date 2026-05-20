@@ -1,10 +1,10 @@
 export const dynamic = "force-dynamic";
 
 import Link from "next/link";
-import { Shield, Phone, FileText, MapPin, AlignLeft, AlertTriangle, ChevronRight, BookOpen, Link2 } from "lucide-react";
+import { Shield, Phone, FileText, MapPin, AlignLeft, AlertTriangle, ChevronRight, BookMarked, Link2 } from "lucide-react";
 import SearchBar from "@/components/SearchBar";
 import PhoneButton from "@/components/PhoneButton";
-import { getAllContacts, getAllFiches, getAllMnemoniques, getAllSecteurs } from "@/lib/db";
+import { getAllContacts, getAllFiches, getAllMnemoniques, getAllSecteurs, getAllLiens, countValidatedMainCourantes } from "@/lib/db";
 
 const CATEGORIE_COLOR: Record<string, string> = {
   accident: "bg-red-600",
@@ -15,11 +15,13 @@ const CATEGORIE_COLOR: Record<string, string> = {
 };
 
 export default async function Home() {
-  const [fiches, contacts, mnemoniques, secteurs] = await Promise.all([
+  const [fiches, contacts, mnemoniques, secteurs, liens, mainCourantesCount] = await Promise.all([
     getAllFiches(),
     getAllContacts(),
     getAllMnemoniques(),
     getAllSecteurs(),
+    getAllLiens(),
+    countValidatedMainCourantes(),
   ]);
 
   const contactsUrgents = contacts.filter((c) => c.categorie === "urgence").slice(0, 3);
@@ -109,15 +111,16 @@ export default async function Home() {
           </h2>
           <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
             {[
-              { href: "/fiches", icon: FileText, label: "Fiches réflexes", sub: `${fiches.length} fiches`, color: "text-blue-700 bg-blue-50" },
-              { href: "/contacts", icon: Phone, label: "Contacts utiles", sub: `${contacts.length} contacts`, color: "text-green-700 bg-green-50" },
-              { href: "/secteurs", icon: MapPin, label: "Secteurs", sub: `${secteurs.length} secteurs`, color: "text-amber-700 bg-amber-50" },
-              { href: "/mnemoniques", icon: AlignLeft, label: "Mnémotechniques", sub: `${mnemoniques.length} acronymes`, color: "text-purple-700 bg-purple-50" },
-            ].map(({ href, icon: Icon, label, sub, color }) => (
+              { href: "/fiches", icon: FileText, label: "Fiches réflexes", sub: `${fiches.length} fiches`, color: "text-blue-700 bg-blue-50", mobileOnly: false },
+              { href: "/contacts", icon: Phone, label: "Contacts utiles", sub: `${contacts.length} contacts`, color: "text-green-700 bg-green-50", mobileOnly: false },
+              { href: "/secteurs", icon: MapPin, label: "Secteurs", sub: `${secteurs.length} secteurs`, color: "text-amber-700 bg-amber-50", mobileOnly: false },
+              { href: "/main-courante", icon: BookMarked, label: "Mains courantes", sub: `${mainCourantesCount} entrées`, color: "text-rose-700 bg-rose-50", mobileOnly: true },
+              { href: "/liens-utiles", icon: Link2, label: "Liens utiles", sub: `${liens.length} liens`, color: "text-teal-700 bg-teal-50", mobileOnly: true },
+            ].map(({ href, icon: Icon, label, sub, color, mobileOnly }) => (
               <Link
                 key={href}
                 href={href}
-                className="card p-4 hover:shadow-md transition-shadow active:scale-95"
+                className={`card p-4 hover:shadow-md transition-shadow active:scale-95${mobileOnly ? " lg:hidden" : ""}`}
               >
                 <div className={`w-10 h-10 rounded-xl ${color} flex items-center justify-center mb-3`}>
                   <Icon size={20} />
@@ -137,39 +140,20 @@ export default async function Home() {
           </p>
         </div>
 
-        {/* Main courante */}
+        {/* Mnémotechniques */}
         <Link
-          href="/main-courante"
+          href="/mnemoniques"
           className="flex items-center justify-between px-4 py-3.5 bg-white border border-slate-200 rounded-xl hover:border-blue-300 hover:shadow-sm transition-all group"
         >
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-700 flex items-center justify-center flex-shrink-0">
-              <BookOpen size={18} />
+            <div className="w-9 h-9 rounded-xl bg-purple-50 text-purple-700 flex items-center justify-center flex-shrink-0">
+              <AlignLeft size={18} />
             </div>
             <div>
               <p className="font-semibold text-sm text-slate-800 group-hover:text-blue-800 transition-colors">
-                Main courante
+                Mnémotechniques
               </p>
-              <p className="text-xs text-slate-500">Mémoire collective — bonnes pratiques et points de vigilance</p>
-            </div>
-          </div>
-          <ChevronRight size={16} className="text-slate-300 group-hover:text-blue-400 transition-colors flex-shrink-0" />
-        </Link>
-
-        {/* Liens utiles */}
-        <Link
-          href="/liens-utiles"
-          className="flex items-center justify-between px-4 py-3.5 bg-white border border-slate-200 rounded-xl hover:border-blue-300 hover:shadow-sm transition-all group"
-        >
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-blue-50 text-blue-700 flex items-center justify-center flex-shrink-0">
-              <Link2 size={18} />
-            </div>
-            <div>
-              <p className="font-semibold text-sm text-slate-800 group-hover:text-blue-800 transition-colors">
-                Liens utiles
-              </p>
-              <p className="text-xs text-slate-500">Portails, outils et documentation de référence</p>
+              <p className="text-xs text-slate-500">{mnemoniques.length} acronymes et moyens mnémotechniques</p>
             </div>
           </div>
           <ChevronRight size={16} className="text-slate-300 group-hover:text-blue-400 transition-colors flex-shrink-0" />

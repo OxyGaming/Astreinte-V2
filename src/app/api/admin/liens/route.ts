@@ -19,6 +19,7 @@ export async function POST(req: NextRequest) {
   const body = await req.json();
   const libelle = typeof body.libelle === "string" ? body.libelle.trim() : "";
   const url = typeof body.url === "string" ? body.url.trim() : "";
+  const categorieId = typeof body.categorieId === "string" && body.categorieId ? body.categorieId : null;
 
   if (!libelle) {
     return NextResponse.json({ error: "Le libellé est obligatoire" }, { status: 400 });
@@ -28,6 +29,6 @@ export async function POST(req: NextRequest) {
   }
 
   const ordre = await prisma.lien.count();
-  const lien = await prisma.lien.create({ data: { libelle, url, ordre } });
+  const lien = await prisma.lien.create({ data: { libelle, url, ordre, categorieId } });
   return NextResponse.json(lien, { status: 201 });
 }

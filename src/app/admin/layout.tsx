@@ -42,7 +42,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
     { href: "/admin/mnemoniques", label: "Mnémoniques", icon: BookOpen },
     { href: "/admin/abreviations", label: "Abréviations", icon: AlignLeft },
     { href: "/admin/liens", label: "Liens utiles", icon: Link2 },
-    { href: "/admin/main-courante", label: "Main courante", icon: BookMarked, badge: pendingMainCourantes },
+    { href: "/admin/main-courante", label: "Mains courantes", icon: BookMarked, badge: pendingMainCourantes },
     { href: "/admin/users", label: "Utilisateurs", icon: UserCog },
     { href: "/admin/registrations", label: "Inscriptions", icon: ClipboardList, badge: pendingRegistrations },
     { href: "/admin/import", label: "Import de données", icon: Upload },

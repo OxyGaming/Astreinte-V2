@@ -298,12 +298,25 @@ export type JournalEntry = JournalActionEntry | JournalCommentEntry;
 
 // ─── Liens utiles ──────────────────────────────────────────────────────────────
 
+/** Thématique (catégorie) de la page « Liens utiles » — porte une icône et une couleur. */
+export interface LienCategorie {
+  id: string;
+  nom: string;
+  /** Clé d'icône Lucide (cf. src/lib/lien-ui.ts). */
+  icon: string;
+  /** Clé de couleur d'accent (cf. src/lib/lien-ui.ts). */
+  couleur: string;
+  ordre: number;
+}
+
 /** Entrée de la collection centrale de liens (référentiel). */
 export interface Lien {
   id: string;
   libelle: string;
   url: string;
   ordre: number;
+  /** Thématique de rattachement (page Liens utiles). */
+  categorieId?: string;
 }
 
 /**

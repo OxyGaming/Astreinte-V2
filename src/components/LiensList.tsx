@@ -31,7 +31,6 @@ export default function LiensList({ liens }: { liens: ResolvedLien[] }) {
               <p className="text-sm font-semibold text-slate-800 group-hover:text-blue-800 transition-colors">
                 {lien.libelle}
               </p>
-              <p className="text-xs text-slate-400 truncate">{lien.url}</p>
             </div>
             <ExternalLink
               size={16}
