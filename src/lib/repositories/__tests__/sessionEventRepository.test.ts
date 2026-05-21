@@ -40,7 +40,7 @@ import {
 
 // ─── Typage des mocks ─────────────────────────────────────────────────────────
 
-const m = prisma as {
+const m = prisma as unknown as {
   sessionProcedureEvent:        { findMany: MockInstance };
   sessionProcedureEventArchive: { findMany: MockInstance };
   sessionProcedure:             { findUnique: MockInstance };

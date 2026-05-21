@@ -204,7 +204,8 @@ export default function FicheSessionView({
       // 2) Drain des ops dépendantes (action, comment) avec l'id courant
       for (const op of ops) {
         if (op.id === undefined) continue;
-        if (op.kind === "session-create") continue; // déjà traité ci-dessus
+        // session-create déjà traité ci-dessus ; seules action/comment se drainent ici.
+        if (op.kind !== "action" && op.kind !== "comment") continue;
         try {
           const url = op.kind === "action"
             ? `/api/sessions/${currentSessionId}/actions`

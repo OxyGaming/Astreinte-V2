@@ -18,7 +18,7 @@ export async function POST(req: NextRequest, { params }: Params) {
 
   const { slug } = await params;
 
-  let body: { posteId?: string } = {};
+  let body: { posteId?: string; agentNom?: string; clientOpId?: string } = {};
   try {
     body = await req.json();
   } catch {
@@ -27,6 +27,16 @@ export async function POST(req: NextRequest, { params }: Params) {
 
   if (!body.posteId) {
     return NextResponse.json({ error: "posteId requis" }, { status: 400 });
+  }
+
+  // Idempotence : une session déjà créée pour ce clientOpId est renvoyée telle
+  // quelle (rejeu d'un drain hors ligne après un ack perdu).
+  if (body.clientOpId) {
+    const existing = await prisma.sessionProcedure.findUnique({
+      where: { clientOpId: body.clientOpId },
+      select: { id: true },
+    });
+    if (existing) return NextResponse.json({ sessionId: existing.id }, { status: 200 });
   }
 
   // Charger la procédure
@@ -63,38 +73,55 @@ export async function POST(req: NextRequest, { params }: Params) {
   const actorNom = `${user.prenom} ${user.nom}`.trim() || user.username;
 
   // Création session + événement session_started dans la même transaction
-  const session = await prisma.$transaction(async (tx) => {
-    const created = await tx.sessionProcedure.create({
-      data: {
-        procedureId:       proc.id,
-        procedureVersion:  proc.version,
-        procedureSnapshot: JSON.stringify(snapshot),
-        posteId:           body.posteId!,
-        posteSlug:         poste.slug,
-        agentNom:          actorNom,   // nom de l'utilisateur connecté
-        statut:            "en_cours",
-        etapeIndex:        0,
-        etat:              JSON.stringify(etatInitial),
-      },
+  try {
+    const session = await prisma.$transaction(async (tx) => {
+      const created = await tx.sessionProcedure.create({
+        data: {
+          procedureId:       proc.id,
+          procedureVersion:  proc.version,
+          procedureSnapshot: JSON.stringify(snapshot),
+          posteId:           body.posteId!,
+          posteSlug:         poste.slug,
+          agentNom:          actorNom,   // nom de l'utilisateur connecté
+          statut:            "en_cours",
+          etapeIndex:        0,
+          etat:              JSON.stringify(etatInitial),
+          clientOpId:        body.clientOpId ?? null,
+        },
+      });
+
+      await tx.sessionProcedureEvent.create({
+        data: {
+          sessionId: created.id,
+          sequence:  1,   // premier événement — pas besoin de calculer MAX
+          type:      "session_started",
+          payload:   JSON.stringify({
+            procedureId:      proc.id,
+            procedureVersion: proc.version,
+            posteSlug:        poste.slug,
+            agentNom:         actorNom,
+          }),
+          actorNom,
+        },
+      });
+
+      return created;
     });
 
-    await tx.sessionProcedureEvent.create({
-      data: {
-        sessionId: created.id,
-        sequence:  1,   // premier événement — pas besoin de calculer MAX
-        type:      "session_started",
-        payload:   JSON.stringify({
-          procedureId:      proc.id,
-          procedureVersion: proc.version,
-          posteSlug:        poste.slug,
-          agentNom:         actorNom,
-        }),
-        actorNom,
-      },
-    });
-
-    return created;
-  });
-
-  return NextResponse.json({ sessionId: session.id }, { status: 201 });
+    return NextResponse.json({ sessionId: session.id }, { status: 201 });
+  } catch (err) {
+    // Race : un drain concurrent a inséré la même clientOpId — on relit et renvoie.
+    if (
+      body.clientOpId &&
+      typeof err === "object" && err !== null && "code" in err &&
+      (err as { code: unknown }).code === "P2002"
+    ) {
+      const existing = await prisma.sessionProcedure.findUnique({
+        where: { clientOpId: body.clientOpId },
+        select: { id: true },
+      });
+      if (existing) return NextResponse.json({ sessionId: existing.id }, { status: 200 });
+    }
+    throw err;
+  }
 }

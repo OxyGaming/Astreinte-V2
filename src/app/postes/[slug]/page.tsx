@@ -10,7 +10,6 @@ import {
   MapPin,
   Clock,
   Train,
-  Phone,
   AlertTriangle,
   Eye,
   BookOpen,
@@ -27,6 +26,7 @@ import {
 } from "lucide-react";
 import PhoneButton from "@/components/PhoneButton";
 import LiensList from "@/components/LiensList";
+import PosteAnnuaire from "./PosteAnnuaire";
 import { formatFileSize, formatDocumentDate } from "@/lib/documents";
 
 const TYPE_PROCEDURE_META: Record<string, { label: string; sublabel: string; icon: React.ElementType; bg: string; iconColor: string }> = {
@@ -181,67 +181,7 @@ export default async function PosteDetailPage({
       )}
 
       {/* Annuaire */}
-      <section>
-        <h2 className="flex items-center gap-2 text-base font-bold text-slate-800 mb-3">
-          <Phone size={18} className="text-blue-700" />
-          Annuaire
-        </h2>
-        <div className="space-y-3">
-          {annuaire.map((section, si) => (
-            <div key={section.titre || `section-${si}`} className="bg-white rounded-xl border border-slate-200 overflow-hidden">
-              {section.titre && (
-                <div className="px-4 py-2.5 bg-slate-50 border-b border-slate-200">
-                  <h3 className="text-xs font-semibold text-slate-600 uppercase tracking-wide">
-                    {section.titre}
-                  </h3>
-                </div>
-              )}
-              <div className="divide-y divide-slate-100">
-                {section.contacts.map((contact, ci) => (
-                  <div key={`${contact.nom}-${ci}`} className="px-4 py-3 gap-3">
-                    {/* Contact introuvable */}
-                    {contact.orphan ? (
-                      <div className="flex items-center gap-2 text-amber-700">
-                        <AlertTriangle size={14} className="flex-shrink-0" />
-                        <div className="min-w-0">
-                          <p className="text-sm font-medium truncate">{contact.nom}</p>
-                          <p className="text-xs text-amber-600 mt-0.5">Contact introuvable dans le référentiel</p>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0 flex-1">
-                          <p className="text-sm font-medium text-slate-900 truncate">{contact.nom}</p>
-                          {contact.role && (
-                            <p className="text-xs text-slate-500">{contact.role}</p>
-                          )}
-                          {contact.disponibilite && (
-                            <p className="text-xs text-green-700 font-medium mt-0.5">{contact.disponibilite}</p>
-                          )}
-                          {contact.note && (
-                            <p className="text-xs text-amber-600 mt-0.5">{contact.note}</p>
-                          )}
-                        </div>
-                        <div className="flex-shrink-0 flex flex-col items-end gap-1">
-                          {contact.telephone && !contact.telephone.includes("X") && (
-                            <PhoneButton number={contact.telephone} />
-                          )}
-                          {contact.telephone?.includes("X") && (
-                            <span className="text-sm text-slate-400 font-mono">{contact.telephone}</span>
-                          )}
-                          {contact.telephoneAlt && !contact.telephoneAlt.includes("X") && (
-                            <PhoneButton number={contact.telephoneAlt} size="sm" />
-                          )}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
+      <PosteAnnuaire annuaire={annuaire} />
 
       {/* Circuits de voie */}
       <section>

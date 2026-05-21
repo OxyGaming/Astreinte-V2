@@ -1,10 +1,15 @@
 /**
  * GET /api/postes/[slug]/procedures?type=cessation
  * Retourne le poste (id, nom, slug) et ses procédures associées, filtrées par type.
+ *
+ * Les procédures sont renvoyées complètes (étapes incluses) : c'est le snapshot
+ * nécessaire pour démarrer une session — y compris hors ligne, où le client
+ * construit la session localement à partir de cette réponse mise en cache.
  */
 import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/user-auth";
 import { prisma } from "@/lib/prisma";
+import type { ProcedureMetier, EtapeMetier } from "@/lib/procedure/types";
 
 type Params = { params: Promise<{ slug: string }> };
 
@@ -32,6 +37,9 @@ export async function GET(req: NextRequest, { params }: Params) {
               description: true,
               version: true,
               typeProcedure: true,
+              etapes: true,
+              createdAt: true,
+              updatedAt: true,
             },
           },
         },
@@ -41,7 +49,17 @@ export async function GET(req: NextRequest, { params }: Params) {
 
   if (!poste) return NextResponse.json({ error: "Poste introuvable" }, { status: 404 });
 
-  let procedures = poste.proceduresMetier.map((pp) => pp.procedure);
+  let procedures: ProcedureMetier[] = poste.proceduresMetier.map((pp) => ({
+    id: pp.procedure.id,
+    slug: pp.procedure.slug,
+    titre: pp.procedure.titre,
+    typeProcedure: pp.procedure.typeProcedure as ProcedureMetier["typeProcedure"],
+    description: pp.procedure.description ?? undefined,
+    version: pp.procedure.version,
+    etapes: JSON.parse(pp.procedure.etapes) as EtapeMetier[],
+    createdAt: pp.procedure.createdAt.toISOString(),
+    updatedAt: pp.procedure.updatedAt.toISOString(),
+  }));
   if (type) {
     procedures = procedures.filter((p) => p.typeProcedure === type);
   }

@@ -77,7 +77,7 @@ function buildEvent(overrides: Partial<{ id: string; sequence: number }> = {}) {
 }
 
 // Accès typé aux mocks (les types vitest ne sont pas injectés automatiquement).
-const m = prisma as {
+const m = prisma as unknown as {
   sessionProcedure: {
     findUnique: MockInstance;
     update:     MockInstance;

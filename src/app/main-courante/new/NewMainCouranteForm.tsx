@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Send, CheckCircle, Info } from "lucide-react";
+import { Send, CheckCircle, Info, WifiOff } from "lucide-react";
 import type { Fiche } from "@/lib/types";
+import { enqueue } from "@/lib/idb-offline";
 
 interface Props {
   fiches: Fiche[];
@@ -19,6 +20,21 @@ export default function NewMainCouranteForm({ fiches }: Props) {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
+  const [offlineSaved, setOfflineSaved] = useState(false);
+  const [isOffline, setIsOffline] = useState(false);
+
+  // État réseau — initialisé à false (= rendu SSR) pour éviter l'erreur d'hydration.
+  useEffect(() => {
+    setIsOffline(!navigator.onLine);
+    const on = () => setIsOffline(false);
+    const off = () => setIsOffline(true);
+    window.addEventListener("online", on);
+    window.addEventListener("offline", off);
+    return () => {
+      window.removeEventListener("online", on);
+      window.removeEventListener("offline", off);
+    };
+  }, []);
 
   const reset = () => {
     setNature("");
@@ -33,23 +49,53 @@ export default function NewMainCouranteForm({ fiches }: Props) {
     if (!description.trim()) return;
     setSubmitting(true);
     setError("");
+
+    // clientOpId stable : réutilisé pour le POST direct ET un éventuel repli
+    // hors ligne, afin que le serveur déduplique si le POST avait abouti.
+    const clientOpId = crypto.randomUUID();
+    const payload = {
+      nature: nature.trim() || undefined,
+      libelle: libelle.trim() || undefined,
+      description: description.trim(),
+      solution: solution.trim() || undefined,
+      ficheSlug: ficheSlug || undefined,
+    };
+
+    // Met la contribution en file d'attente locale (rejeu au retour réseau).
+    const saveOffline = async () => {
+      await enqueue({
+        kind: "main-courante-create",
+        payload,
+        clientOpId,
+        createdAt: Date.now(),
+        attempts: 0,
+      });
+      setOfflineSaved(true);
+      setSuccess(true);
+    };
+
     try {
+      if (!navigator.onLine) {
+        await saveOffline();
+        return;
+      }
       const res = await fetch("/api/main-courante", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          nature: nature.trim() || undefined,
-          libelle: libelle.trim() || undefined,
-          description: description.trim(),
-          solution: solution.trim() || undefined,
-          ficheSlug: ficheSlug || undefined,
-        }),
+        body: JSON.stringify({ ...payload, clientOpId }),
       });
       if (res.ok) {
         setSuccess(true);
       } else {
         const data = await res.json();
         setError(data.error ?? "Une erreur est survenue.");
+      }
+    } catch {
+      // Perte de réseau pendant l'envoi → bascule en file d'attente locale.
+      try {
+        await saveOffline();
+      } catch {
+        setError("Impossible d'enregistrer la contribution. Réessayez.");
       }
     } finally {
       setSubmitting(false);
@@ -58,16 +104,27 @@ export default function NewMainCouranteForm({ fiches }: Props) {
 
   if (success) {
     return (
-      <div className="bg-green-50 border border-green-200 rounded-xl p-6 text-center space-y-3">
-        <CheckCircle size={32} className="mx-auto text-green-500" />
-        <h2 className="font-semibold text-green-800">Contribution envoyée !</h2>
-        <p className="text-sm text-green-700">
-          Votre contribution a été transmise aux administrateurs pour validation.
-          Le titre, les avis sécurité et production seront ajoutés par eux avant publication.
+      <div
+        className={`border rounded-xl p-6 text-center space-y-3 ${
+          offlineSaved ? "bg-amber-50 border-amber-200" : "bg-green-50 border-green-200"
+        }`}
+      >
+        {offlineSaved ? (
+          <WifiOff size={32} className="mx-auto text-amber-500" />
+        ) : (
+          <CheckCircle size={32} className="mx-auto text-green-500" />
+        )}
+        <h2 className={`font-semibold ${offlineSaved ? "text-amber-800" : "text-green-800"}`}>
+          {offlineSaved ? "Contribution enregistrée hors ligne" : "Contribution envoyée !"}
+        </h2>
+        <p className={`text-sm ${offlineSaved ? "text-amber-700" : "text-green-700"}`}>
+          {offlineSaved
+            ? "Votre contribution est enregistrée sur cet appareil. Elle sera transmise automatiquement aux administrateurs dès le retour de la connexion."
+            : "Votre contribution a été transmise aux administrateurs pour validation. Le titre, les avis sécurité et production seront ajoutés par eux avant publication."}
         </p>
         <div className="flex gap-3 justify-center pt-2">
           <button
-            onClick={() => { setSuccess(false); reset(); }}
+            onClick={() => { setSuccess(false); setOfflineSaved(false); reset(); }}
             className="text-sm text-blue-700 font-medium hover:underline"
           >
             Nouvelle contribution
@@ -94,6 +151,17 @@ export default function NewMainCouranteForm({ fiches }: Props) {
           Un administrateur ajoutera ensuite le titre et, si nécessaire, les avis sécurité et production avant publication.
         </p>
       </div>
+
+      {/* Bandeau hors ligne */}
+      {isOffline && (
+        <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 flex items-start gap-2 text-xs text-amber-800">
+          <WifiOff size={14} className="mt-0.5 flex-shrink-0" />
+          <p>
+            Vous êtes hors ligne. Votre contribution sera enregistrée sur cet appareil
+            et envoyée automatiquement au retour de la connexion.
+          </p>
+        </div>
+      )}
 
       {/* Nature + Libellé (sur une ligne sur desktop) */}
       <div className="grid grid-cols-1 sm:grid-cols-[140px_1fr] gap-3">
@@ -190,7 +258,11 @@ export default function NewMainCouranteForm({ fiches }: Props) {
         className="w-full flex items-center justify-center gap-2 bg-blue-800 hover:bg-blue-700 disabled:bg-blue-300 text-white font-semibold py-3 rounded-xl transition-colors text-sm"
       >
         <Send size={14} />
-        {submitting ? "Envoi en cours…" : "Soumettre ma contribution"}
+        {submitting
+          ? "Envoi en cours…"
+          : isOffline
+          ? "Enregistrer hors ligne"
+          : "Soumettre ma contribution"}
       </button>
 
       <p className="text-xs text-slate-400 text-center">

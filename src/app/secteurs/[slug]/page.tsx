@@ -2,8 +2,8 @@ export const dynamic = "force-dynamic";
 
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, MapPin, Navigation, AlertTriangle, ChevronRight, Phone, BookOpen } from "lucide-react";
-import { getSecteurBySlug, resolveLiens } from "@/lib/db";
+import { ArrowLeft, MapPin, Navigation, AlertTriangle, ChevronRight, Phone, BookOpen, Building2 } from "lucide-react";
+import { getSecteurBySlug, getPostesBySecteurSlug, resolveLiens } from "@/lib/db";
 import Accordion from "@/components/Accordion";
 import LiensList from "@/components/LiensList";
 
@@ -15,7 +15,10 @@ export default async function SecteurDetailPage({ params }: Props) {
   const { slug } = await params;
   const secteur = await getSecteurBySlug(slug);
   if (!secteur) notFound();
-  const liensUtiles = await resolveLiens(secteur.liens ?? []);
+  const [liensUtiles, postes] = await Promise.all([
+    resolveLiens(secteur.liens ?? []),
+    getPostesBySecteurSlug(slug),
+  ]);
 
   return (
     <div className="max-w-2xl mx-auto lg:max-w-3xl">
@@ -37,6 +40,33 @@ export default async function SecteurDetailPage({ params }: Props) {
       </div>
 
       <div className="px-4 py-5 space-y-5 lg:px-8">
+
+        {/* Postes associés */}
+        {postes.length > 0 && (
+          <section>
+            <h2 className="text-xs font-bold text-slate-500 uppercase tracking-wide mb-3">
+              Postes associés
+            </h2>
+            <div className="card divide-y divide-slate-100">
+              {postes.map((p) => (
+                <Link
+                  key={p.id}
+                  href={`/postes/${p.slug}`}
+                  className="flex items-center gap-3 px-4 py-3.5 hover:bg-slate-50 active:bg-slate-100 transition-colors"
+                >
+                  <div className="p-2 bg-blue-50 rounded-lg flex-shrink-0">
+                    <Building2 size={18} className="text-blue-700" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-slate-800 text-sm">{p.nom}</p>
+                    <p className="text-xs text-slate-500 mt-0.5">{p.type_poste}</p>
+                  </div>
+                  <ChevronRight size={16} className="text-slate-300 flex-shrink-0" />
+                </Link>
+              ))}
+            </div>
+          </section>
+        )}
 
         {/* Points d'accès */}
         {secteur.points_acces.length > 0 && (

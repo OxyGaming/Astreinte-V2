@@ -1,42 +1,29 @@
 /**
  * /procedures/session/[id]
- * Page du wizard : charge tous les contacts en une seule passe, puis passe la main
- * au composant client ProcedureWizard.
+ * Coquille de la page wizard. Charge les données globales (contacts + liens),
+ * identiques pour toute session, puis passe la main au composant client.
  *
- * Stratégie de chargement :
- * - On charge TOUS les contacts une seule fois (getAllContacts).
- * - On en dérive :
- *   • contactsIndex  : Record<string, string> id→telephone  (pour ActionConfirmation)
- *   • allContacts    : Contact[]                            (pour ActionContactRecherche)
- * Cela supprime la fragilité liée au scan du snapshot (contactId absent si snapshot
- * capturé avant ajout du contact, ou snapshot corrompu).
+ * IMPORTANT — compatibilité hors ligne :
+ * L'identifiant de session n'est PAS lu ici (params) mais côté client, dans
+ * ProcedureWizard via usePathname(). La sortie SSR est ainsi rigoureusement
+ * identique pour toute session : le Service Worker peut mettre en cache une
+ * coquille unique (/procedures/session/__shell__) et la servir pour n'importe
+ * quelle URL de session lorsqu'on est hors ligne (y compris une session
+ * démarrée hors ligne dont l'id n'a jamais existé côté serveur).
+ *
+ * L'existence de la session n'est donc PAS vérifiée côté serveur — c'est le
+ * wizard (useSession) qui résout la session, via l'API ou le cache IndexedDB.
  */
 
 export const dynamic = "force-dynamic";
-import { notFound } from "next/navigation";
-import { prisma } from "@/lib/prisma";
 import { getAllContacts, getAllLiens } from "@/lib/db";
 import ProcedureWizard from "@/components/procedure/ProcedureWizard";
 
-export default async function SessionPage({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
-  const { id } = await params;
-
-  // Vérifier que la session existe (lecture minimale)
-  const session = await prisma.sessionProcedure.findUnique({
-    where: { id },
-    select: { id: true, statut: true },
-  });
-
-  if (!session) notFound();
-
-  // Charger tous les contacts + la collection de liens
+export default async function SessionPage() {
+  // Contacts + collection de liens — données globales, indépendantes de la session.
   const [allContacts, liensCollection] = await Promise.all([getAllContacts(), getAllLiens()]);
 
-  // Construire l'index id→telephone pour enrichir ActionConfirmation
+  // Index id→telephone pour enrichir les actions de confirmation.
   const contactsIndex: Record<string, string> = {};
   for (const c of allContacts) {
     contactsIndex[c.id] = c.telephone;
@@ -45,7 +32,6 @@ export default async function SessionPage({
   return (
     <div className="max-w-2xl mx-auto px-4 py-6">
       <ProcedureWizard
-        sessionId={id}
         contactsIndex={contactsIndex}
         allContacts={allContacts}
         liensCollection={liensCollection}

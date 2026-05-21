@@ -1,12 +1,12 @@
 import { requireAdminSession } from "@/lib/admin-auth";
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
-import { FileText, Users, MapPin, BookOpen, AlignLeft, Plus, TrendingUp, Building2, MapPinned, ClipboardList, Link2, BookMarked } from "lucide-react";
+import { FileText, Users, MapPin, BookOpen, AlignLeft, Plus, TrendingUp, Building2, MapPinned, ClipboardList, Link2, BookMarked, UserCog } from "lucide-react";
 
 export default async function AdminDashboard() {
   await requireAdminSession();
 
-  const [fichesCount, contactsCount, secteursCount, postesCount, accesCount, mnemoniquesCount, abreviationsCount, proceduresCount, liensCount, mainCourantesCount, mainCourantesPending] =
+  const [fichesCount, contactsCount, secteursCount, postesCount, accesCount, mnemoniquesCount, abreviationsCount, proceduresCount, liensCount, mainCourantesCount, mainCourantesPending, usersCount] =
     await Promise.all([
       prisma.fiche.count(),
       prisma.contact.count(),
@@ -19,6 +19,7 @@ export default async function AdminDashboard() {
       prisma.lien.count(),
       prisma.mainCourante.count(),
       prisma.mainCourante.count({ where: { status: "pending" } }),
+      prisma.user.count(),
     ]);
 
   const recentFiches = await prisma.fiche.findMany({
@@ -43,6 +44,7 @@ export default async function AdminDashboard() {
     { label: "Procédures guidées", count: proceduresCount, icon: ClipboardList, href: "/admin/procedures", color: "bg-indigo-500" },
     { label: "Liens utiles", count: liensCount, icon: Link2, href: "/admin/liens", color: "bg-teal-500" },
     { label: "Mains courantes", count: mainCourantesCount, icon: BookMarked, href: "/admin/main-courante", color: "bg-rose-500" },
+    { label: "Utilisateurs", count: usersCount, icon: UserCog, href: "/admin/users", color: "bg-violet-500" },
   ];
 
   const quickActions = [

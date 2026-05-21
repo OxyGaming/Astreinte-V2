@@ -31,7 +31,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Corps JSON invalide" }, { status: 400 });
   }
 
-  const { nature, libelle, description, solution, ficheSlug } = body as Record<string, string>;
+  const { nature, libelle, description, solution, ficheSlug, clientOpId } = body as Record<string, string>;
 
   if (!description?.trim()) {
     return NextResponse.json({ error: "La description est requise" }, { status: 400 });
@@ -56,6 +56,7 @@ export async function POST(req: NextRequest) {
     libelle: libelle?.trim() || undefined,
     solution: solution?.trim() || undefined,
     ficheSlug: ficheSlug?.trim() || undefined,
+    clientOpId: clientOpId?.trim() || undefined,
   });
   return NextResponse.json({ entry }, { status: 201 });
 }

@@ -5,6 +5,7 @@ import SideNav from "@/components/SideNav";
 import OfflineIndicator from "@/components/OfflineIndicator";
 import PendingOpsBadge from "@/components/PendingOpsBadge";
 import ServiceWorkerRegister from "@/components/ServiceWorkerRegister";
+import OfflineSyncManager from "@/components/OfflineSyncManager";
 
 export const metadata: Metadata = {
   title: "Astreinte",
@@ -40,6 +41,7 @@ export default function RootLayout({
     <html lang="fr">
       <body className="bg-slate-50">
         <ServiceWorkerRegister />
+        <OfflineSyncManager />
         <SideNav />
         {/* Wrapper décalé de la sidebar, flex pour que OfflineIndicator pousse le contenu vers le bas */}
         <div className="lg:ml-64 flex flex-col min-h-screen">

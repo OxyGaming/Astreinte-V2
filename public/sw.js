@@ -6,8 +6,11 @@
 //   - RSC payloads / autres fetch → réseau uniquement (pas de mise en cache pour éviter les conflits)
 //   - Message PRECACHE_CRITICAL → précache toutes les pages critiques en arrière-plan
 
-const CACHE_NAME = 'astreinte-v2';
+const CACHE_NAME = 'astreinte-v3';
 const OFFLINE_URL = '/offline.html';
+// Coquille canonique des pages de session de procédure : servie hors ligne pour
+// toute URL /procedures/session/* (la sortie SSR est identique quel que soit l'id).
+const PROC_SHELL_URL = '/procedures/session/__shell__';
 
 // ─── Installation ─────────────────────────────────────────────────────────────
 
@@ -55,6 +58,12 @@ self.addEventListener('fetch', (event) => {
   // Assets statiques Next.js (versionnés par hash) → cache-first
   if (url.pathname.startsWith('/_next/static/')) {
     event.respondWith(cacheFirst(request));
+    return;
+  }
+
+  // Pages de session de procédure → coquille canonique en fallback hors ligne
+  if (request.mode === 'navigate' && url.pathname.startsWith('/procedures/session/')) {
+    event.respondWith(networkFirstProcedureSession(request));
     return;
   }
 
@@ -116,6 +125,39 @@ async function networkFirstNavigation(request) {
   }
 }
 
+/**
+ * Pages /procedures/session/* — network-first avec coquille canonique en fallback.
+ *
+ * La sortie SSR de ces pages est identique quel que soit l'id (l'id est lu côté
+ * client). On peut donc servir une coquille unique en cache pour n'importe quelle
+ * URL de session hors ligne — y compris une session démarrée hors ligne dont
+ * l'id n'a jamais existé côté serveur.
+ */
+async function networkFirstProcedureSession(request) {
+  try {
+    const response = await fetch(request);
+    if (response.ok) {
+      await putInCache(request, response.clone());
+      // Garder la coquille canonique à jour à chaque session réellement ouverte.
+      await putInCache(PROC_SHELL_URL, response.clone());
+    }
+    return response;
+  } catch {
+    // 1. Correspondance exacte (cette session précise a déjà été ouverte/précachée)
+    const exact = await caches.match(request);
+    if (exact) return exact;
+    // 2. Coquille canonique (sert n'importe quelle session hors ligne)
+    const shell = await caches.match(PROC_SHELL_URL);
+    if (shell) return shell;
+    // 3. Dernier recours
+    const offline = await caches.match(OFFLINE_URL);
+    return offline || new Response(
+      '<!DOCTYPE html><html lang="fr"><body><h1>Hors ligne</h1><p>Cette page n\'est pas disponible sans réseau.</p></body></html>',
+      { status: 503, headers: { 'Content-Type': 'text/html; charset=utf-8' } }
+    );
+  }
+}
+
 /** Network-first pour les API : fallback vers le cache, puis JSON d'erreur */
 async function networkFirstApi(request) {
   try {
@@ -153,16 +195,25 @@ async function putInCache(request, response) {
  * handler fetch (spec SW) — ils vont directement au réseau avec les cookies de session.
  */
 async function precacheCriticalPages() {
-  // 1. Récupérer la liste des slugs dynamiques depuis l'API
+  // 1. Inventaire des pages dynamiques depuis l'API
   const slugsRes = await fetch('/api/offline/slugs');
   if (!slugsRes.ok) throw new Error(`Slugs API error: ${slugsRes.status}`);
-  const { fiches, postes, secteurs } = await slugsRes.json();
+  const data = await slugsRes.json();
+  const fiches              = data.fiches              || [];
+  const postes              = data.postes              || [];
+  const secteurs            = data.secteurs            || [];
+  const contacts            = data.contacts            || [];
+  const sessions            = data.sessions            || [];
+  const mainCourantes       = data.mainCourantes       || [];
+  const procedureSessions   = data.procedureSessions   || [];
+  const posteProcedureTypes = data.posteProcedureTypes || {};
+  const documents           = data.documents           || [];
 
-  // 2. Construire la liste complète des URLs à précacher
-  // Note : /sessions et /main-courante sont user-spécifiques. La réponse
-  // cachée reflète l'utilisateur courant — un changement d'utilisateur sur
-  // le même appareil verrait l'ancien cache jusqu'à un retour réseau.
-  const urls = [
+  // 2. Pages (navigations HTML).
+  // Note : les pages user-spécifiques (/sessions, /main-courante…) reflètent
+  // l'utilisateur courant — un changement d'utilisateur verrait l'ancien cache
+  // jusqu'au prochain retour réseau.
+  const pages = [
     '/',
     '/contacts',
     '/fiches',
@@ -171,13 +222,44 @@ async function precacheCriticalPages() {
     '/mnemoniques',
     '/sessions',
     '/main-courante',
+    '/main-courante/mes-soumissions',
     '/acces',
+    '/liens-utiles',
+    '/recherche',
+    '/mode-operatoire.html',
+    PROC_SHELL_URL,
     ...fiches.map(s => `/fiches/${s}`),
     ...postes.map(s => `/postes/${s}`),
     ...secteurs.map(s => `/secteurs/${s}`),
+    ...contacts.map(id => `/contacts/${id}`),
+    ...sessions.map(id => `/sessions/${id}`),
+    ...mainCourantes.map(id => `/main-courante/${id}`),
   ];
+  for (const slug of postes) {
+    pages.push(`/postes/${slug}/procedures`);
+    pages.push(`/postes/${slug}/cessation`);
+    for (const type of (posteProcedureTypes[slug] || [])) {
+      pages.push(`/postes/${slug}/procedures/${type}`);
+    }
+  }
 
-  // 3. Précacher chaque URL séquentiellement (évite de saturer le réseau)
+  // 3. Endpoints API consommés côté client (réponses JSON cachées).
+  const apis = [];
+  for (const slug of postes) {
+    apis.push(`/api/postes/${slug}/procedures`);
+    for (const type of (posteProcedureTypes[slug] || [])) {
+      apis.push(`/api/postes/${slug}/procedures?type=${type}`);
+    }
+  }
+  for (const id of procedureSessions) {
+    apis.push(`/api/procedures/sessions/${id}`);
+  }
+
+  // 4. Documents PDF de référence.
+  const docs = documents.map(id => `/api/documents/${id}/download`);
+
+  // 5. Précache séquentiel (évite de saturer le réseau ; les PDF peuvent être lourds).
+  const urls = [...pages, ...apis, ...docs];
   const cache = await caches.open(CACHE_NAME);
   let cached = 0;
   let failed = 0;
@@ -196,7 +278,7 @@ async function precacheCriticalPages() {
     }
   }
 
-  // 4. Notifier toutes les pages clientes du résultat
+  // 6. Notifier toutes les pages clientes du résultat
   broadcastToClients({
     type: 'PRECACHE_DONE',
     timestamp: Date.now(),

@@ -215,6 +215,8 @@ model SessionProcedure {
   completedAt       DateTime?
   eventsArchived    Boolean                 @default(false)
   eventsArchivedAt  DateTime?
+  /// Clé d'idempotence générée client-side. Voir FicheSession.clientOpId.
+  clientOpId        String?                 @unique
   poste             Poste                   @relation(fields: [posteId], references: [id])
   procedure         Procedure               @relation(fields: [procedureId], references: [id])
   events            SessionProcedureEvent[]
@@ -377,6 +379,8 @@ model MainCourante {
   updatedAt           DateTime  @updatedAt
   validatedAt         DateTime?
   validatedByUserId   String?
+  /// Clé d'idempotence générée client-side. Voir FicheSession.clientOpId.
+  clientOpId          String?   @unique
   auteur              User      @relation("MainCouranteAuteur", fields: [auteurId], references: [id])
   validatedBy         User?     @relation("MainCouranteValidatedBy", fields: [validatedByUserId], references: [id])
 

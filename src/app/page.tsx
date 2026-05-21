@@ -109,18 +109,18 @@ export default async function Home() {
           <h2 className="text-xs font-bold text-slate-500 uppercase tracking-wide mb-3">
             Modules
           </h2>
-          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
             {[
-              { href: "/fiches", icon: FileText, label: "Fiches réflexes", sub: `${fiches.length} fiches`, color: "text-blue-700 bg-blue-50", mobileOnly: false },
-              { href: "/contacts", icon: Phone, label: "Contacts utiles", sub: `${contacts.length} contacts`, color: "text-green-700 bg-green-50", mobileOnly: false },
-              { href: "/secteurs", icon: MapPin, label: "Secteurs", sub: `${secteurs.length} secteurs`, color: "text-amber-700 bg-amber-50", mobileOnly: false },
-              { href: "/main-courante", icon: BookMarked, label: "Mains courantes", sub: `${mainCourantesCount} entrées`, color: "text-rose-700 bg-rose-50", mobileOnly: true },
-              { href: "/liens-utiles", icon: Link2, label: "Liens utiles", sub: `${liens.length} liens`, color: "text-teal-700 bg-teal-50", mobileOnly: true },
-            ].map(({ href, icon: Icon, label, sub, color, mobileOnly }) => (
+              { href: "/fiches", icon: FileText, label: "Fiches réflexes", sub: `${fiches.length} fiches`, color: "text-blue-700 bg-blue-50" },
+              { href: "/contacts", icon: Phone, label: "Contacts utiles", sub: `${contacts.length} contacts`, color: "text-green-700 bg-green-50" },
+              { href: "/secteurs", icon: MapPin, label: "Secteurs", sub: `${secteurs.length} secteurs`, color: "text-amber-700 bg-amber-50" },
+              { href: "/main-courante", icon: BookMarked, label: "Mains courantes", sub: `${mainCourantesCount} entrées`, color: "text-rose-700 bg-rose-50" },
+              { href: "/liens-utiles", icon: Link2, label: "Liens utiles", sub: `${liens.length} liens`, color: "text-teal-700 bg-teal-50" },
+            ].map(({ href, icon: Icon, label, sub, color }) => (
               <Link
                 key={href}
                 href={href}
-                className={`card p-4 hover:shadow-md transition-shadow active:scale-95${mobileOnly ? " lg:hidden" : ""}`}
+                className="card p-4 hover:shadow-md transition-shadow active:scale-95"
               >
                 <div className={`w-10 h-10 rounded-xl ${color} flex items-center justify-center mb-3`}>
                   <Icon size={20} />

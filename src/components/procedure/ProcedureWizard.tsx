@@ -1,16 +1,16 @@
 "use client";
 
 import { useState, useCallback } from "react";
+import { usePathname } from "next/navigation";
 import { useSession } from "@/lib/procedure/hooks/useSession";
 import { etapesVisibles } from "@/lib/procedure/engine";
 import type { ValeurReponse } from "@/lib/procedure/types";
 import type { Contact, Lien } from "@/lib/types";
 import EtapeRenderer from "./EtapeRenderer";
 import ProcedureSummary from "./ProcedureSummary";
-import { CheckCircle2, Circle, Loader2 } from "lucide-react";
+import { CheckCircle2, Circle, Loader2, WifiOff, CloudUpload } from "lucide-react";
 
 interface Props {
-  sessionId: string;
   /** Map contactId → telephone (résolu côté serveur, enrichissement confirmation) */
   contactsIndex: Record<string, string>;
   /** Liste complète des contacts (pour les actions contact_recherche) */
@@ -19,8 +19,12 @@ interface Props {
   liensCollection?: Lien[];
 }
 
-export default function ProcedureWizard({ sessionId, contactsIndex, allContacts = [], liensCollection = [] }: Props) {
-  const { session, loading, error, repondre, avancer, abandonner, completer } =
+export default function ProcedureWizard({ contactsIndex, allContacts = [], liensCollection = [] }: Props) {
+  // L'id de session est lu depuis l'URL (et non des props serveur) : la coquille
+  // SSR reste identique pour toute session → mise en cache unique par le SW.
+  const pathname = usePathname();
+  const sessionId = pathname.split("/").filter(Boolean).pop() ?? "";
+  const { session, loading, error, isOffline, pendingCount, repondre, avancer, abandonner, completer } =
     useSession(sessionId);
   const [synthese, setSynthese] = useState<ReturnType<typeof completer> extends Promise<infer T> ? T : never>(null);
   const [completing, setCompleting] = useState(false);
@@ -113,6 +117,29 @@ export default function ProcedureWizard({ sessionId, contactsIndex, allContacts 
           <p className="text-blue-300 text-sm mt-1">Agent : {session.agentNom}</p>
         )}
       </div>
+
+      {/* Statut hors ligne / synchronisation */}
+      {(isOffline || pendingCount > 0) && (
+        <div
+          className={`flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-medium border ${
+            isOffline
+              ? "bg-amber-50 text-amber-800 border-amber-200"
+              : "bg-blue-50 text-blue-800 border-blue-200"
+          }`}
+        >
+          {isOffline ? <WifiOff size={13} className="flex-shrink-0" /> : <CloudUpload size={13} className="flex-shrink-0" />}
+          <span>
+            {isOffline
+              ? "Hors ligne — vos réponses sont enregistrées sur l'appareil"
+              : "Synchronisation en cours…"}
+          </span>
+          {pendingCount > 0 && (
+            <span className="ml-auto rounded-full bg-white/70 px-2 py-0.5 whitespace-nowrap">
+              {pendingCount} en attente
+            </span>
+          )}
+        </div>
+      )}
 
       {/* Stepper */}
       <div className="flex items-center gap-1 overflow-x-auto pb-1">

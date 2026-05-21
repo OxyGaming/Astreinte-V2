@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ArrowLeft, Link2, ExternalLink, Search } from "lucide-react";
 import { getLienIcon, getLienColor } from "@/lib/lien-ui";
 import type { Lien, LienCategorie } from "@/lib/types";
+import { matchesSearch } from "@/lib/search";
 
 interface CategorieHub extends LienCategorie {
   liens: Lien[];
@@ -17,7 +18,7 @@ interface Props {
 
 export default function LiensHubClient({ categories, autres }: Props) {
   const [q, setQ] = useState("");
-  const query = q.trim().toLowerCase();
+  const query = q.trim();
 
   const allSections = [
     ...categories.map((c) => ({ key: c.id, nom: c.nom, couleur: c.couleur, icon: c.icon, liens: c.liens })),
@@ -26,15 +27,19 @@ export default function LiensHubClient({ categories, autres }: Props) {
       : []),
   ];
 
+  // Filtrage insensible casse/accents : si la thématique correspond, tous ses
+  // liens sont conservés ; sinon on filtre les liens par libellé ou URL.
   const sections = allSections
-    .map((s) => ({
-      ...s,
-      liens: query
-        ? s.liens.filter(
-            (l) => l.libelle.toLowerCase().includes(query) || l.url.toLowerCase().includes(query)
-          )
-        : s.liens,
-    }))
+    .map((s) => {
+      if (!query) return s;
+      if (matchesSearch(s.nom, query)) return s;
+      return {
+        ...s,
+        liens: s.liens.filter(
+          (l) => matchesSearch(l.libelle, query) || matchesSearch(l.url, query)
+        ),
+      };
+    })
     .filter((s) => s.liens.length > 0);
 
   const total = allSections.reduce((n, s) => n + s.liens.length, 0);

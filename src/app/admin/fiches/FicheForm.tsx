@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Save, Trash2, AlertTriangle } from "lucide-react";
+import CheckboxSearchList from "@/components/admin/CheckboxSearchList";
 
 interface Contact { id: string; nom: string; categorie: string }
 interface Secteur { id: string; nom: string; ligne: string }
@@ -212,39 +213,20 @@ export default function FicheForm({ fiche, contacts, secteurs, mode }: Props) {
 
       {/* Relations */}
       <div className="grid grid-cols-2 gap-6">
-        {/* Contacts liés */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
-          <h2 className="font-semibold text-gray-800 text-sm mb-3">Contacts liés</h2>
-          <div className="space-y-1 max-h-64 overflow-y-auto">
-            {contacts.map((c) => (
-              <label key={c.id} className="flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-gray-50 cursor-pointer">
-                <input type="checkbox" checked={form.contactIds.includes(c.id)} onChange={() => toggleContact(c.id)}
-                  className="w-4 h-4 rounded border-gray-300 text-blue-600" />
-                <div className="min-w-0">
-                  <p className="text-sm font-medium text-gray-700 truncate">{c.nom}</p>
-                  <p className="text-xs text-gray-400 truncate">{c.categorie}</p>
-                </div>
-              </label>
-            ))}
-          </div>
-        </div>
-
-        {/* Secteurs liés */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
-          <h2 className="font-semibold text-gray-800 text-sm mb-3">Secteurs liés</h2>
-          <div className="space-y-1 max-h-64 overflow-y-auto">
-            {secteurs.map((s) => (
-              <label key={s.id} className="flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-gray-50 cursor-pointer">
-                <input type="checkbox" checked={form.secteurIds.includes(s.id)} onChange={() => toggleSecteur(s.id)}
-                  className="w-4 h-4 rounded border-gray-300 text-blue-600" />
-                <div className="min-w-0">
-                  <p className="text-sm font-medium text-gray-700 truncate">{s.nom}</p>
-                  <p className="text-xs text-gray-400">Ligne {s.ligne}</p>
-                </div>
-              </label>
-            ))}
-          </div>
-        </div>
+        <CheckboxSearchList
+          title="Contacts liés"
+          items={contacts.map((c) => ({ id: c.id, label: c.nom, sublabel: c.categorie }))}
+          selectedIds={form.contactIds}
+          onToggle={toggleContact}
+          placeholder="Rechercher un contact, une catégorie…"
+        />
+        <CheckboxSearchList
+          title="Secteurs liés"
+          items={secteurs.map((s) => ({ id: s.id, label: s.nom, sublabel: `Ligne ${s.ligne}` }))}
+          selectedIds={form.secteurIds}
+          onToggle={toggleSecteur}
+          placeholder="Rechercher un secteur, une ligne…"
+        />
       </div>
 
       {/* Actions */}

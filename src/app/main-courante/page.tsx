@@ -16,7 +16,9 @@ export default async function MainCourantePage({ searchParams }: Props) {
   if (!user) redirect("/login?from=/main-courante");
 
   const { q } = await searchParams;
-  const entries = await getValidatedMainCourantes(q);
+  // Toutes les entrées validées sont chargées ; le filtrage est instantané
+  // côté client (cf. MainCouranteList) — réactif et fonctionnel hors ligne.
+  const entries = await getValidatedMainCourantes();
 
   return (
     <div className="max-w-2xl mx-auto lg:max-w-3xl">

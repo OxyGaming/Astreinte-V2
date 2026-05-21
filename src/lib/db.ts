@@ -207,6 +207,12 @@ export async function getPosteBySlug(slug: string): Promise<Poste | null> {
   return row ? dbToPoste(row) : null;
 }
 
+/** Postes rattachés à un secteur donné (via la jointure poste ↔ secteur). */
+export async function getPostesBySecteurSlug(secteurSlug: string): Promise<Poste[]> {
+  const all = await getAllPostes();
+  return all.filter((p) => p.secteur_slugs.includes(secteurSlug));
+}
+
 function dbToPoste(row: {
   id: string; slug: string; nom: string; typePoste: string; lignes: string;
   adresse: string; horaires: string; electrification: string; systemeBlock: string;
@@ -657,21 +663,48 @@ export interface MainCouranteCreateInput {
   libelle?: string;
   solution?: string;
   ficheSlug?: string;
+  /** Clé d'idempotence pour le rejeu d'une contribution soumise hors ligne. */
+  clientOpId?: string;
 }
 
+/**
+ * Crée une contribution, ou renvoie celle déjà créée pour ce clientOpId.
+ * Garantit l'idempotence du rejeu d'une op `main-courante-create` après un ack
+ * perdu (cf. createFicheSession pour le même schéma).
+ */
 export async function createMainCourante(input: MainCouranteCreateInput): Promise<MainCourante> {
-  const row = await prisma.mainCourante.create({
-    data: {
-      description: input.description,
-      auteurId: input.auteurId,
-      nature: input.nature ?? null,
-      libelle: input.libelle ?? null,
-      solution: input.solution ?? null,
-      ficheSlug: input.ficheSlug ?? null,
-    },
-    include: MC_INCLUDE,
-  });
-  return dbToMainCourante(row);
+  if (input.clientOpId) {
+    const existing = await prisma.mainCourante.findUnique({
+      where: { clientOpId: input.clientOpId },
+      include: MC_INCLUDE,
+    });
+    if (existing) return dbToMainCourante(existing);
+  }
+  try {
+    const row = await prisma.mainCourante.create({
+      data: {
+        description: input.description,
+        auteurId: input.auteurId,
+        nature: input.nature ?? null,
+        libelle: input.libelle ?? null,
+        solution: input.solution ?? null,
+        ficheSlug: input.ficheSlug ?? null,
+        clientOpId: input.clientOpId ?? null,
+      },
+      include: MC_INCLUDE,
+    });
+    return dbToMainCourante(row);
+  } catch (err) {
+    // Race : un drain concurrent a inséré la même clientOpId — on relit et renvoie.
+    if (input.clientOpId && isUniqueConstraintError(err)) {
+      const existing = await prisma.mainCourante.findUnique({
+        where: { clientOpId: input.clientOpId },
+        include: MC_INCLUDE,
+      });
+      if (existing) return dbToMainCourante(existing);
+    }
+    throw err;
+  }
 }
 
 export interface MainCouranteUpdateInput {
@@ -822,4 +855,43 @@ export async function getLiensHub(): Promise<{
     })),
     autres,
   };
+}
+
+// ─── Précache hors ligne ──────────────────────────────────────────────────────
+
+/** IDs de tous les documents — pour le préchargement hors ligne des PDF. */
+export async function getAllDocumentIds(): Promise<string[]> {
+  const rows = await prisma.document.findMany({ select: { id: true } });
+  return rows.map((r) => r.id);
+}
+
+/** IDs des sessions de procédure encore en cours — pour le précache hors ligne. */
+export async function getActiveProcedureSessionIds(): Promise<string[]> {
+  const rows = await prisma.sessionProcedure.findMany({
+    where: { statut: "en_cours" },
+    select: { id: true },
+  });
+  return rows.map((r) => r.id);
+}
+
+/**
+ * Types de procédure disponibles par slug de poste.
+ * Sert à construire les URLs /postes/[slug]/procedures/[type] à précacher.
+ */
+export async function getPosteProcedureTypes(): Promise<Record<string, string[]>> {
+  const postes = await prisma.poste.findMany({
+    select: {
+      slug: true,
+      proceduresMetier: {
+        select: { procedure: { select: { typeProcedure: true } } },
+      },
+    },
+  });
+  const result: Record<string, string[]> = {};
+  for (const p of postes) {
+    const types = new Set<string>();
+    for (const pp of p.proceduresMetier) types.add(pp.procedure.typeProcedure);
+    result[p.slug] = [...types];
+  }
+  return result;
 }

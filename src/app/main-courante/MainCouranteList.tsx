@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { Search, ChevronRight, BookOpen, Calendar, User, Tag } from "lucide-react";
 import type { MainCourante } from "@/lib/types";
 import { getNatureColors } from "@/lib/main-courante-colors";
+import { matchesSearch } from "@/lib/search";
 
 interface Props {
   initialEntries: MainCourante[];
@@ -19,21 +20,27 @@ function formatDate(iso: string) {
   });
 }
 
+/** Filtre plein texte sur l'ensemble des champs consultables d'une entrée. */
+function entryMatches(entry: MainCourante, q: string): boolean {
+  return (
+    matchesSearch(entry.titre, q) ||
+    matchesSearch(entry.nature, q) ||
+    matchesSearch(entry.libelle, q) ||
+    matchesSearch(entry.description, q) ||
+    matchesSearch(entry.editedDescription, q) ||
+    matchesSearch(entry.solution, q) ||
+    matchesSearch(entry.avisSecurite, q) ||
+    matchesSearch(entry.avisProduction, q) ||
+    matchesSearch(`${entry.auteurPrenom} ${entry.auteurNom}`, q)
+  );
+}
+
 export default function MainCouranteList({ initialEntries, initialQuery }: Props) {
   const [query, setQuery] = useState(initialQuery);
-  const [entries, setEntries] = useState<MainCourante[]>(initialEntries);
-  const [isPending, startTransition] = useTransition();
+  const q = query.trim();
 
-  const search = (q: string) => {
-    setQuery(q);
-    startTransition(async () => {
-      const res = await fetch(`/api/main-courante?q=${encodeURIComponent(q)}`);
-      if (res.ok) {
-        const data = await res.json();
-        setEntries(data.entries);
-      }
-    });
-  };
+  // Filtrage client instantané : aucun aller-retour serveur, fonctionne hors ligne.
+  const entries = q ? initialEntries.filter((e) => entryMatches(e, q)) : initialEntries;
 
   return (
     <div className="space-y-4">
@@ -41,17 +48,12 @@ export default function MainCouranteList({ initialEntries, initialQuery }: Props
       <div className="relative">
         <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
         <input
-          type="text"
+          type="search"
           value={query}
-          onChange={(e) => search(e.target.value)}
+          onChange={(e) => setQuery(e.target.value)}
           placeholder="Rechercher par nature, libellé, description, solution…"
           className="w-full pl-9 pr-4 py-2.5 text-sm bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400 transition"
         />
-        {isPending && (
-          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-400">
-            …
-          </span>
-        )}
       </div>
 
       {/* Liste */}
@@ -59,7 +61,7 @@ export default function MainCouranteList({ initialEntries, initialQuery }: Props
         <div className="text-center py-12">
           <BookOpen size={32} className="mx-auto text-slate-300 mb-3" />
           <p className="text-sm text-slate-500">
-            {query
+            {q
               ? "Aucun résultat pour cette recherche."
               : "Aucune entrée validée pour le moment."}
           </p>
@@ -74,7 +76,7 @@ export default function MainCouranteList({ initialEntries, initialQuery }: Props
         <div className="space-y-2">
           <p className="text-xs text-slate-400">
             {entries.length} entrée{entries.length > 1 ? "s" : ""}
-            {query ? ` pour « ${query} »` : ""}
+            {q ? ` pour « ${q} »` : ""}
           </p>
           {entries.map((entry) => {
             const teaser = entry.editedDescription ?? entry.description;

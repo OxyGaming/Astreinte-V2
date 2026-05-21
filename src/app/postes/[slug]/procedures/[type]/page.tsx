@@ -1,12 +1,12 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ChevronLeft, ClipboardCheck, CheckCircle2, AlertTriangle, Wrench, BookOpen, Loader2 } from "lucide-react";
+import { startProcedureSession } from "@/lib/procedure/start-session";
+import type { ProcedureMetier } from "@/lib/procedure/types";
 
 interface PosteInfo { id: string; nom: string; slug: string }
-interface ProcedureInfo { id: string; slug: string; titre: string; description: string | null; version: string }
 
 const TYPE_META: Record<string, { label: string; Icon: React.ElementType; headerBg: string; btnBg: string }> = {
   cessation: { label: "Cessation de service", Icon: ClipboardCheck,  headerBg: "bg-blue-900",   btnBg: "bg-blue-700 hover:bg-blue-800" },
@@ -21,11 +21,10 @@ export default function ProcedureTypePage({
 }: {
   params: Promise<{ slug: string; type: string }>;
 }) {
-  const router = useRouter();
   const [slug, setSlug] = useState("");
   const [type, setType] = useState("");
   const [poste, setPoste] = useState<PosteInfo | null>(null);
-  const [procedures, setProcedures] = useState<ProcedureInfo[]>([]);
+  const [procedures, setProcedures] = useState<ProcedureMetier[]>([]);
   const [starting, setStarting] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -41,22 +40,13 @@ export default function ProcedureTypePage({
       .catch(() => setError("Impossible de charger les procédures."));
   }, [slug, type]);
 
-  const handleDemarrer = async (procedure: ProcedureInfo) => {
+  const handleDemarrer = async (procedure: ProcedureMetier) => {
     if (!poste) return;
     setStarting(procedure.id);
     setError(null);
     try {
-      const res = await fetch(`/api/procedures/${procedure.slug}/sessions`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ posteId: poste.id }),
-      });
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error ?? "Erreur lors du démarrage");
-      }
-      const { sessionId } = await res.json();
-      router.push(`/procedures/session/${sessionId}`);
+      // Démarre la session (en ligne ou hors ligne) et navigue vers le wizard.
+      await startProcedureSession({ procedure, posteId: poste.id, posteSlug: poste.slug });
     } catch (e) {
       setError(e instanceof Error ? e.message : "Erreur inconnue");
       setStarting(null);
