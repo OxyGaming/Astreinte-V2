@@ -63,13 +63,46 @@ export default function UserForm({ user }: Props) {
     }
   };
 
-  const handleDelete = async () => {
+  const handleDeactivate = async () => {
     if (!user) return;
     setLoading(true);
+    setError(null);
     try {
-      await fetch(`/api/admin/users/${user.id}`, { method: "DELETE" });
+      const res = await fetch(`/api/admin/users/${user.id}`, { method: "DELETE" });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setError(data.error ?? "Erreur serveur lors de la désactivation.");
+        setConfirmDelete(false);
+        return;
+      }
       router.push("/admin/users");
       router.refresh();
+    } catch {
+      setError("Erreur réseau");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleReactivate = async () => {
+    if (!user) return;
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/admin/users/${user.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ actif: true }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setError(data.error ?? "Erreur serveur lors de la réactivation.");
+        return;
+      }
+      setActif(true);
+      router.refresh();
+    } catch {
+      setError("Erreur réseau");
     } finally {
       setLoading(false);
     }
@@ -192,34 +225,56 @@ export default function UserForm({ user }: Props) {
       </div>
 
       {isEdit && (
-        <div className="border-t border-gray-200 pt-4">
-          {!confirmDelete ? (
-            <button
-              type="button"
-              onClick={() => setConfirmDelete(true)}
-              className="text-sm text-red-500 hover:text-red-700 transition-colors"
-            >
-              Supprimer cet utilisateur
-            </button>
+        <div className="border-t border-gray-200 pt-4 space-y-2">
+          {actif ? (
+            !confirmDelete ? (
+              <>
+                <button
+                  type="button"
+                  onClick={() => setConfirmDelete(true)}
+                  className="text-sm text-red-500 hover:text-red-700 transition-colors"
+                >
+                  Désactiver le compte
+                </button>
+                <p className="text-xs text-gray-400">
+                  L&apos;historique (sessions, journaux, mains courantes) est conservé.
+                  La connexion sera bloquée mais le compte pourra être réactivé.
+                </p>
+              </>
+            ) : (
+              <div className="flex flex-wrap items-center gap-3">
+                <span className="text-sm text-red-600 font-medium">Confirmer la désactivation ?</span>
+                <button
+                  type="button"
+                  onClick={handleDeactivate}
+                  disabled={loading}
+                  className="text-sm bg-red-600 hover:bg-red-700 disabled:bg-red-300 text-white px-3 py-1.5 rounded-lg font-medium"
+                >
+                  Désactiver
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setConfirmDelete(false)}
+                  className="text-sm text-gray-500 hover:text-gray-700"
+                >
+                  Annuler
+                </button>
+              </div>
+            )
           ) : (
-            <div className="flex items-center gap-3">
-              <span className="text-sm text-red-600 font-medium">Confirmer la suppression ?</span>
+            <>
               <button
                 type="button"
-                onClick={handleDelete}
+                onClick={handleReactivate}
                 disabled={loading}
-                className="text-sm bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 rounded-lg font-medium"
+                className="text-sm bg-green-600 hover:bg-green-700 disabled:bg-green-300 text-white px-3 py-1.5 rounded-lg font-medium"
               >
-                Supprimer
+                Réactiver le compte
               </button>
-              <button
-                type="button"
-                onClick={() => setConfirmDelete(false)}
-                className="text-sm text-gray-500 hover:text-gray-700"
-              >
-                Annuler
-              </button>
-            </div>
+              <p className="text-xs text-gray-400">
+                Compte actuellement désactivé — l&apos;utilisateur ne peut pas se connecter.
+              </p>
+            </>
           )}
         </div>
       )}

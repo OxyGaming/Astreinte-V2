@@ -15,11 +15,33 @@ function roleStyle(role: string) {
   return ROLES.find((r) => r.value === role) ?? { label: role, color: "bg-gray-100 text-gray-600" };
 }
 
+function sortUsersByStatus(users: UserType[]): UserType[] {
+  // Actifs (approved) > en attente > rejetés/inactifs ; à statut égal, alphabétique.
+  const rank = (u: UserType): number => {
+    if (u.status === "pending") return 1;
+    if (u.actif && u.status === "approved") return 0;
+    return 2;
+  };
+  return [...users].sort((a, b) => {
+    const r = rank(a) - rank(b);
+    if (r !== 0) return r;
+    return `${a.nom}${a.prenom}`.localeCompare(`${b.nom}${b.prenom}`, "fr");
+  });
+}
+
 export default function UsersClient({ initialUsers }: { initialUsers: UserType[] }) {
-  const [users, setUsers] = useState(initialUsers);
+  const [users, setUsers] = useState(() => sortUsersByStatus(initialUsers));
   const [savingId, setSavingId] = useState<string | null>(null);
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<{ id: string; ok: boolean } | null>(null);
+  const [showInactive, setShowInactive] = useState(true);
+
+  const activeCount = users.filter((u) => u.actif && u.status === "approved").length;
+  const inactiveCount = users.filter((u) => !u.actif || u.status === "rejected").length;
+  const pendingCount = users.filter((u) => u.status === "pending").length;
+  const visibleUsers = showInactive
+    ? users
+    : users.filter((u) => u.actif && u.status !== "rejected");
 
   async function changeRole(user: UserType, newRole: string) {
     if (newRole === user.role) { setOpenDropdown(null); return; }
@@ -31,7 +53,7 @@ export default function UsersClient({ initialUsers }: { initialUsers: UserType[]
       body: JSON.stringify({ role: newRole }),
     });
     if (res.ok) {
-      setUsers((us) => us.map((u) => u.id === user.id ? { ...u, role: newRole as UserType["role"] } : u));
+      setUsers((us) => sortUsersByStatus(us.map((u) => u.id === user.id ? { ...u, role: newRole as UserType["role"] } : u)));
       setFeedback({ id: user.id, ok: true });
     } else {
       setFeedback({ id: user.id, ok: false });
@@ -41,8 +63,39 @@ export default function UsersClient({ initialUsers }: { initialUsers: UserType[]
   }
 
   return (
+    <div className="space-y-3">
+      {/* Bandeau de comptage / filtre */}
+      <div className="flex items-center justify-between gap-3 flex-wrap text-sm">
+        <div className="flex items-center gap-3 text-gray-600">
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-green-50 text-green-700 rounded-full font-medium">
+            <Check size={12} /> {activeCount} actif{activeCount > 1 ? "s" : ""}
+          </span>
+          {pendingCount > 0 && (
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-amber-50 text-amber-700 rounded-full font-medium">
+              <Clock size={12} /> {pendingCount} en attente
+            </span>
+          )}
+          {inactiveCount > 0 && (
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-gray-100 text-gray-500 rounded-full font-medium">
+              <X size={12} /> {inactiveCount} inactif{inactiveCount > 1 ? "s" : ""}
+            </span>
+          )}
+        </div>
+        {inactiveCount > 0 && (
+          <label className="flex items-center gap-2 cursor-pointer text-xs text-gray-500">
+            <input
+              type="checkbox"
+              checked={showInactive}
+              onChange={(e) => setShowInactive(e.target.checked)}
+              className="rounded border-gray-300"
+            />
+            Afficher les comptes inactifs
+          </label>
+        )}
+      </div>
+
     <div className="bg-white rounded-2xl border border-gray-200 overflow-x-auto">
-      {users.length === 0 ? (
+      {visibleUsers.length === 0 ? (
         <div className="p-8 text-center text-gray-400">
           <User size={32} className="mx-auto mb-3 opacity-40" />
           <p className="font-medium">Aucun utilisateur</p>
@@ -60,14 +113,15 @@ export default function UsersClient({ initialUsers }: { initialUsers: UserType[]
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
-            {users.map((u) => {
+            {visibleUsers.map((u) => {
               const rs = roleStyle(u.role);
               const isSaving = savingId === u.id;
               const isOpen = openDropdown === u.id;
               const fb = feedback?.id === u.id ? feedback : null;
+              const dimmed = !u.actif || u.status === "rejected";
 
               return (
-                <tr key={u.id} className="hover:bg-gray-50 transition-colors">
+                <tr key={u.id} className={`hover:bg-gray-50 transition-colors ${dimmed ? "bg-gray-50/40 opacity-60" : ""}`}>
                   {/* Nom */}
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
@@ -164,6 +218,7 @@ export default function UsersClient({ initialUsers }: { initialUsers: UserType[]
       {openDropdown && (
         <div className="fixed inset-0 z-10" onClick={() => setOpenDropdown(null)} />
       )}
+    </div>
     </div>
   );
 }
