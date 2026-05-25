@@ -1,5 +1,5 @@
 import "dotenv/config";
-import { readFileSync } from "fs";
+import { readFileSync, existsSync } from "fs";
 import { join } from "path";
 import { PrismaClient } from "../src/generated/prisma/client";
 import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
@@ -12,65 +12,115 @@ const url = path.isAbsolute(dbPath) ? dbPath : path.join(process.cwd(), dbPath);
 const adapter = new PrismaBetterSqlite3({ url });
 const prisma = new PrismaClient({ adapter });
 
+const DATA_DIR = join(__dirname, "data");
+
 function loadJson<T>(filename: string): T {
-  return JSON.parse(readFileSync(join(__dirname, "data", filename), "utf-8")) as T;
+  return JSON.parse(readFileSync(join(DATA_DIR, filename), "utf-8")) as T;
+}
+
+/** Charge un fichier de données optionnel — retourne [] si absent. */
+function loadJsonOptional<T>(filename: string): T[] {
+  const fullPath = join(DATA_DIR, filename);
+  if (!existsSync(fullPath)) return [];
+  return loadJson<T[]>(filename);
 }
 
 type ContactRow   = { id: string; nom: string; role: string; categorie: string; telephone: string; telephoneAlt?: string | null; note?: string | null; disponibilite?: string | null };
-type SecteurRow   = { id: string; slug: string; nom: string; ligne: string; trajet: string; description: string; pointsAcces: string; procedures: string; pn?: string | null };
-type FicheRow     = { id: string; slug: string; numero: number; titre: string; categorie: string; priorite: string; mnemonique?: string | null; resume: string; etapes: string; references?: string | null; avisObligatoires?: string | null; contactIds: string[] };
+type SecteurRow   = { id: string; slug: string; nom: string; ligne: string; trajet: string; description: string; pointsAcces: string; procedures: string; pn?: string | null; liens?: string | null };
+type FicheRow     = { id: string; slug: string; numero: number; titre: string; categorie: string; priorite: string; mnemonique?: string | null; resume: string; etapes: string; references?: string | null; avisObligatoires?: string | null; liens?: string | null; contactIds?: string[]; secteurIds?: string[] };
 type MnomoniqueRow = { id: string; acronyme: string; titre: string; description: string; lettres: string; contexte?: string | null; couleur?: string | null };
 type AbreviationRow = { id: string; sigle: string; definition: string };
+type LienCategorieRow = { id: string; nom: string; icon: string; couleur: string; ordre: number };
+type LienRow = { id: string; libelle: string; url: string; ordre: number; categorieId?: string | null };
 
 // ─── Seed principal ──────────────────────────────────────────────────────────
 
 async function main() {
   console.log("🌱 Démarrage du seed...");
 
-  // Vider les tables dans l'ordre pour respecter les contraintes FK
-  await prisma.ficheContact.deleteMany();
+  // Vider les tables dans l'ordre pour respecter les contraintes FK.
+  // - FicheLien/FicheContact/FicheSecteur cascadent depuis Fiche
+  // - FicheActionLog/FicheCommentLog cascadent depuis FicheSession
+  // - Lien dépend de LienCategorie (catégorie SetNull, mais on vide les deux)
   await prisma.ficheActionLog.deleteMany();
   await prisma.ficheCommentLog.deleteMany();
   await prisma.ficheSession.deleteMany();
   await prisma.user.deleteMany();
+  await prisma.ficheLien.deleteMany();
+  await prisma.ficheContact.deleteMany();
   await prisma.ficheSecteur.deleteMany();
   await prisma.fiche.deleteMany();
   await prisma.contact.deleteMany();
   await prisma.secteur.deleteMany();
   await prisma.mnemonique.deleteMany();
   await prisma.abreviation.deleteMany();
+  await prisma.lien.deleteMany();
+  await prisma.lienCategorie.deleteMany();
   console.log("  ✓ Tables vidées");
 
   // Contacts
   const contactsData = loadJson<ContactRow[]>("contacts.json");
   for (const c of contactsData) {
     await prisma.contact.create({
-      data: { id: c.id, nom: c.nom, role: c.role, categorie: c.categorie, telephone: c.telephone, telephoneAlt: c.telephoneAlt ?? null, note: c.note ?? null, disponibilite: c.disponibilite ?? null },
+      data: {
+        id: c.id, nom: c.nom, role: c.role, categorie: c.categorie,
+        telephone: c.telephone, telephoneAlt: c.telephoneAlt ?? null,
+        note: c.note ?? null, disponibilite: c.disponibilite ?? null,
+      },
     });
   }
   console.log(`  ✓ ${contactsData.length} contacts insérés`);
 
-  // Secteurs
+  // Secteurs — colonne `liens` optionnelle (rétro-compat avec anciens dumps)
   const secteursData = loadJson<SecteurRow[]>("secteurs.json");
   for (const s of secteursData) {
     await prisma.secteur.create({
-      data: { id: s.id, slug: s.slug, nom: s.nom, ligne: s.ligne, trajet: s.trajet, description: s.description, pointsAcces: s.pointsAcces, procedures: s.procedures, pn: s.pn ?? null },
+      data: {
+        id: s.id, slug: s.slug, nom: s.nom, ligne: s.ligne, trajet: s.trajet,
+        description: s.description, pointsAcces: s.pointsAcces, procedures: s.procedures,
+        pn: s.pn ?? null,
+        liens: s.liens ?? null,
+      },
     });
   }
   console.log(`  ✓ ${secteursData.length} secteurs insérés`);
 
-  // Fiches + relations contacts
+  // Thématiques de liens utiles (AVANT les liens, car Lien.categorieId pointe ici)
+  const lienCategoriesData = loadJsonOptional<LienCategorieRow>("lien-categories.json");
+  for (const lc of lienCategoriesData) {
+    await prisma.lienCategorie.create({
+      data: { id: lc.id, nom: lc.nom, icon: lc.icon, couleur: lc.couleur, ordre: lc.ordre },
+    });
+  }
+  if (lienCategoriesData.length > 0) console.log(`  ✓ ${lienCategoriesData.length} thématiques de liens insérées`);
+
+  // Collection de liens utiles
+  const liensData = loadJsonOptional<LienRow>("liens.json");
+  for (const l of liensData) {
+    await prisma.lien.create({
+      data: { id: l.id, libelle: l.libelle, url: l.url, ordre: l.ordre, categorieId: l.categorieId ?? null },
+    });
+  }
+  if (liensData.length > 0) console.log(`  ✓ ${liensData.length} liens utiles insérés`);
+
+  // Fiches + relations contacts/secteurs + colonne `liens`
   const fichesData = loadJson<FicheRow[]>("fiches.json");
   for (const f of fichesData) {
     await prisma.fiche.create({
       data: {
         id: f.id, slug: f.slug, numero: f.numero, titre: f.titre, categorie: f.categorie,
         priorite: f.priorite, mnemonique: f.mnemonique ?? null, resume: f.resume,
-        etapes: f.etapes, references: f.references ?? null, avisObligatoires: f.avisObligatoires ?? null,
+        etapes: f.etapes,
+        references: f.references ?? null,
+        avisObligatoires: f.avisObligatoires ?? null,
+        liens: f.liens ?? null,
       },
     });
     for (const contactId of (f.contactIds ?? [])) {
       await prisma.ficheContact.create({ data: { ficheId: f.id, contactId } });
+    }
+    for (const secteurId of (f.secteurIds ?? [])) {
+      await prisma.ficheSecteur.create({ data: { ficheId: f.id, secteurId } });
     }
   }
   console.log(`  ✓ ${fichesData.length} fiches insérées`);
@@ -107,7 +157,7 @@ async function main() {
   ];
   for (const u of usersData) {
     const h = await bcrypt.hash(u.password, 12);
-    await prisma.user.create({ data: { username: u.username, email: (u as { email?: string }).email ?? null, password: h, nom: u.nom, prenom: u.prenom, role: u.role } });
+    await prisma.user.create({ data: { username: u.username, email: u.email, password: h, nom: u.nom, prenom: u.prenom, role: u.role } });
   }
   console.log(`  ✓ ${usersData.length} utilisateurs front-office créés`);
   console.log("    → admin.system (ADMIN)");
