@@ -45,9 +45,10 @@ prisma/data/
 # Sauvegardes horodatées (générées par npm run db:backup)
 prisma/data-backup/
 
-# Scripts d'injection/export one-shot (données internes, hors périmètre du repo)
+# Scripts d'injection one-shot (données internes, hors périmètre du repo).
+# Note : prisma/export.ts EST versionné (script générique, sans secret) —
+# voir commit `chore(prisma): versionne export.ts`.
 prisma/inject_*.py
-prisma/export.ts
 prisma/scan_annuaires.ts
 
 # Fichiers uploadés temporairement (imports admin)
