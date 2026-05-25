@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import * as XLSX from "xlsx";
 import { prisma } from "@/lib/prisma";
+import { serializeLiensForExport } from "@/lib/liens-server";
 
 interface LettreAcronyme {
   lettre: string;
@@ -10,7 +11,7 @@ interface LettreAcronyme {
 
 export async function GET() {
   try {
-    const [contacts, mnemoniques, abreviations, acces, postes, secteurs, procedures, mainCourantes] =
+    const [contacts, mnemoniques, abreviations, acces, postes, secteurs, procedures, mainCourantes, fiches, liens, lienCategories] =
       await Promise.all([
         prisma.contact.findMany({ orderBy: { nom: "asc" } }),
         prisma.mnemonique.findMany({ orderBy: { acronyme: "asc" } }),
@@ -27,6 +28,18 @@ export async function GET() {
           orderBy: { validatedAt: "asc" },
           include: { auteur: { select: { username: true } } },
         }),
+        prisma.fiche.findMany({
+          orderBy: { numero: "asc" },
+          include: {
+            contacts: { include: { contact: { select: { nom: true } } } },
+            secteurs: { include: { secteur: { select: { slug: true } } } },
+          },
+        }),
+        prisma.lien.findMany({
+          orderBy: [{ categorieId: "asc" }, { ordre: "asc" }],
+          include: { categorie: { select: { nom: true } } },
+        }),
+        prisma.lienCategorie.findMany({ orderBy: { ordre: "asc" } }),
       ]);
 
     const wb = XLSX.utils.book_new();
@@ -99,6 +112,7 @@ export async function GET() {
       ["proceduresCles_json", "JSON des procédures clés (ProcedureCle[]) — ne pas modifier à la main", "NON", "[{\"titre\":\"...\",\"etapes\":[...]}]"],
       ["dbc_json", "JSON DBC (Dbc[]) — optionnel, ne pas modifier à la main", "NON", "[]"],
       ["rex_json", "JSON REX (string[]) — optionnel, ne pas modifier à la main", "NON", "[]"],
+      ["liens_json", "JSON liens utiles rattachés au poste (LienRef[]) — ne pas modifier à la main", "NON", "[{\"lienId\":\"...\"},{\"libelle\":\"...\",\"url\":\"https://...\"}]"],
       [""],
       ["═══ ONGLET SECTEURS (secteurs ferroviaires) ════════════════════════════════"],
       ["Colonne", "Description", "Obligatoire", "Exemples"],
@@ -110,6 +124,7 @@ export async function GET() {
       ["pointsAcces_json", "JSON points d'accès (PointAcces[]) — ne pas modifier à la main", "NON", "[{\"nom\":\"...\",\"adresse\":\"...\",\"note\":\"...\"}]"],
       ["procedures_json", "JSON procédures spécifiques (données legacy) — ne pas modifier à la main", "NON", "[{\"titre\":\"...\",\"description\":\"...\"}]"],
       ["pn_json", "JSON passages à niveau (PassageNiveau[]) — ne pas modifier à la main", "NON", "[{\"numero\":\"PN 16\",\"axe\":\"...\"}]"],
+      ["liens_json", "JSON liens utiles rattachés au secteur (LienRef[]) — ne pas modifier à la main", "NON", "[{\"lienId\":\"...\"}]"],
       [""],
       ["═══ ONGLET PROCEDURES (procédures guidées) ═════════════════════════════════"],
       ["Colonne", "Description", "Obligatoire", "Exemples"],
@@ -118,7 +133,7 @@ export async function GET() {
       ["typeProcedure", "Type de procédure", "OUI", "cessation | reprise | incident | travaux | autre"],
       ["description", "Description courte (optionnel)", "NON", "Procédure standard de cessation de service"],
       ["version", "Numéro de version", "OUI", "1.0"],
-      ["etapes_json", "JSON complet des étapes (ne pas modifier à la main)", "OUI", "[{\"id\":\"...\",\"titre\":\"...\"}]"],
+      ["etapes_json", "JSON complet des étapes (ne pas modifier à la main) — chaque étape peut contenir un champ liens (LienRef[])", "OUI", "[{\"id\":\"...\",\"titre\":\"...\",\"liens\":[{\"lienId\":\"...\"}]}]"],
       ["postes_slugs", "Slugs des postes associés, séparés par | (optionnel)", "NON", "givors-canal|saint-fons"],
       [""],
       ["═══ ONGLET MAIN_COURANTE (mémoire collective) ══════════════════════════════"],
@@ -129,15 +144,47 @@ export async function GET() {
       ["ficheSlug", "Slug de la fiche réflexe associée (optionnel)", "NON", "rupture-canalisation"],
       ["auteurUsername", "Username de l'auteur (informatif, non importé)", "INFO", "jessie.achille"],
       [""],
-      ["NOTE : A l'import, toutes les entrées sont créées avec status=validated."],
+      ["═══ ONGLET FICHES (fiches réflexes) ════════════════════════════════════════"],
+      ["Colonne", "Description", "Obligatoire", "Exemples"],
+      ["slug", "Identifiant URL unique", "OUI", "rupture-canalisation"],
+      ["numero", "Numéro de fiche (entier, unique)", "OUI", "12"],
+      ["titre", "Titre de la fiche", "OUI", "Rupture de canalisation"],
+      ["categorie", "Catégorie métier", "OUI", "incident | exploitation | securite"],
+      ["priorite", "Priorité d'intervention", "OUI", "haute | normale | basse"],
+      ["mnemonique", "Sigle mnémonique associé (optionnel)", "NON", "CAMMI"],
+      ["resume", "Résumé de la fiche", "OUI", "Texte court…"],
+      ["etapes_json", "JSON complet des étapes (ne pas modifier à la main)", "OUI", "[{\"ordre\":1,\"titre\":\"...\"}]"],
+      ["references_json", "JSON tableau de références (optionnel)", "NON", "[\"Doc XYZ\"]"],
+      ["avisObligatoires_json", "JSON tableau des avis (optionnel)", "NON", "[\"Sécurité\"]"],
+      ["contact_noms", "Noms des contacts associés, séparés par | (optionnel)", "NON", "Jean Dupont|COGC Lyon"],
+      ["secteur_slugs", "Slugs des secteurs associés, séparés par | (optionnel)", "NON", "givors-canal|peyraud"],
+      ["liens_json", "JSON liens utiles rattachés à la fiche (LienRef[]) — ne pas modifier à la main", "NON", "[{\"lienId\":\"...\"}]"],
+      [""],
+      ["═══ ONGLET LIENS_CATEGORIES (thématiques du hub /liens-utiles) ════════════"],
+      ["Colonne", "Description", "Obligatoire", "Exemples"],
+      ["nom", "Nom de la thématique (unique)", "OUI", "Réglementation"],
+      ["icon", "Clé d'icône Lucide (cf. lib/lien-ui.ts)", "OUI", "BookOpen | Link2 | Map"],
+      ["couleur", "Clé de couleur d'accent", "OUI", "blue | green | amber | red | purple"],
+      ["ordre", "Ordre d'affichage (entier)", "OUI", "0, 1, 2"],
+      [""],
+      ["═══ ONGLET LIENS (collection centrale référencée par les entités) ═════════"],
+      ["Colonne", "Description", "Obligatoire", "Exemples"],
+      ["libelle", "Libellé du lien", "OUI", "Référentiel infra IN 1500"],
+      ["url", "URL http(s) cible", "OUI", "https://intranet.sncf/..."],
+      ["categorie_nom", "Nom de la thématique (doit exister dans Liens_Categories)", "NON", "Réglementation"],
+      ["ordre", "Ordre d'affichage dans la thématique", "NON", "0"],
+      [""],
+      ["NOTE : A l'import, toutes les entrées de la main courante sont créées avec status=validated."],
       ["NOTE : L'auteurUsername est exporté pour référence uniquement. A l'import, c'est l'admin connecté qui devient auteur."],
+      ["NOTE : Les liens_json des fiches/postes/secteurs peuvent référencer un lien de la collection via lienId, OU"],
+      ["définir un lien libre via { libelle, url }. Les lienId inconnus à l'import sont rejetés."],
       [""],
       ["IMPORTANT : Ne supprimez pas et ne renommez pas les onglets."],
       ["IMPORTANT : La ligne d'en-tête (première ligne) ne doit pas être modifiée."],
-      ["IMPORTANT : Les colonnes *_json des postes (annuaire_json, circuitsVoie_json, etc.) sont exportées"],
-      ["pour garantir un round-trip fidèle. Ne les modifiez pas manuellement — utilisez le back-office."],
-      ["IMPORTANT : Les colonnes *_json des secteurs (pointsAcces_json, procedures_json, pn_json) sont"],
-      ["exportées pour garantir un round-trip fidèle. Ne les modifiez pas manuellement."],
+      ["IMPORTANT : Les colonnes *_json (annuaire_json, liens_json, etc.) sont exportées pour garantir"],
+      ["un round-trip fidèle. Ne les modifiez pas manuellement — utilisez le back-office."],
+      ["IMPORTANT : Si une colonne *_json est vide ou absente à l'import, la valeur en base est conservée"],
+      ["(pas d'écrasement). Pour effacer un champ, fournir une chaîne JSON valide : [] (tableau vide)."],
     ];
     const wsAide = XLSX.utils.aoa_to_sheet(aideData);
     wsAide["!cols"] = [{ wch: 22 }, { wch: 52 }, { wch: 14 }, { wch: 46 }];
@@ -224,7 +271,7 @@ export async function GET() {
 
     // ─── Onglet POSTES ──────────────────────────────────────────────────────────
     const postesRows: unknown[][] = [
-      ["slug", "nom", "typePoste", "lignes", "adresse", "horaires", "electrification", "systemeBlock", "secteur_slug", "particularites", "annuaire_json", "circuitsVoie_json", "pnSensibles_json", "proceduresCles_json", "dbc_json", "rex_json"],
+      ["slug", "nom", "typePoste", "lignes", "adresse", "horaires", "electrification", "systemeBlock", "secteur_slug", "particularites", "annuaire_json", "circuitsVoie_json", "pnSensibles_json", "proceduresCles_json", "dbc_json", "rex_json", "liens_json"],
     ];
     for (const p of postes) {
       let lignes: string[] = [];
@@ -248,26 +295,73 @@ export async function GET() {
         p.proceduresCles,
         p.dbc || "[]",
         p.rex || "[]",
+        serializeLiensForExport(p.liens),
       ]);
     }
     const wsPostes = XLSX.utils.aoa_to_sheet(postesRows);
     wsPostes["!cols"] = [
       { wch: 22 }, { wch: 35 }, { wch: 12 }, { wch: 18 }, { wch: 35 }, { wch: 14 },
       { wch: 22 }, { wch: 18 }, { wch: 22 }, { wch: 40 },
-      { wch: 60 }, { wch: 60 }, { wch: 60 }, { wch: 60 }, { wch: 40 }, { wch: 40 },
+      { wch: 60 }, { wch: 60 }, { wch: 60 }, { wch: 60 }, { wch: 40 }, { wch: 40 }, { wch: 60 },
     ];
     XLSX.utils.book_append_sheet(wb, wsPostes, "Postes");
 
     // ─── Onglet SECTEURS ────────────────────────────────────────────────────────
     const secteursRows: unknown[][] = [
-      ["slug", "nom", "ligne", "trajet", "description", "pointsAcces_json", "procedures_json", "pn_json"],
+      ["slug", "nom", "ligne", "trajet", "description", "pointsAcces_json", "procedures_json", "pn_json", "liens_json"],
     ];
     for (const s of secteurs) {
-      secteursRows.push([s.slug, s.nom, s.ligne, s.trajet, s.description, s.pointsAcces, s.procedures, s.pn || "[]"]);
+      secteursRows.push([
+        s.slug, s.nom, s.ligne, s.trajet, s.description,
+        s.pointsAcces, s.procedures, s.pn || "[]",
+        serializeLiensForExport(s.liens),
+      ]);
     }
     const wsSecteurs = XLSX.utils.aoa_to_sheet(secteursRows);
-    wsSecteurs["!cols"] = [{ wch: 26 }, { wch: 32 }, { wch: 20 }, { wch: 35 }, { wch: 55 }, { wch: 60 }, { wch: 60 }, { wch: 60 }];
+    wsSecteurs["!cols"] = [{ wch: 26 }, { wch: 32 }, { wch: 20 }, { wch: 35 }, { wch: 55 }, { wch: 60 }, { wch: 60 }, { wch: 60 }, { wch: 60 }];
     XLSX.utils.book_append_sheet(wb, wsSecteurs, "Secteurs");
+
+    // ─── Onglet FICHES ──────────────────────────────────────────────────────────
+    const fichesRows: unknown[][] = [
+      ["slug", "numero", "titre", "categorie", "priorite", "mnemonique", "resume", "etapes_json", "references_json", "avisObligatoires_json", "contact_noms", "secteur_slugs", "liens_json"],
+    ];
+    for (const f of fiches) {
+      fichesRows.push([
+        f.slug, f.numero, f.titre, f.categorie, f.priorite, f.mnemonique || "",
+        f.resume, f.etapes, f.references || "[]", f.avisObligatoires || "[]",
+        f.contacts.map((c) => c.contact.nom).join("|"),
+        f.secteurs.map((s) => s.secteur.slug).join("|"),
+        serializeLiensForExport(f.liens),
+      ]);
+    }
+    const wsFiches = XLSX.utils.aoa_to_sheet(fichesRows);
+    wsFiches["!cols"] = [
+      { wch: 30 }, { wch: 8 }, { wch: 40 }, { wch: 16 }, { wch: 12 }, { wch: 16 },
+      { wch: 50 }, { wch: 80 }, { wch: 40 }, { wch: 40 }, { wch: 40 }, { wch: 30 }, { wch: 60 },
+    ];
+    XLSX.utils.book_append_sheet(wb, wsFiches, "Fiches");
+
+    // ─── Onglet LIENS_CATEGORIES ───────────────────────────────────────────────
+    const lcRows: unknown[][] = [
+      ["nom", "icon", "couleur", "ordre"],
+    ];
+    for (const c of lienCategories) {
+      lcRows.push([c.nom, c.icon, c.couleur, c.ordre]);
+    }
+    const wsLC = XLSX.utils.aoa_to_sheet(lcRows);
+    wsLC["!cols"] = [{ wch: 30 }, { wch: 18 }, { wch: 12 }, { wch: 8 }];
+    XLSX.utils.book_append_sheet(wb, wsLC, "Liens_Categories");
+
+    // ─── Onglet LIENS ──────────────────────────────────────────────────────────
+    const liensRows: unknown[][] = [
+      ["libelle", "url", "categorie_nom", "ordre"],
+    ];
+    for (const l of liens) {
+      liensRows.push([l.libelle, l.url, l.categorie?.nom ?? "", l.ordre]);
+    }
+    const wsLiens = XLSX.utils.aoa_to_sheet(liensRows);
+    wsLiens["!cols"] = [{ wch: 40 }, { wch: 60 }, { wch: 30 }, { wch: 8 }];
+    XLSX.utils.book_append_sheet(wb, wsLiens, "Liens");
 
     // ─── Onglet PROCEDURES ──────────────────────────────────────────────────────
     const proceduresRows: unknown[][] = [

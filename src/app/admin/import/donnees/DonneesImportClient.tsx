@@ -5,6 +5,7 @@ import Link from "next/link";
 import {
   ChevronLeft, Download, Upload, Loader2, CheckCircle2, AlertTriangle,
   X, Info, FileX, Phone, BookOpen, Hash, MapPin, Building2, ClipboardList, Layers, BookMarked,
+  Link2, Tag, FileText,
 } from "lucide-react";
 
 // ─── Types de données ───────────────────────────────────────────────────────
@@ -13,10 +14,13 @@ interface ContactRow { nom: string; role: string; categorie: string; telephone: 
 interface MnemoniqueRow { acronyme: string; titre: string; description: string; contexte?: string; couleur?: string; lettres: { lettre: string; signification: string; detail?: string }[]; errors: string[]; warnings: string[] }
 interface AbreviationRow { sigle: string; definition: string; errors: string[]; warnings: string[] }
 interface AccesRow { ligne: string; pk: string; type?: string; identifiant?: string; nomAffiche: string; nomComplet: string; latitude: number; longitude: number; description?: string; errors: string[]; warnings: string[] }
-interface PosteRow { slug: string; nom: string; typePoste: string; lignes: string[]; adresse: string; horaires: string; electrification: string; systemeBlock: string; secteur_slug?: string; particularites: string[]; annuaire_json?: string; circuitsVoie_json?: string; pnSensibles_json?: string; proceduresCles_json?: string; dbc_json?: string; rex_json?: string; errors: string[]; warnings: string[] }
+interface PosteRow { slug: string; nom: string; typePoste: string; lignes: string[]; adresse: string; horaires: string; electrification: string; systemeBlock: string; secteur_slug?: string; particularites: string[]; annuaire_json?: string; circuitsVoie_json?: string; pnSensibles_json?: string; proceduresCles_json?: string; dbc_json?: string; rex_json?: string; liens_json?: string; errors: string[]; warnings: string[] }
 interface ProcedureRow { slug: string; titre: string; typeProcedure: string; description?: string; version: string; etapes_json: string; postes_slugs?: string; errors: string[]; warnings: string[] }
-interface SecteurRow { slug: string; nom: string; ligne: string; trajet: string; description: string; pointsAcces_json?: string; procedures_json?: string; pn_json?: string; errors: string[]; warnings: string[] }
+interface SecteurRow { slug: string; nom: string; ligne: string; trajet: string; description: string; pointsAcces_json?: string; procedures_json?: string; pn_json?: string; liens_json?: string; errors: string[]; warnings: string[] }
+interface FicheRow { slug: string; numero: number; titre: string; categorie: string; priorite: string; mnemonique?: string; resume: string; etapes_json: string; references_json?: string; avisObligatoires_json?: string; contact_noms?: string; secteur_slugs?: string; liens_json?: string; errors: string[]; warnings: string[] }
 interface MainCouranteRow { titre: string; description: string; editedDescription?: string; ficheSlug?: string; auteurUsername?: string; errors: string[]; warnings: string[] }
+interface LienCategorieRow { nom: string; icon: string; couleur: string; ordre: number; errors: string[]; warnings: string[] }
+interface LienRow { libelle: string; url: string; categorie_nom?: string; ordre?: number; errors: string[]; warnings: string[] }
 
 interface ParsedData {
   contacts: ContactRow[];
@@ -26,7 +30,10 @@ interface ParsedData {
   postes: PosteRow[];
   procedures: ProcedureRow[];
   secteurs: SecteurRow[];
+  fiches: FicheRow[];
   mainCourante: MainCouranteRow[];
+  lienCategories: LienCategorieRow[];
+  liens: LienRow[];
 }
 
 interface ImportResult {
@@ -36,7 +43,10 @@ interface ImportResult {
   details: { status: string; reason?: string }[];
 }
 
-type TabId = "contacts" | "mnemoniques" | "abreviations" | "acces" | "postes" | "procedures" | "secteurs" | "mainCourante";
+type TabId =
+  | "contacts" | "mnemoniques" | "abreviations" | "acces" | "postes"
+  | "procedures" | "secteurs" | "fiches" | "mainCourante"
+  | "lienCategories" | "liens";
 
 const TABS: { id: TabId; label: string; icon: React.ReactNode; color: string }[] = [
   { id: "contacts", label: "Numéros utiles", icon: <Phone size={15} />, color: "blue" },
@@ -46,7 +56,10 @@ const TABS: { id: TabId; label: string; icon: React.ReactNode; color: string }[]
   { id: "postes", label: "Postes", icon: <Building2 size={15} />, color: "orange" },
   { id: "secteurs", label: "Secteurs", icon: <Layers size={15} />, color: "teal" },
   { id: "procedures", label: "Procédures", icon: <ClipboardList size={15} />, color: "blue" },
+  { id: "fiches", label: "Fiches", icon: <FileText size={15} />, color: "slate" },
   { id: "mainCourante", label: "Mains courantes", icon: <BookMarked size={15} />, color: "indigo" },
+  { id: "lienCategories", label: "Thématiques", icon: <Tag size={15} />, color: "rose" },
+  { id: "liens", label: "Liens utiles", icon: <Link2 size={15} />, color: "violet" },
 ];
 
 const CONTACT_CATEGORIES = ["urgence", "astreinte", "encadrement", "externe"];
@@ -73,8 +86,26 @@ function validateEtapesStructure(etapes: unknown[]): string[] {
       if (typeof a.verifiable !== "boolean") errors.push(`${ap} : "verifiable" doit être booléen`);
       if (!VALID_NIVEAUX.includes(a.niveau as string)) errors.push(`${ap} : niveau "${a.niveau}" invalide`);
     });
+    if (e.liens !== undefined && !Array.isArray(e.liens)) errors.push(`${prefix} : "liens" doit être un tableau`);
   });
   return errors;
+}
+
+/** Validation côté client d'un tableau de LienRef sérialisé en JSON. */
+function validateLiensJsonString(raw: string): string | null {
+  const trimmed = raw.trim();
+  if (!trimmed) return null;
+  let parsed: unknown;
+  try { parsed = JSON.parse(trimmed); } catch { return "JSON malformé"; }
+  if (!Array.isArray(parsed)) return "Doit être un tableau JSON";
+  for (let i = 0; i < parsed.length; i++) {
+    const r = parsed[i] as Record<string, unknown>;
+    if (!r || typeof r !== "object") return `Élément ${i + 1} invalide`;
+    const hasLienId = typeof r.lienId === "string" && r.lienId.trim();
+    const hasUrl = typeof r.url === "string" && /^https?:\/\//i.test(r.url.trim());
+    if (!hasLienId && !hasUrl) return `Lien ${i + 1} : lienId ou url requis`;
+  }
+  return null;
 }
 
 // ─── Parsing Excel ──────────────────────────────────────────────────────────
@@ -189,6 +220,11 @@ async function parseFile(file: File): Promise<ParsedData> {
         catch { warnings.push(`${key}: JSON malformé (ignoré)`); }
       }
     }
+    const rawLiens = String(r.liens_json || "").trim();
+    if (rawLiens) {
+      const err = validateLiensJsonString(rawLiens);
+      if (err) warnings.push(`liens_json: ${err} (ignoré)`); else jsonFields.liens_json = rawLiens;
+    }
     return { slug, nom, typePoste, lignes, adresse: String(r.adresse || "").trim(), horaires: String(r.horaires || "").trim(), electrification: String(r.electrification || "").trim(), systemeBlock: String(r.systemeBlock || "").trim(), secteur_slug: String(r.secteur_slug || "").trim() || undefined, particularites, ...jsonFields, errors, warnings };
   });
 
@@ -251,7 +287,92 @@ async function parseFile(file: File): Promise<ParsedData> {
         catch { warnings.push(`${key}: JSON malformé (ignoré)`); }
       }
     }
+    const rawLiens = String(r.liens_json || "").trim();
+    if (rawLiens) {
+      const err = validateLiensJsonString(rawLiens);
+      if (err) warnings.push(`liens_json: ${err} (ignoré)`); else secteurJsonFields.liens_json = rawLiens;
+    }
     return { slug, nom, ligne, trajet, description, ...secteurJsonFields, errors, warnings };
+  });
+
+  // ── Fiches ──
+  const fichesRaws = getSheet<Record<string, string>>("Fiches");
+  const fiches: FicheRow[] = fichesRaws.map((r) => {
+    const errors: string[] = [];
+    const warnings: string[] = [];
+    const slug = String(r.slug || "").trim();
+    const titre = String(r.titre || "").trim();
+    const categorie = String(r.categorie || "").trim();
+    const priorite = String(r.priorite || "").trim();
+    const resume = String(r.resume || "").trim();
+    const numero = Number(r.numero);
+    const etapes_json = String(r.etapes_json || "").trim();
+    if (!slug) errors.push("Slug manquant");
+    if (!titre) errors.push("Titre manquant");
+    if (!categorie) errors.push("Catégorie manquante");
+    if (!priorite) errors.push("Priorité manquante");
+    if (!resume) errors.push("Résumé manquant");
+    if (!Number.isInteger(numero) || numero <= 0) errors.push("Numéro invalide");
+    if (!etapes_json) errors.push("etapes_json manquant");
+    else {
+      try {
+        const parsed = JSON.parse(etapes_json);
+        if (!Array.isArray(parsed)) errors.push("etapes_json doit être un tableau");
+      } catch { errors.push("etapes_json invalide (JSON malformé)"); }
+    }
+    const optionalJsonFields: Record<string, string | undefined> = {};
+    for (const key of ["references_json", "avisObligatoires_json"]) {
+      const raw = String(r[key] || "").trim();
+      if (raw) {
+        try { const p = JSON.parse(raw); if (!Array.isArray(p)) warnings.push(`${key}: doit être un tableau (ignoré)`); else optionalJsonFields[key] = raw; }
+        catch { warnings.push(`${key}: JSON malformé (ignoré)`); }
+      }
+    }
+    const rawLiens = String(r.liens_json || "").trim();
+    if (rawLiens) {
+      const err = validateLiensJsonString(rawLiens);
+      if (err) warnings.push(`liens_json: ${err} (ignoré)`); else optionalJsonFields.liens_json = rawLiens;
+    }
+    return {
+      slug, numero, titre, categorie, priorite,
+      mnemonique: String(r.mnemonique || "").trim() || undefined,
+      resume, etapes_json,
+      contact_noms: String(r.contact_noms || "").trim() || undefined,
+      secteur_slugs: String(r.secteur_slugs || "").trim() || undefined,
+      ...optionalJsonFields,
+      errors, warnings,
+    };
+  });
+
+  // ── Thématiques de liens ──
+  const VALID_LIEN_ICONS = ["Link2","Wrench","CloudSun","Users","ClipboardList","DoorOpen","Phone","Map","BookOpen","Shield","FileText","AlertTriangle","Calendar","Folder","Train","Building2"];
+  const VALID_LIEN_COULEURS = ["blue","orange","violet","emerald","amber","rose","slate"];
+  const lcRaws = getSheet<Record<string, string>>("Liens_Categories");
+  const lienCategories: LienCategorieRow[] = lcRaws.map((r) => {
+    const errors: string[] = [];
+    const warnings: string[] = [];
+    const nom = String(r.nom || "").trim();
+    const icon = String(r.icon || "Link2").trim();
+    const couleur = String(r.couleur || "blue").trim();
+    const ordre = Number(r.ordre) || 0;
+    if (!nom) errors.push("Nom manquant");
+    if (!VALID_LIEN_ICONS.includes(icon)) errors.push(`Icône inconnue "${icon}"`);
+    if (!VALID_LIEN_COULEURS.includes(couleur)) errors.push(`Couleur inconnue "${couleur}"`);
+    return { nom, icon, couleur, ordre, errors, warnings };
+  });
+
+  // ── Liens utiles (collection) ──
+  const liensRaws = getSheet<Record<string, string>>("Liens");
+  const liens: LienRow[] = liensRaws.map((r) => {
+    const errors: string[] = [];
+    const warnings: string[] = [];
+    const libelle = String(r.libelle || "").trim();
+    const url = String(r.url || "").trim();
+    const categorie_nom = String(r.categorie_nom || "").trim() || undefined;
+    const ordre = Number.isFinite(Number(r.ordre)) ? Number(r.ordre) : 0;
+    if (!libelle) errors.push("Libellé manquant");
+    if (!/^https?:\/\//i.test(url)) errors.push("URL invalide (http ou https attendu)");
+    return { libelle, url, categorie_nom, ordre, errors, warnings };
   });
 
   // ── Main courante ──
@@ -271,7 +392,7 @@ async function parseFile(file: File): Promise<ParsedData> {
     return { titre, description, editedDescription, ficheSlug, auteurUsername, errors, warnings };
   });
 
-  return { contacts, mnemoniques, abreviations, acces, postes, procedures, secteurs, mainCourante };
+  return { contacts, mnemoniques, abreviations, acces, postes, procedures, secteurs, fiches, mainCourante, lienCategories, liens };
 }
 
 // ─── Composant principal ────────────────────────────────────────────────────
@@ -340,7 +461,10 @@ export default function DonneesImportClient() {
       postes: "/api/admin/import/postes",
       procedures: "/api/admin/import/procedures",
       secteurs: "/api/admin/import/secteurs",
+      fiches: "/api/admin/import/fiches",
       mainCourante: "/api/admin/import/main-courante",
+      lienCategories: "/api/admin/import/lien-categories",
+      liens: "/api/admin/import/liens",
     };
     const BODY_KEYS: Record<TabId, string> = {
       contacts: "contacts",
@@ -350,7 +474,10 @@ export default function DonneesImportClient() {
       postes: "postes",
       procedures: "procedures",
       secteurs: "secteurs",
+      fiches: "fiches",
       mainCourante: "entries",
+      lienCategories: "categories",
+      liens: "liens",
     };
 
     setImporting((prev) => ({ ...prev, [tabId]: true }));
@@ -390,7 +517,10 @@ export default function DonneesImportClient() {
         postes: data.postes.length,
         procedures: data.procedures.length,
         secteurs: data.secteurs.length,
+        fiches: data.fiches.length,
         mainCourante: data.mainCourante.length,
+        lienCategories: data.lienCategories.length,
+        liens: data.liens.length,
       }
     : null;
 
@@ -642,7 +772,10 @@ function TabContent({
         {tabId === "postes" && <PostesTable rows={data.postes} />}
         {tabId === "secteurs" && <SecteursTable rows={data.secteurs} />}
         {tabId === "procedures" && <ProceduresTable rows={data.procedures} />}
+        {tabId === "fiches" && <FichesTable rows={data.fiches} />}
         {tabId === "mainCourante" && <MainCouranteTable rows={data.mainCourante} />}
+        {tabId === "lienCategories" && <LienCategoriesTable rows={data.lienCategories} />}
+        {tabId === "liens" && <LiensTable rows={data.liens} />}
       </div>
 
       {/* Bouton d'import */}
@@ -889,6 +1022,93 @@ function ProceduresTable({ rows }: { rows: ProcedureRow[] }) {
             </tr>
           );
         })}
+      </tbody>
+    </table>
+  );
+}
+
+function FichesTable({ rows }: { rows: FicheRow[] }) {
+  return (
+    <table className="w-full text-sm">
+      <thead className="bg-gray-50 border-b border-gray-200">
+        <tr>
+          <th className="text-left px-3 py-2.5 font-medium text-gray-600 w-14">N°</th>
+          <th className="text-left px-3 py-2.5 font-medium text-gray-600">Titre</th>
+          <th className="text-left px-3 py-2.5 font-medium text-gray-600 w-32">Slug</th>
+          <th className="text-left px-3 py-2.5 font-medium text-gray-600 w-24">Catégorie</th>
+          <th className="text-left px-3 py-2.5 font-medium text-gray-600 w-16">Liens</th>
+          <th className="text-left px-3 py-2.5 font-medium text-gray-600">Statut</th>
+        </tr>
+      </thead>
+      <tbody className="divide-y divide-gray-50">
+        {rows.map((r, i) => {
+          let liensCount = 0;
+          try { liensCount = (JSON.parse(r.liens_json || "[]") as unknown[]).length; } catch { /* ignore */ }
+          return (
+            <tr key={i} className={r.errors.length > 0 ? "bg-red-50/40" : "hover:bg-gray-50/60"}>
+              <td className="px-3 py-2 font-mono text-xs text-gray-700">{Number.isInteger(r.numero) ? r.numero : "—"}</td>
+              <td className="px-3 py-2 font-medium text-gray-800 truncate max-w-[220px]">{r.titre || <span className="text-red-400 italic">—</span>}</td>
+              <td className="px-3 py-2 font-mono text-xs text-gray-500 truncate">{r.slug}</td>
+              <td className="px-3 py-2"><span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">{r.categorie || "—"}</span></td>
+              <td className="px-3 py-2 text-center text-xs text-gray-600">{liensCount > 0 ? <span className="text-green-600 font-medium">{liensCount}</span> : <span className="text-gray-300">—</span>}</td>
+              <td className="px-3 py-2"><RowStatus errors={r.errors} warnings={r.warnings} /></td>
+            </tr>
+          );
+        })}
+      </tbody>
+    </table>
+  );
+}
+
+function LienCategoriesTable({ rows }: { rows: LienCategorieRow[] }) {
+  return (
+    <table className="w-full text-sm">
+      <thead className="bg-gray-50 border-b border-gray-200">
+        <tr>
+          <th className="text-left px-3 py-2.5 font-medium text-gray-600">Nom</th>
+          <th className="text-left px-3 py-2.5 font-medium text-gray-600 w-32">Icône</th>
+          <th className="text-left px-3 py-2.5 font-medium text-gray-600 w-28">Couleur</th>
+          <th className="text-left px-3 py-2.5 font-medium text-gray-600 w-16">Ordre</th>
+          <th className="text-left px-3 py-2.5 font-medium text-gray-600">Statut</th>
+        </tr>
+      </thead>
+      <tbody className="divide-y divide-gray-50">
+        {rows.map((r, i) => (
+          <tr key={i} className={r.errors.length > 0 ? "bg-red-50/40" : "hover:bg-gray-50/60"}>
+            <td className="px-3 py-2 font-medium text-gray-800 truncate max-w-[200px]">{r.nom || <span className="text-red-400 italic">—</span>}</td>
+            <td className="px-3 py-2 font-mono text-xs text-gray-600">{r.icon}</td>
+            <td className="px-3 py-2"><span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">{r.couleur}</span></td>
+            <td className="px-3 py-2 text-xs text-gray-500">{r.ordre}</td>
+            <td className="px-3 py-2"><RowStatus errors={r.errors} warnings={r.warnings} /></td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+}
+
+function LiensTable({ rows }: { rows: LienRow[] }) {
+  return (
+    <table className="w-full text-sm">
+      <thead className="bg-gray-50 border-b border-gray-200">
+        <tr>
+          <th className="text-left px-3 py-2.5 font-medium text-gray-600">Libellé</th>
+          <th className="text-left px-3 py-2.5 font-medium text-gray-600">URL</th>
+          <th className="text-left px-3 py-2.5 font-medium text-gray-600 w-32">Thématique</th>
+          <th className="text-left px-3 py-2.5 font-medium text-gray-600 w-16">Ordre</th>
+          <th className="text-left px-3 py-2.5 font-medium text-gray-600">Statut</th>
+        </tr>
+      </thead>
+      <tbody className="divide-y divide-gray-50">
+        {rows.map((r, i) => (
+          <tr key={i} className={r.errors.length > 0 ? "bg-red-50/40" : "hover:bg-gray-50/60"}>
+            <td className="px-3 py-2 font-medium text-gray-800 truncate max-w-[200px]">{r.libelle || <span className="text-red-400 italic">—</span>}</td>
+            <td className="px-3 py-2 text-xs text-gray-600 font-mono truncate max-w-[260px]">{r.url}</td>
+            <td className="px-3 py-2 text-xs text-gray-600">{r.categorie_nom || "—"}</td>
+            <td className="px-3 py-2 text-xs text-gray-500">{r.ordre ?? 0}</td>
+            <td className="px-3 py-2"><RowStatus errors={r.errors} warnings={r.warnings} /></td>
+          </tr>
+        ))}
       </tbody>
     </table>
   );

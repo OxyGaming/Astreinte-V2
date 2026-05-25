@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
+import { parseLiensImportField } from "@/lib/liens-server";
 
 interface PosteData {
   slug: string;
@@ -19,6 +20,7 @@ interface PosteData {
   proceduresCles_json?: string;
   dbc_json?: string;
   rex_json?: string;
+  liens_json?: string;
 }
 
 function parseJsonField(raw: string | undefined, fallback: string): { value: string; error?: string } {
@@ -45,6 +47,10 @@ export async function POST(req: NextRequest) {
     // Précharger les secteurs pour la résolution du slug
     const secteurs = await prisma.secteur.findMany({ select: { id: true, slug: true } });
     const secteurMap = new Map(secteurs.map((s) => [s.slug, s.id]));
+
+    // Précharger les ids de liens valides — un seul round-trip pour tout le batch
+    const knownLiens = await prisma.lien.findMany({ select: { id: true } });
+    const knownLienIds = new Set(knownLiens.map((l) => l.id));
 
     let created = 0;
     let updated = 0;
@@ -91,6 +97,10 @@ export async function POST(req: NextRequest) {
         for (const [field, result] of [["annuaire_json", annuaire], ["circuitsVoie_json", circuitsVoie], ["pnSensibles_json", pnSensibles], ["proceduresCles_json", proceduresCles], ["dbc_json", dbc], ["rex_json", rex]] as [string, ReturnType<typeof parseJsonField>][]) {
           if (result.error) jsonWarnings.push(`${field}: ${result.error} (valeur ignorée)`);
         }
+        // Liens : `null` ⇒ colonne absente → conserver `existing.liens` (pas d'écrasement)
+        const liensParsed = parseLiensImportField(p.liens_json, knownLienIds);
+        if (liensParsed.error) jsonWarnings.push(`liens_json: ${liensParsed.error} (valeur ignorée)`);
+        const liensValue = liensParsed.value ?? existing?.liens ?? null;
 
         if (existing) {
           if (mode === "create") {
@@ -115,6 +125,7 @@ export async function POST(req: NextRequest) {
               proceduresCles: proceduresCles.value,
               dbc: dbc.value,
               rex: rex.value,
+              liens: liensValue,
               secteurs: secteurSlugs.length > 0
                 ? { deleteMany: {}, create: resolvedSecteurIds.map((secteurId) => ({ secteurId })) }
                 : { deleteMany: {} },
@@ -140,6 +151,7 @@ export async function POST(req: NextRequest) {
               proceduresCles: proceduresCles.value,
               dbc: dbc.value || undefined,
               rex: rex.value || undefined,
+              liens: liensValue ?? undefined,
               secteurs: resolvedSecteurIds.length > 0
                 ? { create: resolvedSecteurIds.map((secteurId) => ({ secteurId })) }
                 : undefined,

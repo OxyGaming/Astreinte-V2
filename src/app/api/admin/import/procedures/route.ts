@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { normalizeLiensPayloadSync } from "@/lib/liens-server";
+import { toLienRefs } from "@/lib/liens";
 
 interface ProcedureInput {
   slug: string;
@@ -15,7 +17,7 @@ const VALID_TYPES = ["cessation", "reprise", "incident", "travaux", "autre"];
 const VALID_ACTION_TYPES = ["information", "question_oui_non", "question_choix", "saisie_texte", "confirmation"];
 const VALID_NIVEAUX = ["informatif", "alerte", "bloquant"];
 
-function validateEtapesStructure(etapes: unknown[]): string[] {
+function validateEtapesStructure(etapes: unknown[], knownLienIds: Set<string>): string[] {
   const errors: string[] = [];
   etapes.forEach((etape, ei) => {
     const e = etape as Record<string, unknown>;
@@ -37,8 +39,32 @@ function validateEtapesStructure(etapes: unknown[]): string[] {
       if (typeof a.verifiable !== "boolean") errors.push(`${aPrefix} : "verifiable" doit être un booléen`);
       if (!VALID_NIVEAUX.includes(a.niveau as string)) errors.push(`${aPrefix} : niveau "${a.niveau}" invalide`);
     });
+    // Liens optionnels rattachés à l'étape
+    if (e.liens !== undefined) {
+      if (!Array.isArray(e.liens)) {
+        errors.push(`${prefix} : champ "liens" doit être un tableau`);
+      } else {
+        const result = normalizeLiensPayloadSync(e.liens, knownLienIds);
+        if (!result.ok) errors.push(`${prefix} : ${result.error}`);
+      }
+    }
   });
   return errors;
+}
+
+/**
+ * Re-sérialise les étapes en normalisant le tableau `liens` de chaque étape
+ * (filtrage des entrées invalides, normalisation des LienRef). Doit être
+ * appelé APRÈS validateEtapesStructure pour éviter de masquer une erreur.
+ */
+function normalizeEtapesLiens(etapes: unknown[]): unknown[] {
+  return etapes.map((etape) => {
+    const e = etape as Record<string, unknown>;
+    if (Array.isArray(e.liens)) {
+      return { ...e, liens: toLienRefs(e.liens) };
+    }
+    return e;
+  });
 }
 
 export async function POST(req: NextRequest) {
@@ -53,6 +79,10 @@ export async function POST(req: NextRequest) {
     // Précharger tous les postes (slug → id)
     const allPostes = await prisma.poste.findMany({ select: { id: true, slug: true } });
     const posteBySlug = new Map(allPostes.map((p) => [p.slug, p.id]));
+
+    // Précharger les liens valides (un round-trip pour tout le batch)
+    const knownLiens = await prisma.lien.findMany({ select: { id: true } });
+    const knownLienIds = new Set(knownLiens.map((l) => l.id));
 
     let created = 0;
     let updated = 0;
@@ -72,13 +102,13 @@ export async function POST(req: NextRequest) {
         try {
           const parsed = JSON.parse(p.etapes_json);
           if (!Array.isArray(parsed)) throw new Error("Pas un tableau");
-          const structErrors = validateEtapesStructure(parsed);
+          const structErrors = validateEtapesStructure(parsed, knownLienIds);
           if (structErrors.length > 0) {
             rejected++;
             details.push({ status: "rejected", reason: `${p.slug} : structure etapes_json invalide — ${structErrors.slice(0, 3).join("; ")}${structErrors.length > 3 ? ` (+ ${structErrors.length - 3} autres)` : ""}` });
             continue;
           }
-          etapesJson = JSON.stringify(parsed);
+          etapesJson = JSON.stringify(normalizeEtapesLiens(parsed));
         } catch (e) {
           rejected++;
           details.push({ status: "rejected", reason: `${p.slug} : etapes_json invalide — ${e instanceof Error ? e.message : "JSON malformé"}` });

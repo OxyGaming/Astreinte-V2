@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
+import { parseLiensImportField } from "@/lib/liens-server";
 
 interface SecteurData {
   slug: string;
@@ -11,6 +12,7 @@ interface SecteurData {
   pointsAcces_json?: string;
   procedures_json?: string;
   pn_json?: string;
+  liens_json?: string;
 }
 
 function parseJsonField(raw: string | undefined, fallback: string): { value: string; error?: string } {
@@ -33,6 +35,9 @@ export async function POST(req: NextRequest) {
     if (!Array.isArray(secteurs) || secteurs.length === 0) {
       return NextResponse.json({ error: "Aucun secteur à importer." }, { status: 400 });
     }
+
+    const knownLiens = await prisma.lien.findMany({ select: { id: true } });
+    const knownLienIds = new Set(knownLiens.map((l) => l.id));
 
     let created = 0;
     let updated = 0;
@@ -57,6 +62,9 @@ export async function POST(req: NextRequest) {
         for (const [field, result] of [["pointsAcces_json", pointsAcces], ["procedures_json", procedures], ["pn_json", pn]] as [string, ReturnType<typeof parseJsonField>][]) {
           if (result.error) jsonWarnings.push(`${field}: ${result.error} (valeur ignorée)`);
         }
+        const liensParsed = parseLiensImportField(s.liens_json, knownLienIds);
+        if (liensParsed.error) jsonWarnings.push(`liens_json: ${liensParsed.error} (valeur ignorée)`);
+        const liensValue = liensParsed.value ?? existing?.liens ?? null;
 
         if (existing) {
           if (mode === "create") {
@@ -74,6 +82,7 @@ export async function POST(req: NextRequest) {
               pointsAcces: pointsAcces.value,
               procedures: procedures.value,
               pn: pn.value,
+              liens: liensValue,
             },
           });
           updated++;
@@ -94,6 +103,7 @@ export async function POST(req: NextRequest) {
               pointsAcces: pointsAcces.value,
               procedures: procedures.value,
               pn: pn.value || undefined,
+              liens: liensValue ?? undefined,
             },
           });
           created++;
