@@ -83,6 +83,12 @@ model FicheLien {
 
 /// Document PDF téléchargeable, attaché à une Fiche OU à un Poste.
 /// Le fichier physique est stocké sous ./uploads/documents/<id>.pdf (hors public/).
+/// Document PDF téléchargeable, attaché à une Fiche OU à un Poste.
+/// Le fichier physique est stocké sous ./uploads/documents/<id>.pdf (hors public/).
+///
+/// `uploadedByUserId` est nullable avec onDelete: SetNull — si l'utilisateur
+/// est supprimé physiquement (hors application), le document reste accessible
+/// avec un libellé "Téléversé par : (utilisateur supprimé)".
 model Document {
   id               String   @id @default(cuid())
   filename         String
@@ -91,11 +97,11 @@ model Document {
   size             Int
   ficheId          String?
   posteId          String?
-  uploadedByUserId String
+  uploadedByUserId String?
   createdAt        DateTime @default(now())
   fiche            Fiche?   @relation(fields: [ficheId], references: [id], onDelete: Cascade)
   poste            Poste?   @relation(fields: [posteId], references: [id], onDelete: Cascade)
-  uploadedBy       User     @relation(fields: [uploadedByUserId], references: [id])
+  uploadedBy       User?    @relation(fields: [uploadedByUserId], references: [id], onDelete: SetNull)
 
   @@index([ficheId])
   @@index([posteId])
@@ -283,6 +289,23 @@ model AccesRail {
   @@index([pk])
 }
 
+/// ⚠️  Règle métier — JAMAIS de prisma.user.delete depuis une route ou un script.
+/// Les utilisateurs sont désactivés (actif=false) via `guardUserDeactivation`
+/// (cf. src/app/api/admin/users/[id]/route.ts) pour préserver l'historique
+/// opérationnel (sessions, logs, commentaires, contributions main courante).
+///
+/// Si une suppression physique devient nécessaire (RGPD), elle doit être faite
+/// hors application via un script séparé, et après avoir mesuré l'impact sur les
+/// relations ci-dessous.
+///
+/// Relations cascade :
+///   - actionLogs / commentLogs : `onDelete: SetNull` — l'historique reste, le
+///     nom de l'auteur disparaît (fallback UI "Utilisateur supprimé").
+///   - documentsUploaded : `onDelete: SetNull` — le PDF reste utile, le nom de
+///     l'uploadeur disparaît.
+///   - sessions / mainCouranteSoumis : NOT NULL volontaire — l'identité du
+///     créateur d'une session ou d'une contribution est un attribut métier
+///     critique, jamais anonymisable. Le soft-delete couvre déjà ces cas.
 model User {
   id          String            @id @default(cuid())
   username    String            @unique
@@ -318,12 +341,21 @@ model FicheSession {
   clientOpId      String?           @unique
   actionLogs      FicheActionLog[]
   commentLogs     FicheCommentLog[]
+  /// createdByUserId reste NOT NULL : une session "anonyme" n'a aucun sens
+  /// métier (qui est responsable de l'opération en cours ?). Le soft-delete
+  /// est la seule voie pour mettre un user de côté tout en gardant la trace
+  /// des sessions qu'il a lancées.
   createdBy       User              @relation(fields: [createdByUserId], references: [id])
 
   @@index([ficheSlug])
   @@index([status])
 }
 
+/// Log d'action (cochage/décochage) dans une session de fiche.
+///
+/// `userId` est nullable avec onDelete: SetNull — si l'utilisateur est
+/// supprimé physiquement (hors application), le log reste pour l'audit
+/// mais affiche "Utilisateur supprimé" (cf. getSessionJournal).
 model FicheActionLog {
   id          String       @id @default(cuid())
   sessionId   String
@@ -331,25 +363,29 @@ model FicheActionLog {
   etapeOrdre  Int
   actionIndex Int
   actionLabel String
-  userId      String
+  userId      String?
   timestamp   DateTime     @default(now())
   type        String
   /// Clé d'idempotence générée client-side. Voir FicheSession.clientOpId.
   clientOpId  String?      @unique
-  user        User         @relation(fields: [userId], references: [id])
+  user        User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
   session     FicheSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
 }
 
+/// Commentaire posté dans une session de fiche.
+///
+/// `userId` est nullable avec onDelete: SetNull — même règle que
+/// FicheActionLog (préserver l'audit même si l'auteur disparaît).
 model FicheCommentLog {
   id         String       @id @default(cuid())
   sessionId  String
   ficheSlug  String
-  userId     String
+  userId     String?
   timestamp  DateTime     @default(now())
   message    String
   /// Clé d'idempotence générée client-side. Voir FicheSession.clientOpId.
   clientOpId String?      @unique
-  user       User         @relation(fields: [userId], references: [id])
+  user       User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
   session    FicheSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
 }
 
@@ -381,8 +417,15 @@ model MainCourante {
   validatedByUserId   String?
   /// Clé d'idempotence générée client-side. Voir FicheSession.clientOpId.
   clientOpId          String?   @unique
+  /// auteurId reste NOT NULL : l'identité du contributeur fait partie
+  /// intégrante de la donnée métier (responsabilité, contradictoire).
+  /// Le soft-delete (`actif=false`) doit suffire — une suppression physique
+  /// du compte est interdite tant qu'il a une MainCourante associée.
   auteur              User      @relation("MainCouranteAuteur", fields: [auteurId], references: [id])
-  validatedBy         User?     @relation("MainCouranteValidatedBy", fields: [validatedByUserId], references: [id])
+  /// validatedByUserId : nullable + SetNull. Si l'admin valideur disparaît
+  /// physiquement, la MainCourante reste validée — on perd juste le nom
+  /// de l'admin (affichage "Validée par : (utilisateur supprimé)").
+  validatedBy         User?     @relation("MainCouranteValidatedBy", fields: [validatedByUserId], references: [id], onDelete: SetNull)
 
   @@index([status])
   @@index([auteurId])

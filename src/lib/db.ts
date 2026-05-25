@@ -495,14 +495,21 @@ export async function getSessionJournal(sessionId: string): Promise<JournalEntry
     }),
   ]);
 
+  // userId / user peuvent être null si l'auteur a été supprimé physiquement
+  // (FK FicheActionLog.userId / FicheCommentLog.userId passées en SetNull —
+  // cf. migration 20260525000000_user_relations_setnull). On affiche un
+  // libellé neutre plutôt que de planter ou de filtrer l'entrée.
+  const DELETED_USER_NOM = "(utilisateur supprimé)";
+  const DELETED_USER_PRENOM = "";
+
   const entries: JournalEntry[] = [
     ...actions.map((a) => ({
       kind: "action" as const,
       id: a.id,
       timestamp: a.timestamp.toISOString(),
       userId: a.userId,
-      userNom: a.user.nom,
-      userPrenom: a.user.prenom,
+      userNom: a.user?.nom ?? DELETED_USER_NOM,
+      userPrenom: a.user?.prenom ?? DELETED_USER_PRENOM,
       etapeOrdre: a.etapeOrdre,
       actionIndex: a.actionIndex,
       actionLabel: a.actionLabel,
@@ -513,8 +520,8 @@ export async function getSessionJournal(sessionId: string): Promise<JournalEntry
       id: c.id,
       timestamp: c.timestamp.toISOString(),
       userId: c.userId,
-      userNom: c.user.nom,
-      userPrenom: c.user.prenom,
+      userNom: c.user?.nom ?? DELETED_USER_NOM,
+      userPrenom: c.user?.prenom ?? DELETED_USER_PRENOM,
       message: c.message,
     })),
   ];

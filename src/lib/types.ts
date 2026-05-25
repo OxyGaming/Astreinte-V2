@@ -237,7 +237,9 @@ export interface JournalActionEntry {
   kind: "action";
   id: string;
   timestamp: string;
-  userId: string;
+  /** null si l'utilisateur a été supprimé physiquement (FK passée en SetNull). */
+  userId: string | null;
+  /** Toujours rempli, "Utilisateur supprimé" si la relation est cassée. */
   userNom: string;
   userPrenom: string;
   etapeOrdre: number;
@@ -252,7 +254,9 @@ export interface JournalCommentEntry {
   kind: "comment";
   id: string;
   timestamp: string;
-  userId: string;
+  /** null si l'utilisateur a été supprimé physiquement (FK passée en SetNull). */
+  userId: string | null;
+  /** Toujours rempli, "Utilisateur supprimé" si la relation est cassée. */
   userNom: string;
   userPrenom: string;
   message: string;
