@@ -27,10 +27,16 @@ export async function loginAction(
     headersList.get("x-forwarded-for")?.split(",")[0].trim() ||
     headersList.get("x-real-ip") ||
     "unknown";
-  const rateLimitKey = `login:${ip}`;
-  const { allowed } = checkRateLimit(rateLimitKey);
+  // Deux compteurs en parallèle :
+  //   - login:ip:<ip>      → empêche le bourrage depuis une IP (anti-bot)
+  //   - login:email:<email> → empêche le bourrage sur un compte, réinitialisable
+  //                            par un admin qui réinitialise le mot de passe
+  const rateLimitIpKey = `login:ip:${ip}`;
+  const rateLimitEmailKey = `login:email:${input.email}`;
+  const ipCheck = checkRateLimit(rateLimitIpKey);
+  const emailCheck = checkRateLimit(rateLimitEmailKey);
 
-  if (!allowed) {
+  if (!ipCheck.allowed || !emailCheck.allowed) {
     return {
       error:
         "Trop de tentatives de connexion. Veuillez patienter 15 minutes avant de réessayer.",
@@ -40,20 +46,23 @@ export async function loginAction(
   const result = await verifyUserCredentials(input.email, input.password);
   if (result.error === "pending") {
     // Mot de passe correct mais compte pas encore validé : ne pas consommer de slot rate-limit
-    resetRateLimit(rateLimitKey);
+    resetRateLimit(rateLimitIpKey);
+    resetRateLimit(rateLimitEmailKey);
     return { error: "Votre compte est en attente de validation par un administrateur." };
   }
   if (result.error === "rejected") {
     // Idem : ne pas pénaliser un compte refusé (mot de passe vérifié avant ce point)
-    resetRateLimit(rateLimitKey);
+    resetRateLimit(rateLimitIpKey);
+    resetRateLimit(rateLimitEmailKey);
     return { error: "Votre demande d'inscription a été refusée. Contactez un administrateur." };
   }
   if (result.error !== null) {
     return { error: "Identifiant ou mot de passe incorrect." };
   }
 
-  // Connexion réussie → on réinitialise le compteur
-  resetRateLimit(rateLimitKey);
+  // Connexion réussie → on réinitialise les deux compteurs
+  resetRateLimit(rateLimitIpKey);
+  resetRateLimit(rateLimitEmailKey);
   const user = result.user;
 
   const proto = headersList.get("x-forwarded-proto") || "";

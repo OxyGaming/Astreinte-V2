@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/user-auth";
+import { resetRateLimit } from "@/lib/rate-limit";
 import bcrypt from "bcryptjs";
 
 interface Params {
@@ -90,7 +91,7 @@ export async function PUT(req: NextRequest, { params }: Params) {
   // État actuel — nécessaire pour les vérifications de cohérence
   const target = await prisma.user.findUnique({
     where: { id },
-    select: { id: true, role: true, actif: true, status: true },
+    select: { id: true, role: true, actif: true, status: true, email: true },
   });
   if (!target) return NextResponse.json({ error: "Utilisateur introuvable" }, { status: 404 });
 
@@ -144,6 +145,18 @@ export async function PUT(req: NextRequest, { params }: Params) {
     data,
     select: { id: true, username: true, nom: true, prenom: true, role: true, actif: true, status: true },
   });
+
+  // Si le mot de passe a été réinitialisé par l'admin, on lève le rate-limit
+  // login:email:* du user — sinon il reste bloqué jusqu'à 15 min même avec le bon
+  // nouveau mdp (c'est typiquement l'utilisateur qui a vidé son quota en oubliant
+  // son mdp et qui vient de demander une réinitialisation).
+  if (password) {
+    if (target.email) resetRateLimit(`login:email:${target.email}`);
+    if (typeof data.email === "string" && data.email !== target.email) {
+      resetRateLimit(`login:email:${data.email}`);
+    }
+  }
+
   return NextResponse.json(user);
 }
 
