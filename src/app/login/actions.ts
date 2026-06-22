@@ -73,7 +73,7 @@ export async function loginAction(
   cookieStore.set(COOKIE_NAME, await createUserToken(user.id, user.role), {
     httpOnly: true,
     secure: isHttps,
-    sameSite: "strict",
+    sameSite: "lax",
     path: "/",
     maxAge: COOKIE_MAX_AGE,
   });

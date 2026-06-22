@@ -11,6 +11,8 @@ const PUBLIC_PREFIXES = [
   "/favicon.ico",
   "/manifest.json",
   "/icons",
+  "/sw.js",
+  "/offline.html",
 ];
 
 export async function proxy(request: NextRequest) {
@@ -24,9 +26,28 @@ export async function proxy(request: NextRequest) {
   const token = request.cookies.get(COOKIE_NAME)?.value;
   const isAuthenticated = await isValidToken(token);
 
-  // Routes /api/** → 401 si non connecté (pas de redirect, c'est une API)
+  // Routes /api/** → 401 si non connecté.
+  // Exception : navigation top-level (clic sur <a target="_blank"> vers un PDF,
+  // bookmark direct, etc.) → redirection vers /login pour offrir une UX correcte
+  // au lieu d'afficher un JSON brut. Détection via Sec-Fetch-Dest: document.
   if (pathname.startsWith("/api/")) {
     if (isAuthenticated) return NextResponse.next();
+    // Le SW intercepte /api/* et re-fetch les requêtes, ce qui peut perdre
+    // sec-fetch-mode/dest. L'en-tête accept est préservé : une vraie navigation
+    // top-level (clic sur lien) embarque "text/html" alors qu'un fetch() côté
+    // client envoie "*/*" ou "application/json".
+    const secFetchMode = request.headers.get("sec-fetch-mode");
+    const secFetchDest = request.headers.get("sec-fetch-dest");
+    const accept = request.headers.get("accept") || "";
+    const isTopLevelNavigation =
+      secFetchMode === "navigate" ||
+      secFetchDest === "document" ||
+      accept.includes("text/html");
+    if (isTopLevelNavigation) {
+      const loginUrl = new URL("/login", request.url);
+      loginUrl.searchParams.set("from", pathname + request.nextUrl.search);
+      return NextResponse.redirect(loginUrl);
+    }
     return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
   }
 
