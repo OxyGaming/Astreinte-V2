@@ -307,25 +307,30 @@ model AccesRail {
 ///     créateur d'une session ou d'une contribution est un attribut métier
 ///     critique, jamais anonymisable. Le soft-delete couvre déjà ces cas.
 model User {
-  id          String            @id @default(cuid())
-  username    String            @unique
-  password    String
-  nom         String
-  prenom      String
-  role        String            @default("USER")
-  actif       Boolean           @default(true)
-  createdAt   DateTime          @default(now())
-  updatedAt   DateTime          @updatedAt
-  email       String?           @unique
-  status      String            @default("approved")
-  poste       String?
-  motif       String?
+  id                  String            @id @default(cuid())
+  username            String            @unique
+  password            String
+  nom                 String
+  prenom              String
+  role                String            @default("USER")
+  actif               Boolean           @default(true)
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
+  email               String?           @unique
+  status              String            @default("approved")
+  poste               String?
+  motif               String?
   actionLogs          FicheActionLog[]
   commentLogs         FicheCommentLog[]
   sessions            FicheSession[]
   mainCouranteSoumis  MainCourante[]    @relation("MainCouranteAuteur")
   mainCouranteValidee MainCourante[]    @relation("MainCouranteValidatedBy")
   documentsUploaded   Document[]
+  /// RCI et incidents CIL créés par cet utilisateur. `authorId` est NOT NULL :
+  /// c'est la frontière de cloisonnement des modules RCI/CIL (cf. src/lib/auth.ts).
+  /// Prisma applique donc Restrict — cohérent avec la règle de soft-delete.
+  rcis                Rci[]
+  cilIncidents        CilIncident[]
 }
 
 model FicheSession {
@@ -390,42 +395,42 @@ model FicheCommentLog {
 }
 
 model MainCourante {
-  id                  String    @id @default(cuid())
+  id                String    @id @default(cuid())
   /// Titre court — saisi/édité uniquement par l'admin lors de la validation.
-  titre               String?
+  titre             String?
   /// Code court de la nature (ex "S1", "S9", "RH"). Texte libre éditable par l'admin.
-  nature              String?
+  nature            String?
   /// Libellé long de la catégorie (ex "Signaux"). Texte libre éditable par l'admin.
-  libelle             String?
+  libelle           String?
   /// Situation/cas rencontré (saisi par le contributeur).
-  description         String
+  description       String
   /// Ce qui a été fait/conseillé (saisi par le contributeur, éditable par l'admin).
-  solution            String?
+  solution          String?
   /// Avis de la filière sécurité — renseigné uniquement par l'admin.
-  avisSecurite        String?
+  avisSecurite      String?
   /// Avis de la filière production — renseigné uniquement par l'admin.
-  avisProduction      String?
-  ficheSlug           String?
-  auteurId            String
-  status              String    @default("pending")
+  avisProduction    String?
+  ficheSlug         String?
+  auteurId          String
+  status            String    @default("pending")
   /// Version éditée par l'admin de la description (legacy — conservée pour compat).
-  editedDescription   String?
-  rejetMotif          String?
-  createdAt           DateTime  @default(now())
-  updatedAt           DateTime  @updatedAt
-  validatedAt         DateTime?
-  validatedByUserId   String?
+  editedDescription String?
+  rejetMotif        String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  validatedAt       DateTime?
+  validatedByUserId String?
   /// Clé d'idempotence générée client-side. Voir FicheSession.clientOpId.
-  clientOpId          String?   @unique
+  clientOpId        String?   @unique
   /// auteurId reste NOT NULL : l'identité du contributeur fait partie
   /// intégrante de la donnée métier (responsabilité, contradictoire).
   /// Le soft-delete (`actif=false`) doit suffire — une suppression physique
   /// du compte est interdite tant qu'il a une MainCourante associée.
-  auteur              User      @relation("MainCouranteAuteur", fields: [auteurId], references: [id])
+  auteur            User      @relation("MainCouranteAuteur", fields: [auteurId], references: [id])
   /// validatedByUserId : nullable + SetNull. Si l'admin valideur disparaît
   /// physiquement, la MainCourante reste validée — on perd juste le nom
   /// de l'admin (affichage "Validée par : (utilisateur supprimé)").
-  validatedBy         User?     @relation("MainCouranteValidatedBy", fields: [validatedByUserId], references: [id], onDelete: SetNull)
+  validatedBy       User?     @relation("MainCouranteValidatedBy", fields: [validatedByUserId], references: [id], onDelete: SetNull)
 
   @@index([status])
   @@index([auteurId])
@@ -474,4 +479,228 @@ model LienCategorie {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   liens     Lien[]
+}
+
+/// Relevé de Constatations Immédiates.
+///
+/// ⚠️ Cloisonnement : la frontière d'accès est `authorId`, PAS `teamId`.
+/// Cette application n'a pas de notion d'équipe ; `teamId` est conservé comme
+/// champ technique inerte (exigé par le bundle portable-rci-cil) et ne doit
+/// JAMAIS servir de mécanisme de sécurité. Voir `teamScope` / `assertTeamAccess`
+/// dans src/lib/auth.ts.
+model Rci {
+  id            String    @id @default(cuid())
+  /// Champ technique inerte — vestige du modèle multi-équipes du bundle d'origine.
+  /// Non utilisé pour le contrôle d'accès. Voir le commentaire du modèle.
+  teamId        String
+  /// Auteur (créateur du brouillon).
+  authorId      String
+  /// DRAFT | FINAL — FINAL = .docx généré et transmis, gel en lecture seule.
+  status        String    @default("DRAFT")
+  /// Numéro de dossier normé JJMMAAHHMM-Lieu (auto-généré côté client).
+  dossierNumber String?
+  /// Horodatage de l'événement (source de vérité, redondant avec le payload).
+  eventAt       DateTime?
+  /// Titre court pour l'affichage en liste (nature + lieu).
+  title         String?
+  /// Payload JSON des champs du wizard (stringifié, parsé côté app).
+  payload       String    @default("{}")
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  author User @relation(fields: [authorId], references: [id])
+
+  @@index([teamId, status])
+  @@index([authorId])
+  @@index([updatedAt])
+}
+
+/// Incident CIL (Chef d'Incident Local).
+/// ⚠️ Même règle que `Rci` : cloisonnement par `authorId`, `teamId` inerte.
+model CilIncident {
+  id               String    @id @default(cuid())
+  /// Champ technique inerte — non utilisé pour le contrôle d'accès.
+  teamId           String
+  authorId         String
+  /// Cycle de vie dur : OPEN | CLOSED. Réouverture réservée EDITOR/ADMIN.
+  status           String    @default("OPEN")
+  /// Référence normée auto (JJMMAAHHMM-Lieu), non unique (comme Rci.dossierNumber).
+  reference        String?
+  /// INCENDIE | ACCIDENT_PERSONNE | OBSTACLE | AUTRE
+  type             String
+  typeLibre        String?
+  /// Horodatage de l'incident (date + heure).
+  occurredAt       DateTime
+  lieu             String
+  poste            String?
+  voie             String?
+  observations     String?
+  /// Localisation choisie UNE FOIS pour tout le livret (imprimé : « entre les
+  /// gares de … et de … » OU « en gare de … », mutuellement exclusifs).
+  /// gareMode ∈ { UNIQUE, BETWEEN }.
+  gareMode         String?
+  gareUnique       String?
+  gareA            String?
+  gareB            String?
+  /// Éléments de géométrie saisis UNE fois et repris par défaut dans chaque
+  /// dépêche (modifiables ponctuellement depuis la fiche incident).
+  voies            String?
+  km               String?
+  acLabel          String?
+  motif            String?
+  /// En-tête CIL (imprimé officiel).
+  cilNom           String?
+  cilPrenom        String?
+  /// EIC_RAL | INFP_RH | INFP_LGV (cases de l'imprimé).
+  cilEtablissement String?
+  /// Heure « Désigné(e) à ».
+  designatedAt     DateTime?
+  /// Arrivée sur site → bascule responsabilité protections CRC→CIL.
+  arrivedOnSiteAt  DateTime?
+  closedAt         DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  author        User              @relation(fields: [authorId], references: [id])
+  events        CilEvent[]
+  depeches      CilDepeche[]
+  intervenants  CilIntervenant[]
+  signatures    CilSignature[]
+  autorisations CilAutorisation[]
+
+  @@index([teamId, status])
+  @@index([authorId])
+}
+
+model CilEvent {
+  id         String   @id @default(cuid())
+  incidentId String
+  /// INCIDENT_CREATED | MISSION_CIL | ARRIVAL_ON_SITE | DEPECHE |
+  /// INTERVENANT_ARRIVAL | INTERVENANT_DEPARTURE | REPRISE_PARTIELLE_CIRCULATION |
+  /// REPRISE_CIRCULATION | RETABLISSEMENT_PARTIEL_TENSION | RETABLISSEMENT_TENSION |
+  /// CHANGEMENT_CIL | CLOSURE | NOTE
+  type       String
+  occurredAt DateTime
+  /// Ordre de saisie (tie-breaker) : max(seq)+1 par incident dans la transaction.
+  seq        Int
+  label      String
+  note       String?
+  /// Auteur figé (survit à la suppression/renommage).
+  actorId    String?
+  actorName  String?
+  /// Lien vers l'entité métier : DEPECHE | INTERVENANT (id dans refId).
+  refType    String?
+  refId      String?
+  /// Données structurées additionnelles (JSON string). Ex. autorisation reprise.
+  metadata   String?
+  createdAt  DateTime @default(now())
+
+  incident CilIncident @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+
+  @@index([incidentId, occurredAt, seq])
+}
+
+model CilDepeche {
+  id                   String    @id @default(cuid())
+  incidentId           String
+  /// L'événement DEPECHE créé avec cette dépêche (le temps y vit).
+  eventId              String    @unique
+  /// PROTECTION_CIRCULATION | PROTECTION_ELECTRIQUE | REPRISE_PARTIELLE |
+  /// REPRISE_NORMALE | RETABLISSEMENT_PARTIEL | RETABLISSEMENT_NORMAL | LIBRE
+  subtype              String
+  /// Destinataire numéroté de la dépêche (imprimé 2024) : CRC | RSS | AC | LIBRE.
+  /// Une protection donne 2 dépêches (CRC + RSS pour l'électrique / CRC + AC
+  /// pour la circulation) ; reprises/rétablissements = CRC ; carnet = LIBRE.
+  interlocutor         String?
+  /// RECU | EXPEDIE (dépêches libres uniquement).
+  sens                 String?
+  texte                String
+  /// Numéro donné par le CIL (réservé dans la plage du subtype). Unique/incident.
+  numeroDonne          Int
+  numeroRecu           String?
+  collationne          Boolean   @default(false)
+  /// Horodatages d'avis (imprimé officiel — protections/reprises/rétablissements).
+  avisCrcAt            DateTime?
+  avisCosAt            DateTime?
+  avisOpjAt            DateTime?
+  /// Rétablissement : départ effectif constaté.
+  departEffectifAt     DateTime?
+  /// ACCORD_COS | ACCORD_OPJ | TOUS_PARTIS (reprises/rétablissements).
+  repriseAuthorization String?
+  /// Géométrie non temporelle (JSON string) : voies, km, gareA, gareB,
+  /// gareUnique, motif, marcheInterdite, marchePrudente, marcheNormale.
+  metadata             String?
+  createdAt            DateTime  @default(now())
+
+  incident      CilIncident              @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+  destinataires CilDepecheDestinataire[]
+
+  @@unique([incidentId, numeroDonne])
+  @@index([incidentId, subtype])
+}
+
+model CilDepecheDestinataire {
+  id         String  @id @default(cuid())
+  depecheId  String
+  label      String
+  numeroRecu String?
+
+  depeche CilDepeche @relation(fields: [depecheId], references: [id], onDelete: Cascade)
+
+  @@index([depecheId])
+}
+
+model CilIntervenant {
+  id         String    @id @default(cuid())
+  incidentId String
+  /// COS | OPJ | POMPES_FUNEBRES | EIC | EF | INFRAPOLE | INFP | AUTRE
+  type       String
+  typeLibre  String?
+  nom        String?
+  tel        String?
+  arrivedAt  DateTime?
+  departedAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  incident CilIncident @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+
+  @@index([incidentId])
+}
+
+model CilAutorisation {
+  id         String   @id @default(cuid())
+  incidentId String
+  /// Sous-type de dépêche visé (REPRISE_PARTIELLE, RETABLISSEMENT_NORMAL, …) :
+  /// une autorisation vaut pour UNE action précise, pas pour tout l'incident.
+  subtype    String
+  /// COS | OPJ
+  role       String
+  grantedAt  DateTime
+  signerName String?
+  /// PNG base64 (sans préfixe data:), comme les signatures RCI.
+  imageB64   String
+  createdAt  DateTime @default(now())
+
+  incident CilIncident @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+
+  @@unique([incidentId, subtype, role])
+  @@index([incidentId])
+}
+
+model CilSignature {
+  id         String   @id @default(cuid())
+  incidentId String
+  /// INCIDENT | EVENT | DEPECHE | INTERVENANT
+  ownerType  String
+  ownerId    String
+  signerName String?
+  signerRole String?
+  /// PNG base64 (sans préfixe data:), comme les signatures RCI.
+  imageB64   String
+  createdAt  DateTime @default(now())
+
+  incident CilIncident @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+
+  @@index([incidentId])
+  @@index([ownerType, ownerId])
 }

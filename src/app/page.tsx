@@ -1,7 +1,7 @@
 export const dynamic = "force-dynamic";
 
 import Link from "next/link";
-import { Shield, Phone, FileText, MapPin, AlignLeft, AlertTriangle, ChevronRight, BookMarked, Link2 } from "lucide-react";
+import { Shield, Phone, FileText, MapPin, AlignLeft, AlertTriangle, ChevronRight, BookMarked, Link2, FileSignature, Siren } from "lucide-react";
 import SearchBar from "@/components/SearchBar";
 import PhoneButton from "@/components/PhoneButton";
 import { getAllContacts, getAllFiches, getAllMnemoniques, getAllSecteurs, getAllLiens, countValidatedMainCourantes } from "@/lib/db";
@@ -109,13 +109,17 @@ export default async function Home() {
           <h2 className="text-xs font-bold text-slate-500 uppercase tracking-wide mb-3">
             Modules
           </h2>
-          <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
             {[
               { href: "/fiches", icon: FileText, label: "Fiches réflexes", sub: `${fiches.length} fiches`, color: "text-blue-700 bg-blue-50" },
               { href: "/contacts", icon: Phone, label: "Contacts utiles", sub: `${contacts.length} contacts`, color: "text-green-700 bg-green-50" },
               { href: "/secteurs", icon: MapPin, label: "Secteurs", sub: `${secteurs.length} secteurs`, color: "text-amber-700 bg-amber-50" },
               { href: "/main-courante", icon: BookMarked, label: "Mains courantes", sub: `${mainCourantesCount} entrées`, color: "text-rose-700 bg-rose-50" },
               { href: "/liens-utiles", icon: Link2, label: "Liens utiles", sub: `${liens.length} liens`, color: "text-teal-700 bg-teal-50" },
+              // Sous-titres statiques : les dossiers RCI/CIL sont cloisonnés par
+              // auteur, un compteur global exposerait l'activité des autres.
+              { href: "/rci", icon: FileSignature, label: "RCI", sub: "Constat immédiat", color: "text-indigo-700 bg-indigo-50" },
+              { href: "/cil", icon: Siren, label: "Livret CIL", sub: "Chef d'Incident Local", color: "text-red-700 bg-red-50" },
             ].map(({ href, icon: Icon, label, sub, color }) => (
               <Link
                 key={href}

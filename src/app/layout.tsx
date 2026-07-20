@@ -6,6 +6,7 @@ import OfflineIndicator from "@/components/OfflineIndicator";
 import PendingOpsBadge from "@/components/PendingOpsBadge";
 import ServiceWorkerRegister from "@/components/ServiceWorkerRegister";
 import OfflineSyncManager from "@/components/OfflineSyncManager";
+import { Toaster } from "sonner";
 
 export const metadata: Metadata = {
   title: "Astreinte",
@@ -52,6 +53,9 @@ export default function RootLayout({
           </main>
         </div>
         <BottomNav />
+        {/* Toasts des modules RCI / CIL. N'affecte pas les systèmes de
+            notification déjà en place ailleurs dans l'application. */}
+        <Toaster richColors position="top-center" />
       </body>
     </html>
   );

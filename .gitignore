@@ -54,3 +54,12 @@ prisma/scan_annuaires.ts
 # Fichiers uploadés temporairement (imports admin)
 uploads/
 tmp/
+
+# Worktrees Git créés par l'outillage local
+.claude/worktrees/
+
+# Bundle source des modules RCI / CIL. Son contenu a été copié et adapté dans
+# src/ (lib/cil, lib/rci, app/api, app/cil, app/rci) ; le conserver ici
+# dupliquerait la logique métier et divergerait de la version réellement
+# compilée — il est déjà exclu de tsconfig.json et vitest.config.ts.
+portable-rci-cil/

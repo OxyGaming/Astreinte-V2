@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, FileText, Phone, MapPin, Shield, Building2, Settings, MapPinned, ClipboardList, BookOpen, BookMarked, Link2 } from "lucide-react";
+import { Home, FileText, Phone, MapPin, Shield, Building2, Settings, MapPinned, ClipboardList, BookOpen, BookMarked, Link2, FileSignature, Siren } from "lucide-react";
 import LogoutButton from "./LogoutButton";
 
 const navItems = [
@@ -14,6 +14,8 @@ const navItems = [
   { href: "/acces", label: "Points d'accès", icon: MapPinned },
   { href: "/postes", label: "Référentiels postes", icon: Building2 },
   { href: "/main-courante", label: "Mains courantes", icon: BookMarked },
+  { href: "/rci", label: "RCI", icon: FileSignature },
+  { href: "/cil", label: "Livret CIL", icon: Siren },
   { href: "/liens-utiles", label: "Liens utiles", icon: Link2 },
 ];
 

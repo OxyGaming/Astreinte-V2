@@ -36,6 +36,10 @@
     ".next/dev/types/**/*.ts"
   ],
   "exclude": [
-    "node_modules"
+    "node_modules",
+    // Bundle source de référence : ses fichiers ont été copiés dans src/ et
+    // adaptés. Le répertoire d'origine n'est pas compilé (il référence un
+    // schéma Prisma et des modules Team/Photo absents de cette application).
+    "portable-rci-cil"
   ]
 }
