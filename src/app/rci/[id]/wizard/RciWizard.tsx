@@ -159,7 +159,13 @@ export default function RciWizard({
   const [saving, setSaving] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [showGaps, setShowGaps] = useState(false);
-  /** Propositions de reprise en attente d'arbitrage, champ par champ. */
+  /**
+   * Propositions telles que renvoyées par les sources, non filtrées.
+   * Le tri de ce qui reste pertinent est dérivé du payload courant
+   * (`propositionsAExaminer`) et non figé ici : une valeur devenue identique —
+   * parce qu'on vient de l'accepter, que la typologie a été posée au
+   * rattachement, ou que l'agent l'a saisie à la main — disparaît aussitôt.
+   */
   const [propositions, setPropositions] = useState<PropositionChamp[]>([]);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastSavedJson = useRef<string>(initialPayload);
@@ -172,6 +178,21 @@ export default function RciWizard({
   const gapsByStep = useMemo(
     () => missingByStep(payload, photos, eventType),
     [payload, photos, eventType],
+  );
+  /**
+   * Ce qu'il reste réellement à arbitrer : une proposition dont la valeur est
+   * déjà en place n'apprend rien et ne doit pas être présentée comme un
+   * remplacement. Dérivé du payload, donc toujours à jour.
+   */
+  const propositionsAExaminer = useMemo(
+    () => propositionsUtiles(payload, propositions),
+    [payload, propositions],
+  );
+  // La pastille compte des CHAMPS, pas des propositions : deux sources en
+  // désaccord sur une même donnée restent un seul arbitrage à rendre.
+  const nbChampsAExaminer = useMemo(
+    () => new Set(propositionsAExaminer.map((p) => p.cle as string)).size,
+    [propositionsAExaminer],
   );
 
   function patch(updates: Partial<RciPayload>) {
@@ -250,8 +271,8 @@ export default function RciWizard({
    * Interroge les sources rattachées et prépare les propositions à arbitrer.
    *
    * Rien n'est appliqué ici : le panneau de reprise laisse l'agent accepter ou
-   * écarter chaque champ. On n'écarte d'office que les propositions dont la
-   * valeur est déjà en place, qui n'apprendraient rien.
+   * écarter chaque champ. Les propositions sont stockées brutes ; le tri de ce
+   * qui reste pertinent est dérivé du payload (`propositionsAExaminer`).
    */
   async function analyser(typologie?: RciEventType) {
     const res = await fetch(`/api/rci/${rciId}/reprise`, {
@@ -267,12 +288,16 @@ export default function RciWizard({
     const { propositions: brutes } = (await res.json()) as {
       propositions: PropositionChamp[];
     };
-    const utiles = propositionsUtiles(payload, brutes);
-    setPropositions(utiles);
-    toast[utiles.length ? "success" : "info"](
-      utiles.length
-        ? `${utiles.length} donnée${utiles.length > 1 ? "s" : ""} à examiner.`
-        : "Rien de nouveau à reprendre depuis les sources rattachées.",
+    setPropositions(brutes);
+    // Le décompte annoncé doit être celui que l'agent verra : on applique donc
+    // ici le même filtre que le rendu, sur le payload de cet instant.
+    const nb = new Set(
+      propositionsUtiles(payload, brutes).map((p) => p.cle as string),
+    ).size;
+    toast[nb ? "success" : "info"](
+      nb
+        ? `${nb} champ${nb > 1 ? "s" : ""} à examiner.`
+        : "Rien de nouveau à reprendre : les sources ne disent rien que le RCI ne dise déjà.",
     );
   }
 
@@ -328,14 +353,14 @@ export default function RciWizard({
         cilIncident={cilIncident}
         session={session}
         typologieCourante={eventType}
-        nbPropositions={propositions.length}
+        nbPropositions={nbChampsAExaminer}
         onAnalyser={analyser}
         onTypologie={appliquerTypologie}
       />
 
       {!readOnly && (
         <RciReprisePanel
-          propositions={propositions}
+          propositions={propositionsAExaminer}
           payload={payload}
           libellesEtapes={Object.fromEntries(
             STEPS.map((s) => [s.key, s.label]),
