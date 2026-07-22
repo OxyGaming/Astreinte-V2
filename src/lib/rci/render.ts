@@ -19,6 +19,7 @@ import {
   ABSENT_KEYS,
   CHECK_BOOL_KEYS,
   CHECK_TERNARY_KEYS,
+  META_KEYS,
   PHOTO_KEYS,
   type RciPayload,
   type RciPhotos,
@@ -36,6 +37,7 @@ const BOOL_SET = new Set<string>(CHECK_BOOL_KEYS as readonly string[]);
 const TERNARY_SET = new Set<string>(CHECK_TERNARY_KEYS as readonly string[]);
 const PHOTO_SET = new Set<string>(PHOTO_KEYS as readonly string[]);
 const ABSENT_SET = new Set<string>(ABSENT_KEYS as readonly string[]);
+const META_SET = new Set<string>(META_KEYS as readonly string[]);
 
 /**
  * Construit le dictionnaire passé à docxtemplater.render().
@@ -55,6 +57,10 @@ export function buildTemplateData(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const out: Record<string, any> = {};
   for (const [key, value] of Object.entries(payload)) {
+    if (META_SET.has(key)) {
+      // Pilotage du wizard uniquement (typologie d'événement) — pas de tag Word.
+      continue;
+    }
     if (TERNARY_SET.has(key)) {
       out[`check_${key}_oui`] = value === true ? CHECKED : UNCHECKED;
       out[`check_${key}_non`] = value === false ? CHECKED : UNCHECKED;

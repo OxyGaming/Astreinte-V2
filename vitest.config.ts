@@ -7,7 +7,17 @@ export default defineConfig({
     globals: false, // imports explicites — plus lisible
     // Bundle source de référence : ses tests s'exécutent depuis src/ après
     // copie et adaptation. Ne pas les collecter deux fois.
-    exclude: ["**/node_modules/**", "**/dist/**", "portable-rci-cil/**"],
+    //
+    // `.next/**` et `.claude/**` contiennent des copies figées du code (sortie
+    // standalone du build, worktrees d'agents) : les collecter fait échouer la
+    // suite sur du code obsolète qui n'est plus la source de vérité.
+    exclude: [
+      "**/node_modules/**",
+      "**/dist/**",
+      "portable-rci-cil/**",
+      ".next/**",
+      ".claude/**",
+    ],
   },
   resolve: {
     alias: {

@@ -1,38 +1,44 @@
 "use client";
 
-import { FieldSet, TernaryField, TextField, TimeField } from "../fields-ui";
+import { TernaryField, TextField, TimeField } from "../fields-ui";
+import { GuidedFieldSet } from "../guidance-ui";
 import type { StepProps } from "../types";
 import type { RciPayload } from "@/lib/rci/fields";
 
 type K = keyof RciPayload;
 
-export default function Step5Acteurs({ payload, patch, readOnly }: StepProps) {
+export default function StepMesures({ payload, patch, readOnly }: StepProps) {
   return (
     <div className="space-y-4">
-      <FieldSet title="Alcoolémie">
+      <GuidedFieldSet groupId="alcool" title="Alcoolémie">
         <TextField
           label="Personne concernée"
           value={payload.alcool_personne}
+          placeholder="Ex. AC + conducteur"
           disabled={readOnly}
           onChange={(v) => patch({ alcool_personne: v })}
         />
-        <div className="flex gap-6 flex-wrap">
-          <TernaryField
-            label="Pratiqué"
-            value={payload.alcool_pratique}
-            onChange={(v) => patch({ alcool_pratique: v })}
-            disabled={readOnly}
-          />
-          <TernaryField
-            label="Positif"
-            value={payload.alcool_positif}
-            onChange={(v) => patch({ alcool_positif: v })}
-            disabled={readOnly}
-          />
-        </div>
-      </FieldSet>
+        <TernaryField
+          label="Dépistage pratiqué"
+          value={payload.alcool_pratique}
+          onChange={(v) => patch({ alcool_pratique: v })}
+          disabled={readOnly}
+        />
+      </GuidedFieldSet>
 
-      <FieldSet title="Accident de personne" hint="(si applicable)">
+      <GuidedFieldSet groupId="alcool_positif" title="Résultat du dépistage">
+        <TernaryField
+          label="Résultat positif ?"
+          value={payload.alcool_positif}
+          onChange={(v) => patch({ alcool_positif: v })}
+          disabled={readOnly}
+        />
+      </GuidedFieldSet>
+
+      <GuidedFieldSet
+        groupId="accident_personne"
+        title="Accident de personnes / personnel"
+      >
         <div className="grid gap-3 sm:grid-cols-3">
           <TernaryField
             label="Blessé"
@@ -60,18 +66,25 @@ export default function Step5Acteurs({ payload, patch, readOnly }: StepProps) {
           disabled={readOnly}
           onChange={(v) => patch({ ap_source: v })}
         />
-      </FieldSet>
+      </GuidedFieldSet>
 
-      <FieldSet
+      <GuidedFieldSet
+        groupId="mesures_conservatoires"
         title="Mesures conservatoires"
-        hint="3 lignes max (heure / par qui / mesure)"
+        hint="3 lignes max"
       >
         {[1, 2, 3].map((i) => {
           const heureKey = `mc_l${i}_heure` as K;
           const parKey = `mc_l${i}_par_qui` as K;
           const mesKey = `mc_l${i}_mesures` as K;
           return (
-            <div key={i} className="grid gap-2 sm:grid-cols-[100px_180px_1fr]">
+            // Colonnes en `minmax(0,…)` : sans borne basse à 0, l'input `time`
+            // impose sa largeur intrinsèque et pousse les colonnes voisines
+            // hors de la carte (les champs se chevauchaient).
+            <div
+              key={i}
+              className="grid gap-2 sm:grid-cols-[minmax(0,11rem)_minmax(0,1fr)_minmax(0,1.6fr)]"
+            >
               <TimeField
                 label={`Heure ${i}`}
                 value={payload[heureKey] as string}
@@ -85,7 +98,7 @@ export default function Step5Acteurs({ payload, patch, readOnly }: StepProps) {
                 onChange={(v) => patch({ [parKey]: v } as Partial<RciPayload>)}
               />
               <TextField
-                label="Mesures"
+                label="Quelles mesures ?"
                 value={payload[mesKey] as string}
                 disabled={readOnly}
                 onChange={(v) => patch({ [mesKey]: v } as Partial<RciPayload>)}
@@ -93,46 +106,53 @@ export default function Step5Acteurs({ payload, patch, readOnly }: StepProps) {
             </div>
           );
         })}
-        <div className="grid gap-3 sm:grid-cols-3">
+
+        <div className="grid gap-3 sm:grid-cols-2 pt-2 border-t border-slate-100">
           <TimeField
-            label="Notification heure"
+            label="Notification écrite à"
             value={payload.mc_notification_heure}
             disabled={readOnly}
             onChange={(v) => patch({ mc_notification_heure: v })}
           />
-          <div className="text-xs">
-            <span className="font-medium text-slate-600">Réalisé par</span>
-            <div className="mt-1 flex gap-1">
+          <div className="min-w-0">
+            <span className="block text-xs font-semibold text-slate-700 mb-1">
+              Réalisée par
+            </span>
+            <div className="flex gap-1.5 flex-wrap">
+              {/* Exclusifs : la notification est faite soit par le dirigeant
+                  d'enquête, soit par le COGC — jamais les deux. */}
               <button
                 type="button"
                 disabled={readOnly}
+                aria-pressed={payload.mc_notification_dpx}
                 onClick={() =>
                   patch({
                     mc_notification_dpx: !payload.mc_notification_dpx,
                     mc_notification_cogc: false,
                   })
                 }
-                className={`text-xs px-2 py-1 rounded border ${
+                className={`text-xs px-2.5 py-1.5 rounded-lg border transition-colors disabled:opacity-60 ${
                   payload.mc_notification_dpx
-                    ? "bg-indigo-100 border-indigo-300 text-indigo-800"
-                    : "bg-white border-slate-200 text-slate-500"
+                    ? "bg-blue-800 border-blue-800 text-white font-semibold"
+                    : "bg-white border-slate-200 text-slate-500 hover:border-slate-300"
                 }`}
               >
-                DPx
+                Dirigeant d&apos;enquête
               </button>
               <button
                 type="button"
                 disabled={readOnly}
+                aria-pressed={payload.mc_notification_cogc}
                 onClick={() =>
                   patch({
                     mc_notification_cogc: !payload.mc_notification_cogc,
                     mc_notification_dpx: false,
                   })
                 }
-                className={`text-xs px-2 py-1 rounded border ${
+                className={`text-xs px-2.5 py-1.5 rounded-lg border transition-colors disabled:opacity-60 ${
                   payload.mc_notification_cogc
-                    ? "bg-indigo-100 border-indigo-300 text-indigo-800"
-                    : "bg-white border-slate-200 text-slate-500"
+                    ? "bg-blue-800 border-blue-800 text-white font-semibold"
+                    : "bg-white border-slate-200 text-slate-500 hover:border-slate-300"
                 }`}
               >
                 COGC (DRC)
@@ -140,9 +160,13 @@ export default function Step5Acteurs({ payload, patch, readOnly }: StepProps) {
             </div>
           </div>
         </div>
-      </FieldSet>
+      </GuidedFieldSet>
 
-      <FieldSet title="Acteurs principaux" hint="3 lignes max">
+      <GuidedFieldSet
+        groupId="acteurs"
+        title="Identification des acteurs principaux"
+        hint="3 lignes max"
+      >
         {[1, 2, 3].map((i) => {
           const eKey = `acteur_l${i}_entreprise` as K;
           const nKey = `acteur_l${i}_nom` as K;
@@ -170,7 +194,7 @@ export default function Step5Acteurs({ payload, patch, readOnly }: StepProps) {
             </div>
           );
         })}
-      </FieldSet>
+      </GuidedFieldSet>
     </div>
   );
 }

@@ -56,8 +56,13 @@ export type SessionUser = {
  */
 export const TECHNICAL_TEAM_ID = "default-team";
 
-/** Ressource cloisonnable : les deux racines du bundle portent ces deux champs. */
-export type OwnedResource = { teamId: string; authorId: string };
+/**
+ * Ressource cloisonnable. Seul `authorId` porte le cloisonnement réel :
+ * `teamId` est un vestige inerte du bundle multi-équipes d'origine, et
+ * `assertTeamAccess` ne le lit pas. Il reste donc facultatif, ce qui permet de
+ * contrôler l'accès à des entités qui n'en ont pas du tout (`FicheSession`).
+ */
+export type OwnedResource = { teamId?: string; authorId: string };
 
 /**
  * Session courante, ou `null` si non authentifié.

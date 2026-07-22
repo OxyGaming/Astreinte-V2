@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Icon } from "@/components/icons";
@@ -37,9 +38,20 @@ type Role = "USER" | "EDITOR" | "ADMIN";
 export default function CilDashboard({
   initial,
   role,
+  rcis = [],
 }: {
   initial: CilIncidentFull;
   role: Role;
+  /**
+   * RCI rattachés à cet incident — passerelle de navigation vers le module RCI.
+   * Facultatif : le Livret CIL fonctionne à l'identique sans cette information.
+   */
+  rcis?: {
+    id: string;
+    status: string;
+    title: string | null;
+    dossierNumber: string | null;
+  }[];
 }) {
   const router = useRouter();
   const [full, setFull] = useState(initial);
@@ -266,6 +278,44 @@ export default function CilDashboard({
           </button>
         </div>
       </header>
+
+      {/* RCI rattaché(s) — passerelle vers le module RCI (lecture seule ici :
+          le rattachement se pose depuis le RCI). */}
+      {rcis.length > 0 && (
+        <section className="mb-4 rounded-lg border border-blue-200 bg-blue-50/60 px-4 py-3">
+          <h2 className="text-[10px] font-bold uppercase tracking-wide text-blue-900/70 mb-2">
+            {rcis.length > 1 ? "RCI rattachés" : "RCI rattaché"}
+          </h2>
+          <ul className="space-y-1.5">
+            {rcis.map((r) => (
+              <li key={r.id}>
+                <Link
+                  href={`/rci/${r.id}`}
+                  className="flex items-center gap-2 flex-wrap text-sm bg-white rounded-lg border border-blue-200 px-3 py-2 hover:border-blue-400 transition-colors"
+                >
+                  <span
+                    className={`text-[10px] font-mono font-semibold px-1.5 py-0.5 rounded ${
+                      r.status === "FINAL"
+                        ? "bg-emerald-50 text-emerald-700"
+                        : "bg-amber-50 text-amber-700"
+                    }`}
+                  >
+                    {r.status === "FINAL" ? "FINALISÉ" : "BROUILLON"}
+                  </span>
+                  {r.dossierNumber && (
+                    <span className="text-[11px] font-mono text-slate-500">
+                      {r.dossierNumber}
+                    </span>
+                  )}
+                  <span className="font-medium text-slate-800 min-w-0 truncate">
+                    {r.title || "Sans titre"}
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       {/* Progression du déroulé (bandeau) */}
       <ProgressBanner phase={phase} closed={closed} />

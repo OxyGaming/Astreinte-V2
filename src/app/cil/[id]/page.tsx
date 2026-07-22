@@ -1,6 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import { getSessionUser, assertTeamAccess } from "@/lib/auth";
 import { loadIncidentFull, serializeIncident } from "@/lib/cil/repo";
+import { getRcisByCilIncident } from "@/lib/db";
 import CilDashboard from "./CilDashboard";
 
 export const dynamic = "force-dynamic";
@@ -17,5 +18,8 @@ export default async function CilDetailPage({
   // Cloisonnement par auteur. `notFound()` volontaire : ne pas révéler
   // l'existence d'un incident appartenant à un autre utilisateur.
   if (!row || !assertTeamAccess(u, row)) notFound();
-  return <CilDashboard initial={serializeIncident(row)} role={u.role} />;
+  const rcis = await getRcisByCilIncident(id);
+  return (
+    <CilDashboard initial={serializeIncident(row)} role={u.role} rcis={rcis} />
+  );
 }

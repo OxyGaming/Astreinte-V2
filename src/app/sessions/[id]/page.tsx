@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Archive, Play, Clock, User, CheckSquare, MessageSquare } from "lucide-react";
 import { requireUserSession, canAccessSession } from "@/lib/user-auth";
-import { getSessionById, getSessionJournal } from "@/lib/db";
+import { getSessionById, getSessionJournal, getRcisBySession } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
@@ -29,6 +29,9 @@ export default async function SessionDetailPage({ params }: Props) {
   if (!session) notFound();
   if (!canAccessSession(user, session)) notFound();
   const journal = await getSessionJournal(id);
+  // RCI rédigés à partir de cette session — navigation entre les modules qui
+  // décrivent le même événement.
+  const rcis = await getRcisBySession(id);
 
   const isArchived = session.status === "archived";
   const actionCount = journal.filter((e) => e.kind === "action" && e.type === "checked").length;
@@ -82,6 +85,45 @@ export default async function SessionDetailPage({ params }: Props) {
           </div>
         </div>
       </div>
+
+      {/* RCI rattaché(s) — passerelle vers le module RCI */}
+      {rcis.length > 0 && (
+        <div className="px-4 pt-5 lg:px-8">
+          <div className="rounded-xl border border-blue-200 bg-blue-50/60 p-3">
+            <p className="text-[10px] font-bold uppercase tracking-wide text-blue-900/70 mb-2">
+              {rcis.length > 1 ? "RCI rattachés" : "RCI rattaché"}
+            </p>
+            <ul className="space-y-1.5">
+              {rcis.map((r) => (
+                <li key={r.id}>
+                  <Link
+                    href={`/rci/${r.id}`}
+                    className="flex items-center gap-2 flex-wrap text-sm bg-white rounded-lg border border-blue-200 px-3 py-2 hover:border-blue-400 transition-colors"
+                  >
+                    <span
+                      className={`text-[10px] font-mono font-semibold px-1.5 py-0.5 rounded ${
+                        r.status === "FINAL"
+                          ? "bg-emerald-50 text-emerald-700"
+                          : "bg-amber-50 text-amber-700"
+                      }`}
+                    >
+                      {r.status === "FINAL" ? "FINALISÉ" : "BROUILLON"}
+                    </span>
+                    {r.dossierNumber && (
+                      <span className="text-[11px] font-mono text-slate-500">
+                        {r.dossierNumber}
+                      </span>
+                    )}
+                    <span className="font-medium text-slate-800 min-w-0 truncate">
+                      {r.title || "Sans titre"}
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      )}
 
       {/* Journal */}
       <div className="px-4 py-5 lg:px-8 space-y-4">

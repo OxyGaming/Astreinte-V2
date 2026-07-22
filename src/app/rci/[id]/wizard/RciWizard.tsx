@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Icon } from "@/components/icons";
@@ -9,56 +9,100 @@ import {
   type RciPayload,
   type RciPhotos,
 } from "@/lib/rci/fields";
-import Step1Quand from "./steps/Step1Quand";
-import Step2Nature from "./steps/Step2Nature";
-import Step3Ou from "./steps/Step3Ou";
-import Step4Mobiles from "./steps/Step4Mobiles";
-import Step5Acteurs from "./steps/Step5Acteurs";
-import Step6Presents from "./steps/Step6Presents";
-import Step6Recit from "./steps/Step6Recit";
+import {
+  RCI_EVENT_TYPE_LABELS,
+  missingByStep,
+  missingRequired,
+  normalizeEventType,
+  type RciEventType,
+} from "@/lib/rci/guidance";
+import {
+  accepter,
+  propositionsUtiles,
+  type PropositionChamp,
+} from "@/lib/rci/reprise";
+import { GuidanceProvider } from "./guidance-ui";
+import { todayFr } from "./fields-ui";
+import RciSourceCard, {
+  type SourceCil,
+  type SourceSession,
+} from "../RciSourceCard";
+import RciReprisePanel from "../RciReprisePanel";
+import StepQuand from "./steps/StepQuand";
+import StepNature from "./steps/StepNature";
+import StepOu from "./steps/StepOu";
+import StepInstallations from "./steps/StepInstallations";
+import StepMobiles from "./steps/StepMobiles";
+import StepQui from "./steps/StepQui";
+import StepMesures from "./steps/StepMesures";
+import StepPresents from "./steps/StepPresents";
+import StepRecit from "./steps/StepRecit";
 import type { StepDef } from "./types";
 
+/**
+ * Étapes calquées sur les blocs du RCI papier — l'ordre des rubriques du
+ * formulaire officiel est celui que les opérateurs ont en tête sur le terrain.
+ * Les `key` sont celles de la grille de guidage ([[guidance]]), ce qui permet
+ * de renvoyer directement sur la bonne étape depuis le récapitulatif.
+ */
 const STEPS: StepDef[] = [
-  { key: "quand", label: "Quand", short: "1. Quand", component: Step1Quand },
-  { key: "nature", label: "Nature", short: "2. Nature", component: Step2Nature },
-  { key: "ou", label: "Où", short: "3. Où", component: Step3Ou },
+  { key: "quand", label: "Quand", short: "1. Quand", component: StepQuand },
+  { key: "nature", label: "Nature", short: "2. Nature", component: StepNature },
+  { key: "ou", label: "Où", short: "3. Où", component: StepOu },
   {
-    key: "mobiles",
-    label: "Installations & Mobiles",
-    short: "4. Mobiles",
-    component: Step4Mobiles,
+    key: "installations",
+    label: "Installations",
+    short: "4. Installations",
+    component: StepInstallations,
   },
   {
+    key: "mobiles",
+    label: "Mobiles",
+    short: "5. Mobiles",
+    component: StepMobiles,
+  },
+  { key: "qui", label: "Qui ?", short: "6. Qui", component: StepQui },
+  {
     key: "acteurs",
-    label: "Acteurs & Mesures",
-    short: "5. Acteurs",
-    component: Step5Acteurs,
+    label: "Mesures & acteurs",
+    short: "7. Mesures",
+    component: StepMesures,
   },
   {
     key: "presents",
     label: "Présents sur place",
-    short: "6. Présents",
-    component: Step6Presents,
+    short: "8. Présents",
+    component: StepPresents,
   },
-  { key: "recit", label: "Récit + signatures", short: "7. Récit", component: Step6Recit },
+  {
+    key: "recit",
+    label: "Récit + signatures",
+    short: "9. Récit",
+    component: StepRecit,
+  },
 ];
 
+/**
+ * Relit un payload stocké en ne conservant que les clés actuellement définies.
+ *
+ * Les brouillons créés avant une évolution du schéma contiennent des clés qui
+ * n'existent plus (reliquats sans contrepartie dans le RCI officiel). Sans ce
+ * filtrage, un simple `{...emptyPayload(), ...v}` les réinjecterait à chaque
+ * ouverture et les ré-enregistrerait indéfiniment.
+ */
 function parsePayload(s: string): RciPayload {
+  const base = emptyPayload();
   try {
-    const v = JSON.parse(s) as Partial<RciPayload>;
-    return { ...emptyPayload(), ...v };
+    const v = JSON.parse(s) as Record<string, unknown>;
+    if (!v || typeof v !== "object") return base;
+    const out = base as unknown as Record<string, unknown>;
+    for (const k of Object.keys(base)) {
+      if (k in v) out[k] = v[k];
+    }
+    return out as unknown as RciPayload;
   } catch {
-    return emptyPayload();
+    return base;
   }
-}
-
-/** Date du jour au format Word `JJ/MM/AAAA`. */
-function todayFr(): string {
-  const d = new Date();
-  const dd = String(d.getDate()).padStart(2, "0");
-  const mm = String(d.getMonth() + 1).padStart(2, "0");
-  const yyyy = d.getFullYear();
-  return `${dd}/${mm}/${yyyy}`;
 }
 
 /**
@@ -83,6 +127,8 @@ export default function RciWizard({
   initialTitle,
   status,
   authorName,
+  cilIncident,
+  session,
 }: {
   rciId: string;
   initialPayload: string;
@@ -91,6 +137,8 @@ export default function RciWizard({
   initialTitle: string | null;
   status: string;
   authorName: string;
+  cilIncident: SourceCil | null;
+  session: SourceSession | null;
 }) {
   const router = useRouter();
   const readOnly = status === "FINAL";
@@ -110,8 +158,21 @@ export default function RciWizard({
   const [savedAt, setSavedAt] = useState<Date | null>(null);
   const [saving, setSaving] = useState(false);
   const [generating, setGenerating] = useState(false);
+  const [showGaps, setShowGaps] = useState(false);
+  /** Propositions de reprise en attente d'arbitrage, champ par champ. */
+  const [propositions, setPropositions] = useState<PropositionChamp[]>([]);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastSavedJson = useRef<string>(initialPayload);
+
+  const eventType = normalizeEventType(payload.event_type);
+  const gaps = useMemo(
+    () => missingRequired(payload, photos, eventType),
+    [payload, photos, eventType],
+  );
+  const gapsByStep = useMemo(
+    () => missingByStep(payload, photos, eventType),
+    [payload, photos, eventType],
+  );
 
   function patch(updates: Partial<RciPayload>) {
     if (readOnly) return;
@@ -134,7 +195,7 @@ export default function RciWizard({
         // Calcule eventAt depuis date + heure si possible
         let eventAt: string | null = null;
         const dateMatch = payload.date_evenement.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
-        const heureMatch = payload.heure_evenement.match(/^(\d{2})h(\d{2})$/);
+        const heureMatch = payload.heure_evenement.match(/^(\d{1,2})h(\d{2})$/);
         if (dateMatch && heureMatch) {
           const [, d, m, y] = dateMatch;
           const [, h, mi] = heureMatch;
@@ -173,6 +234,61 @@ export default function RciWizard({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [payload, rciId, readOnly]);
 
+  /**
+   * Retient la typologie déterminée au rattachement — jamais au détriment d'un
+   * choix déjà fait : c'est l'agent qui qualifie l'événement, pas la source.
+   */
+  function appliquerTypologie(t: RciEventType) {
+    setPayload((p) =>
+      normalizeEventType(p.event_type) === "autre"
+        ? { ...p, event_type: t }
+        : p,
+    );
+  }
+
+  /**
+   * Interroge les sources rattachées et prépare les propositions à arbitrer.
+   *
+   * Rien n'est appliqué ici : le panneau de reprise laisse l'agent accepter ou
+   * écarter chaque champ. On n'écarte d'office que les propositions dont la
+   * valeur est déjà en place, qui n'apprendraient rien.
+   */
+  async function analyser(typologie?: RciEventType) {
+    const res = await fetch(`/api/rci/${rciId}/reprise`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ typologie }),
+    });
+    if (!res.ok) {
+      const j = await res.json().catch(() => ({}));
+      toast.error(j.error || "Analyse des sources impossible");
+      return;
+    }
+    const { propositions: brutes } = (await res.json()) as {
+      propositions: PropositionChamp[];
+    };
+    const utiles = propositionsUtiles(payload, brutes);
+    setPropositions(utiles);
+    toast[utiles.length ? "success" : "info"](
+      utiles.length
+        ? `${utiles.length} donnée${utiles.length > 1 ? "s" : ""} à examiner.`
+        : "Rien de nouveau à reprendre depuis les sources rattachées.",
+    );
+  }
+
+  /** Retient la valeur choisie pour un champ — décision explicite de l'agent. */
+  function accepterProposition(retenu: Pick<PropositionChamp, "cle" | "valeur">) {
+    setPayload((courant) => accepter(courant, retenu));
+    // L'arbitrage est fait : on retire toutes les propositions du champ, y
+    // compris la valeur concurrente qui n'a pas été retenue.
+    setPropositions((l) => l.filter((x) => x.cle !== retenu.cle));
+  }
+
+  /** Écarte le champ dans son ensemble, quelles que soient les sources. */
+  function ignorerProposition(cle: PropositionChamp["cle"]) {
+    setPropositions((l) => l.filter((x) => x.cle !== cle));
+  }
+
   async function generate() {
     setGenerating(true);
     try {
@@ -205,87 +321,188 @@ export default function RciWizard({
   const Current = STEPS[stepIdx].component;
 
   return (
-    <div className="card p-5 lg:p-6 space-y-5">
-      {/* Stepper */}
-      <ol className="flex gap-1 flex-wrap text-[11px]">
-        {STEPS.map((s, i) => {
-          const active = i === stepIdx;
-          const done = i < stepIdx;
-          return (
-            <li key={s.key}>
+    <GuidanceProvider payload={payload} photos={photos}>
+      <RciSourceCard
+        rciId={rciId}
+        readOnly={readOnly}
+        cilIncident={cilIncident}
+        session={session}
+        typologieCourante={eventType}
+        nbPropositions={propositions.length}
+        onAnalyser={analyser}
+        onTypologie={appliquerTypologie}
+      />
+
+      {!readOnly && (
+        <RciReprisePanel
+          propositions={propositions}
+          payload={payload}
+          libellesEtapes={Object.fromEntries(
+            STEPS.map((s) => [s.key, s.label]),
+          )}
+          onAccepter={accepterProposition}
+          onIgnorer={ignorerProposition}
+          onToutIgnorer={() => setPropositions([])}
+        />
+      )}
+      <div className="card p-5 lg:p-6 space-y-5">
+        {/* Stepper — la pastille compte les rubriques obligatoires encore vides. */}
+        <ol className="flex gap-1 flex-wrap text-[11px]">
+          {STEPS.map((s, i) => {
+            const active = i === stepIdx;
+            const done = i < stepIdx;
+            const missing = gapsByStep[s.key] ?? 0;
+            return (
+              <li key={s.key}>
+                <button
+                  type="button"
+                  onClick={() => setStepIdx(i)}
+                  className={`px-2.5 py-1 rounded-md border transition-colors inline-flex items-center gap-1.5 ${
+                    active
+                      ? "bg-blue-800 text-white border-blue-800"
+                      : done
+                        ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                        : "bg-white text-slate-500 border-slate-200 hover:border-slate-300"
+                  }`}
+                >
+                  {s.short}
+                  {missing > 0 && (
+                    <span
+                      title={`${missing} rubrique(s) obligatoire(s) à compléter`}
+                      className={`inline-flex items-center justify-center min-w-[15px] h-[15px] px-1 rounded-full text-[9px] font-bold ${
+                        active
+                          ? "bg-white/25 text-white"
+                          : "bg-rose-100 text-rose-700"
+                      }`}
+                    >
+                      {missing}
+                    </span>
+                  )}
+                </button>
+              </li>
+            );
+          })}
+        </ol>
+
+        {/* Récapitulatif de complétude, piloté par la typologie déclarée. */}
+        <div
+          className={`rounded-xl border px-3 py-2 ${
+            gaps.length === 0
+              ? "border-emerald-200 bg-emerald-50"
+              : "border-amber-200 bg-amber-50"
+          }`}
+        >
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <p className="text-xs">
+              <span className="font-semibold text-slate-700">
+                {RCI_EVENT_TYPE_LABELS[eventType]}
+              </span>
+              <span className="text-slate-400"> · </span>
+              {gaps.length === 0 ? (
+                <span className="text-emerald-800 font-medium">
+                  toutes les rubriques attendues sont renseignées
+                </span>
+              ) : (
+                <span className="text-amber-900 font-medium">
+                  {gaps.length} rubrique{gaps.length > 1 ? "s" : ""} obligatoire
+                  {gaps.length > 1 ? "s" : ""} à compléter
+                </span>
+              )}
+            </p>
+            {gaps.length > 0 && (
               <button
                 type="button"
-                onClick={() => setStepIdx(i)}
-                className={`px-2.5 py-1 rounded-md border transition-colors ${
-                  active
-                    ? "bg-indigo-600 text-white border-indigo-600"
-                    : done
-                      ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                      : "bg-white text-slate-500 border-slate-200 hover:border-slate-300"
-                }`}
+                onClick={() => setShowGaps((v) => !v)}
+                className="text-[11px] font-semibold text-amber-900 underline underline-offset-2"
               >
-                {s.short}
+                {showGaps ? "Masquer" : "Voir la liste"}
               </button>
-            </li>
-          );
-        })}
-      </ol>
-
-      {/* Statut autosave */}
-      <div className="text-[10px] text-slate-400 font-mono h-3">
-        {saving
-          ? "Sauvegarde…"
-          : savedAt
-            ? `Sauvegardé à ${savedAt.toLocaleTimeString("fr-FR")}`
-            : "Modifications enregistrées automatiquement."}
-      </div>
-
-      {/* Étape courante */}
-      <div className="min-h-[300px]">
-        <Current
-          payload={payload}
-          patch={patch}
-          photos={photos}
-          patchPhotos={patchPhotos}
-          readOnly={readOnly}
-        />
-      </div>
-
-      {/* Navigation + génération */}
-      <div className="flex items-center justify-between gap-2 pt-3 border-t border-slate-200 flex-wrap">
-        <button
-          type="button"
-          onClick={() => setStepIdx((i) => Math.max(0, i - 1))}
-          disabled={stepIdx === 0}
-          className="text-xs text-slate-600 px-3 py-2 rounded-lg border border-slate-200 hover:border-slate-300 disabled:opacity-40"
-        >
-          <Icon.ChevronLeft className="w-4 h-4 inline -ml-1" /> Précédent
-        </button>
-        <div className="text-xs text-slate-500 font-medium">
-          Étape {stepIdx + 1} / {STEPS.length} — {STEPS[stepIdx].label}
+            )}
+          </div>
+          {showGaps && gaps.length > 0 && (
+            <ul className="mt-2 space-y-1">
+              {gaps.map(({ group }) => (
+                <li key={group.id}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const idx = STEPS.findIndex((s) => s.key === group.step);
+                      if (idx >= 0) setStepIdx(idx);
+                      setShowGaps(false);
+                    }}
+                    className="text-[11px] text-left text-amber-900 hover:underline"
+                  >
+                    → {group.label}
+                    <span className="text-amber-700/70">
+                      {" "}
+                      (
+                      {STEPS.find((s) => s.key === group.step)?.label ??
+                        group.step}
+                      )
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
-        {stepIdx < STEPS.length - 1 ? (
+
+        {/* Statut autosave */}
+        <div className="text-[10px] text-slate-400 font-mono h-3">
+          {saving
+            ? "Sauvegarde…"
+            : savedAt
+              ? `Sauvegardé à ${savedAt.toLocaleTimeString("fr-FR")}`
+              : "Modifications enregistrées automatiquement."}
+        </div>
+
+        {/* Étape courante */}
+        <div className="min-h-[300px]">
+          <Current
+            payload={payload}
+            patch={patch}
+            photos={photos}
+            patchPhotos={patchPhotos}
+            readOnly={readOnly}
+          />
+        </div>
+
+        {/* Navigation + génération */}
+        <div className="flex items-center justify-between gap-2 pt-3 border-t border-slate-200 flex-wrap">
           <button
             type="button"
-            onClick={() => setStepIdx((i) => Math.min(STEPS.length - 1, i + 1))}
-            className="btn btn-primary"
+            onClick={() => setStepIdx((i) => Math.max(0, i - 1))}
+            disabled={stepIdx === 0}
+            className="text-xs text-slate-600 px-3 py-2 rounded-lg border border-slate-200 hover:border-slate-300 disabled:opacity-40"
           >
-            Suivant <Icon.ChevronLeft className="w-4 h-4 rotate-180 -mr-1" />
+            <Icon.ChevronLeft className="w-4 h-4 inline -ml-1" /> Précédent
           </button>
-        ) : (
-          <button
-            type="button"
-            onClick={generate}
-            disabled={generating || readOnly}
-            className="btn btn-primary"
-          >
-            <Icon.Plus className="w-4 h-4" />
-            {generating ? "Génération…" : "Générer le .docx"}
-          </button>
-        )}
+          <div className="text-xs text-slate-500 font-medium">
+            Étape {stepIdx + 1} / {STEPS.length} — {STEPS[stepIdx].label}
+          </div>
+          {stepIdx < STEPS.length - 1 ? (
+            <button
+              type="button"
+              onClick={() => setStepIdx((i) => Math.min(STEPS.length - 1, i + 1))}
+              className="btn btn-primary"
+            >
+              Suivant <Icon.ChevronLeft className="w-4 h-4 rotate-180 -mr-1" />
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={generate}
+              disabled={generating || readOnly}
+              className="btn btn-primary"
+            >
+              <Icon.Plus className="w-4 h-4" />
+              {generating ? "Génération…" : "Générer le .docx"}
+            </button>
+          )}
+        </div>
+        {/* initialEventAt non utilisé mais accepté pour API future */}
+        {void initialEventAt}
       </div>
-      {/* initialEventAt non utilisé mais accepté pour API future */}
-      {void initialEventAt}
-    </div>
+    </GuidanceProvider>
   );
 }

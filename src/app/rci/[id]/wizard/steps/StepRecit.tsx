@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { DateField, FieldSet, TernaryField, TextField } from "../fields-ui";
+import { DateField, TernaryField, TextField } from "../fields-ui";
+import { GuidedFieldSet } from "../guidance-ui";
 import SignaturePad from "../SignaturePad";
 import type { StepProps } from "../types";
 import type { RciPayload } from "@/lib/rci/fields";
@@ -186,7 +187,8 @@ export default function Step6Recit({
 
   return (
     <div className="space-y-4">
-      <FieldSet
+      <GuidedFieldSet
+        groupId="recit"
         title="Récit chronologique"
         hint="Déroulé heure par heure de l'événement (avant / pendant)"
       >
@@ -194,16 +196,16 @@ export default function Step6Recit({
           label="Comment ?"
           value={payload.recit_chronologique}
           placeholder={
-            "Heure  Action…\n07h09  Avis CRC\n07h30  Arrivée DPx\n…"
+            "Heure  Action…\n07h09  Avis CRC\n07h30  Arrivée DPx\n…\n\nHypothèses :\n- …"
           }
           disabled={readOnly}
           multiline
           rows={10}
           onChange={(v) => patch({ recit_chronologique: v })}
         />
-      </FieldSet>
+      </GuidedFieldSet>
 
-      <FieldSet title="Conséquences visibles">
+      <GuidedFieldSet groupId="consequences" title="Conséquences visibles">
         <TextField
           label="Conséquences visibles"
           value={payload.consequences_visibles}
@@ -212,9 +214,10 @@ export default function Step6Recit({
           rows={3}
           onChange={(v) => patch({ consequences_visibles: v })}
         />
-      </FieldSet>
+      </GuidedFieldSet>
 
-      <FieldSet
+      <GuidedFieldSet
+        groupId="schema"
         title="Schéma succinct"
         hint="Photo ou croquis — joint après le libellé « Schéma succinct »"
       >
@@ -241,30 +244,35 @@ export default function Step6Recit({
             Kio en base64)
           </div>
         )}
-      </FieldSet>
+      </GuidedFieldSet>
 
-      <FieldSet title="Cases bas de page">
+      <GuidedFieldSet groupId="point_protege" title="Point protégé">
         <TernaryField
-          label="Franchissement intempestif de signal d'arrêt — point protégé engagé ?"
+          label="Franchissement intempestif de signal d'arrêt — le point protégé est-il engagé ?"
           value={payload.franchissement_point_protege_engage}
           onChange={(v) => patch({ franchissement_point_protege_engage: v })}
           disabled={readOnly}
         />
-        <TernaryField
-          label="Photos jointes au RCI ?"
-          value={payload.photos_jointes}
-          onChange={(v) => patch({ photos_jointes: v })}
-          disabled={readOnly}
-        />
-        <TernaryField
-          label="Photos des titres d'habilitation des opérateurs"
-          value={payload.photos_titres_habilitation}
-          onChange={(v) => patch({ photos_titres_habilitation: v })}
-          disabled={readOnly}
-        />
-      </FieldSet>
+      </GuidedFieldSet>
 
-      <FieldSet title="RCI établi par + signatures">
+      <GuidedFieldSet groupId="photos" title="Photos jointes">
+        <div className="grid gap-3 sm:grid-cols-2">
+          <TernaryField
+            label="Photos jointes au RCI ?"
+            value={payload.photos_jointes}
+            onChange={(v) => patch({ photos_jointes: v })}
+            disabled={readOnly}
+          />
+          <TernaryField
+            label="Photos des titres d'habilitation des opérateurs"
+            value={payload.photos_titres_habilitation}
+            onChange={(v) => patch({ photos_titres_habilitation: v })}
+            disabled={readOnly}
+          />
+        </div>
+      </GuidedFieldSet>
+
+      <GuidedFieldSet groupId="etabli" title="RCI établi par + signatures">
         <div className="grid gap-3 sm:grid-cols-2">
           <DateField
             label="RCI établi le"
@@ -331,7 +339,7 @@ export default function Step6Recit({
             {renderSignatory({ key: "ef2", label: "EF n°2" })}
           </div>
         </div>
-      </FieldSet>
+      </GuidedFieldSet>
     </div>
   );
 }

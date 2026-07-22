@@ -5,8 +5,19 @@
  *   - le wizard (formulaire de saisie)
  *   - le rendering (mapping payload → docxtemplater)
  *
- * Couvre la VAGUE 1 (cf. doc/rci/template-audit.txt) : tout sauf la grosse
- * table « Personnes / organismes appelés - présents sur place » (T5 R24-41).
+ * PÉRIMÈTRE — 1re partie du RCI (« Avis immédiat ») uniquement. La 2e partie
+ * (constatations SGC / RFG / maintenance / EF, déclarations écrites, annexes,
+ * suites de l'événement : bouclage des mesures d'urgence, reprise des
+ * circulations, train de secours, relevage terminé) est volontairement hors
+ * périmètre de l'application.
+ *
+ * INVARIANT DE COUVERTURE — sur ce périmètre, **toute** clé de `RciPayload`
+ * possède un placeholder dans `public/rci/template.docx`, et **tout**
+ * placeholder du modèle reçoit une valeur. Il n'existe plus de clé « morte » ni
+ * de champ officiel non balisé : les cases à cocher Word natives ont toutes été
+ * converties. `render.test.ts` vérifie l'invariant dans les deux sens — une clé
+ * ajoutée sans placeholder, ou un placeholder non alimenté, fait échouer les
+ * tests. Seul `META_KEYS` y échappe (pilotage du wizard, hors document).
  *
  * Conventions de nommage :
  *   - {txt_xxx}    → champ texte libre
@@ -22,6 +33,14 @@ export type Ternary = boolean | null;
 
 /** Payload sérialisable d'un RCI (vague 1). */
 export type RciPayload = {
+  // ── Méta (hors template) ───────────────────────────────────────────────
+  /**
+   * Typologie de l'événement — pilote le guidage de saisie (quels champs sont
+   * attendus, lesquels sont sans objet). Cf. [[guidance]]. N'apparaît pas dans
+   * le Word : c'est une aide au remplissage, pas une donnée du RCI.
+   */
+  event_type: string;
+
   // ── Header (T1) ────────────────────────────────────────────────────────
   dossier_numero: string;
 
@@ -63,6 +82,10 @@ export type RciPayload = {
   inst_crocodile_en_service: Ternary;
   inst_detonateur: Ternary;
   inst_cartouche_percutee: Ternary;
+  /** Emplacement libre du tableau « Équipement du signal » : équipement hors
+   *  liste (KVB / TVM / DAAT / Crocodile / ETCS), avec son état en service. */
+  inst_autre_libelle: string;
+  inst_autre_en_service: Ternary;
 
   // ── PN (T2 R17, conditionnel nature=PN) ────────────────────────────────
   pn_numero: string;
@@ -83,7 +106,6 @@ export type RciPayload = {
   train_conduite_em_en_tete: Ternary;
   train_sous_traitant: boolean;
   train_mouvement_manoeuvre_non_guide: string;
-  train_evolution_numero: string;
   train_type_ttx: boolean;
   train_type_tus: boolean;
   train_type_tsv: boolean;
@@ -138,7 +160,6 @@ export type RciPayload = {
   // ── Qui — SNCF Réseau (T3 R17 + T4) ────────────────────────────────────
   qui_sgc: boolean;
   qui_maintenance_travaux_mainteneur: boolean;
-  qui_maintenance_travaux_convois_gi: boolean;
   qui_nb_personnes_cabine: string;
   qui_conducteur_seul_reseau: boolean;
   qui_conducteur_seul_prestataire: boolean;
@@ -165,10 +186,6 @@ export type RciPayload = {
   ef1_pour_elle_meme: boolean;
   ef1_sous_traitant: boolean;
   ef1_utilisatrice_nom: string;
-  ef2_nom: string;
-  ef2_pour_elle_meme: boolean;
-  ef2_sous_traitant: boolean;
-  ef2_utilisatrice_nom: string;
 
   // ── Alcoolémie (T5 R1-3) ───────────────────────────────────────────────
   alcool_personne: string;
@@ -314,6 +331,7 @@ export type RciPhotos = {
 /** Payload entièrement vide, utilisé pour initialiser un brouillon. */
 export function emptyPayload(): RciPayload {
   return {
+    event_type: "autre",
     dossier_numero: "",
     jour_semaine: "",
     date_evenement: "",
@@ -346,6 +364,8 @@ export function emptyPayload(): RciPayload {
     inst_crocodile_en_service: null,
     inst_detonateur: null,
     inst_cartouche_percutee: null,
+    inst_autre_libelle: "",
+    inst_autre_en_service: null,
     pn_numero: "",
     pn_sal2: false,
     pn_sal4: false,
@@ -362,7 +382,6 @@ export function emptyPayload(): RciPayload {
     train_conduite_em_en_tete: null,
     train_sous_traitant: false,
     train_mouvement_manoeuvre_non_guide: "",
-    train_evolution_numero: "",
     train_type_ttx: false,
     train_type_tus: false,
     train_type_tsv: false,
@@ -407,7 +426,6 @@ export function emptyPayload(): RciPayload {
     veh_besoin_relevage: null,
     qui_sgc: false,
     qui_maintenance_travaux_mainteneur: false,
-    qui_maintenance_travaux_convois_gi: false,
     qui_nb_personnes_cabine: "",
     qui_conducteur_seul_reseau: false,
     qui_conducteur_seul_prestataire: false,
@@ -432,10 +450,6 @@ export function emptyPayload(): RciPayload {
     ef1_pour_elle_meme: false,
     ef1_sous_traitant: false,
     ef1_utilisatrice_nom: "",
-    ef2_nom: "",
-    ef2_pour_elle_meme: false,
-    ef2_sous_traitant: false,
-    ef2_utilisatrice_nom: "",
     alcool_personne: "",
     alcool_pratique: null,
     alcool_positif: null,
@@ -584,7 +598,6 @@ export const CHECK_BOOL_KEYS: ReadonlyArray<keyof RciPayload> = [
   "veh_tampons_autres",
   "qui_sgc",
   "qui_maintenance_travaux_mainteneur",
-  "qui_maintenance_travaux_convois_gi",
   "qui_conducteur_seul_reseau",
   "qui_conducteur_seul_prestataire",
   "qui_conducteur_seul_conduite",
@@ -601,11 +614,12 @@ export const CHECK_BOOL_KEYS: ReadonlyArray<keyof RciPayload> = [
   "autres_gi_titulaire",
   "ef1_pour_elle_meme",
   "ef1_sous_traitant",
-  "ef2_pour_elle_meme",
-  "ef2_sous_traitant",
   "mc_notification_dpx",
   "mc_notification_cogc",
 ];
+
+/** Clés de pilotage du wizard, sans contrepartie dans le template Word. */
+export const META_KEYS: ReadonlyArray<keyof RciPayload> = ["event_type"];
 
 /** Clés image (base64 PNG brut). Rendues comme `{%photo_<key>}` dans le template. */
 export const PHOTO_KEYS: ReadonlyArray<keyof RciPayload> = [
@@ -641,6 +655,7 @@ export const CHECK_TERNARY_KEYS: ReadonlyArray<keyof RciPayload> = [
   "inst_crocodile_en_service",
   "inst_detonateur",
   "inst_cartouche_percutee",
+  "inst_autre_en_service",
   "pn_feux_routiers",
   "train_conduite_em_en_tete",
   "cab_kvb_covit",

@@ -8,6 +8,7 @@ import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { Icon } from "@/components/icons";
 import RciWizard from "./wizard/RciWizard";
+import type { SourceCil, SourceSession } from "./RciSourceCard";
 
 type Rci = {
   id: string;
@@ -19,6 +20,9 @@ type Rci = {
   authorName: string;
   // Portage : `teamName` retiré — pas de modèle `Team` dans cette application.
   updatedAt: string;
+  /// Source terrain rattachée (exclusives en pratique, cf. RciSourceCard).
+  cilIncident: SourceCil | null;
+  session: SourceSession | null;
 };
 
 
@@ -157,6 +161,8 @@ export default function RciEditorClient({ rci }: { rci: Rci }) {
         initialTitle={rci.title}
         status={rci.status}
         authorName={rci.authorName}
+        cilIncident={rci.cilIncident}
+        session={rci.session}
       />
     </div>
   );

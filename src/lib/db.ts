@@ -902,3 +902,50 @@ export async function getPosteProcedureTypes(): Promise<Record<string, string[]>
   }
   return result;
 }
+
+/** RCI rédigé(s) à partir d'une session de fiche réflexe. */
+export type RciLie = {
+  id: string;
+  status: string;
+  title: string | null;
+  dossierNumber: string | null;
+  updatedAt: string;
+};
+
+/**
+ * RCI rattachés à une session — alimente l'encart de navigation de
+ * `/sessions/[id]`. Le rattachement est posé depuis le RCI (cf. RciSourceCard) ;
+ * on le lit ici dans l'autre sens.
+ */
+export async function getRcisBySession(sessionId: string): Promise<RciLie[]> {
+  const rows = await prisma.rci.findMany({
+    where: { sessionId },
+    orderBy: { updatedAt: "desc" },
+    select: {
+      id: true,
+      status: true,
+      title: true,
+      dossierNumber: true,
+      updatedAt: true,
+    },
+  });
+  return rows.map((r) => ({ ...r, updatedAt: r.updatedAt.toISOString() }));
+}
+
+/** Idem pour un incident du Livret CIL. */
+export async function getRcisByCilIncident(
+  cilIncidentId: string,
+): Promise<RciLie[]> {
+  const rows = await prisma.rci.findMany({
+    where: { cilIncidentId },
+    orderBy: { updatedAt: "desc" },
+    select: {
+      id: true,
+      status: true,
+      title: true,
+      dossierNumber: true,
+      updatedAt: true,
+    },
+  });
+  return rows.map((r) => ({ ...r, updatedAt: r.updatedAt.toISOString() }));
+}

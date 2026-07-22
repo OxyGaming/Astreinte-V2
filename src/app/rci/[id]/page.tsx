@@ -18,6 +18,27 @@ export default async function RciEditPage({
     // Portage : ni `Team` ni `Photo` dans cette application.
     include: {
       author: { select: { id: true, nom: true, prenom: true } },
+      // Source terrain rattachée — sert l'encart de navigation et la reprise.
+      cilIncident: {
+        select: {
+          id: true,
+          reference: true,
+          lieu: true,
+          type: true,
+          typeLibre: true,
+          status: true,
+          occurredAt: true,
+        },
+      },
+      session: {
+        select: {
+          id: true,
+          ficheTitre: true,
+          ficheSlug: true,
+          status: true,
+          startedAt: true,
+        },
+      },
     },
   });
   if (!rci) notFound();
@@ -35,6 +56,26 @@ export default async function RciEditPage({
         payload: rci.payload,
         authorName: `${rci.author.prenom} ${rci.author.nom}`.trim(),
         updatedAt: rci.updatedAt.toISOString(),
+        cilIncident: rci.cilIncident
+          ? {
+              id: rci.cilIncident.id,
+              reference: rci.cilIncident.reference,
+              lieu: rci.cilIncident.lieu,
+              type: rci.cilIncident.type,
+              typeLibre: rci.cilIncident.typeLibre,
+              status: rci.cilIncident.status,
+              occurredAt: rci.cilIncident.occurredAt.toISOString(),
+            }
+          : null,
+        session: rci.session
+          ? {
+              id: rci.session.id,
+              ficheTitre: rci.session.ficheTitre,
+              ficheSlug: rci.session.ficheSlug,
+              status: rci.session.status,
+              startedAt: rci.session.startedAt.toISOString(),
+            }
+          : null,
       }}
     />
   );

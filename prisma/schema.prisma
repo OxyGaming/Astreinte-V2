@@ -351,6 +351,9 @@ model FicheSession {
   /// est la seule voie pour mettre un user de côté tout en gardant la trace
   /// des sessions qu'il a lancées.
   createdBy       User              @relation(fields: [createdByUserId], references: [id])
+  /// RCI rédigés à partir de cette session (rattachement facultatif).
+  rcis            Rci[]
+
 
   @@index([ficheSlug])
   @@index([status])
@@ -505,14 +508,26 @@ model Rci {
   title         String?
   /// Payload JSON des champs du wizard (stringifié, parsé côté app).
   payload       String    @default("{}")
+  /// Rattachement facultatif à la source terrain de l'événement — sert à la
+  /// navigation entre modules et au pré-remplissage. Exclusifs en pratique
+  /// (l'UI n'en propose qu'un), mais non contraints en base : un RCI peut
+  /// naître d'une session puis être relié à un CIL ouvert plus tard.
+  cilIncidentId String?
+  sessionId     String?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
-  author User @relation(fields: [authorId], references: [id])
+  author      User          @relation(fields: [authorId], references: [id])
+  /// SetNull : la suppression d'un CIL ou d'une session ne doit jamais
+  /// emporter le RCI, qui est un document à valeur probante autonome.
+  cilIncident CilIncident?  @relation(fields: [cilIncidentId], references: [id], onDelete: SetNull)
+  session     FicheSession? @relation(fields: [sessionId], references: [id], onDelete: SetNull)
 
   @@index([teamId, status])
   @@index([authorId])
   @@index([updatedAt])
+  @@index([cilIncidentId])
+  @@index([sessionId])
 }
 
 /// Incident CIL (Chef d'Incident Local).
@@ -567,6 +582,9 @@ model CilIncident {
   intervenants  CilIntervenant[]
   signatures    CilSignature[]
   autorisations CilAutorisation[]
+  /// RCI rédigés à partir de cet incident (rattachement facultatif).
+  rcis          Rci[]
+
 
   @@index([teamId, status])
   @@index([authorId])

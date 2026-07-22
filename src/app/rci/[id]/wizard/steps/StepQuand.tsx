@@ -1,6 +1,7 @@
 "use client";
 
-import { DateField, FieldSet, TextField, TimeField } from "../fields-ui";
+import { DateField, TextField, TimeField } from "../fields-ui";
+import { GuidedFieldSet } from "../guidance-ui";
 import type { StepProps } from "../types";
 
 const JOURS = [
@@ -42,9 +43,10 @@ function buildDossierNumber(dateFr: string, heure: string, lieu: string): string
 export default function Step1Quand({ payload, patch, readOnly }: StepProps) {
   return (
     <div className="space-y-4">
-      <FieldSet
+      <GuidedFieldSet
+        groupId="datetime"
         title="Quand ?"
-        hint="Date et heure de l'événement (le jour est déterminé automatiquement)"
+        hint="le jour de la semaine est déterminé automatiquement"
       >
         <div className="grid gap-3 sm:grid-cols-2">
           <DateField
@@ -84,9 +86,18 @@ export default function Step1Quand({ payload, patch, readOnly }: StepProps) {
             }}
           />
         </div>
-      </FieldSet>
+        {payload.jour_semaine && (
+          <p className="text-[11px] text-slate-500">
+            Jour retenu :{" "}
+            <span className="font-semibold text-slate-700">
+              {payload.jour_semaine}
+            </span>
+          </p>
+        )}
+      </GuidedFieldSet>
 
-      <FieldSet
+      <GuidedFieldSet
+        groupId="dossier"
         title="Numéro de dossier"
         hint="Format normé JJMMAAHHMM-Lieu — généré automatiquement"
       >
@@ -98,7 +109,7 @@ export default function Step1Quand({ payload, patch, readOnly }: StepProps) {
           disabled={readOnly}
           onChange={(v) => patch({ dossier_numero: v })}
         />
-      </FieldSet>
+      </GuidedFieldSet>
     </div>
   );
 }
