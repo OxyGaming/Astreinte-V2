@@ -54,11 +54,17 @@ const closeSchema = z.object({
   at: z.string().datetime(),
 });
 const reopenSchema = z.object({ action: z.literal("reopen") });
+/// Rattachement direct du Livret à une session (triangle). `null` détache.
+const linkSessionSchema = z.object({
+  action: z.literal("link-session"),
+  sessionId: z.string().cuid().nullable(),
+});
 const patchSchema = z.discriminatedUnion("action", [
   headerSchema,
   arrivalSchema,
   closeSchema,
   reopenSchema,
+  linkSessionSchema,
 ]);
 
 export async function PATCH(
@@ -107,6 +113,29 @@ export async function PATCH(
     await prisma.cilIncident.update({
       where: { id },
       data: { status: "OPEN", closedAt: null },
+    });
+    const row = await loadIncidentFull(id);
+    return NextResponse.json(serializeIncident(row!));
+  }
+
+  // Rattachement d'une session — métadonnée de navigation, autorisée même sur
+  // un incident clôturé (on peut relier une session après coup).
+  if (data.action === "link-session") {
+    if (data.sessionId) {
+      const s = await prisma.ficheSession.findUnique({
+        where: { id: data.sessionId },
+        select: { id: true, createdByUserId: true },
+      });
+      if (!s || !assertTeamAccess(u, { authorId: s.createdByUserId })) {
+        return NextResponse.json(
+          { error: "Session inconnue ou inaccessible" },
+          { status: 404 },
+        );
+      }
+    }
+    await prisma.cilIncident.update({
+      where: { id },
+      data: { sessionId: data.sessionId },
     });
     const row = await loadIncidentFull(id);
     return NextResponse.json(serializeIncident(row!));

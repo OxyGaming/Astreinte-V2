@@ -269,7 +269,10 @@ export default function RciSourceCard({
           titre="Session de fiche réflexe"
           libelle={session ? session.ficheTitre : null}
           detail={session ? fmtDateTimeFr(session.startedAt) : ""}
-          href={session ? `/sessions/${session.id}` : null}
+          // Ouvre la vue fiche live (Archiver + conduite à tenir), pas le
+          // journal `/sessions/[id]`. La fiche résout la session active de
+          // l'utilisateur pour ce slug.
+          href={session ? `/fiches/${session.ficheSlug}` : null}
         />
       </div>
 

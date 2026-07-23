@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { requireUser, teamScope } from "@/lib/auth";
+import { requireUser, teamScope, assertTeamAccess } from "@/lib/auth";
 import { createEvent } from "@/lib/cil/repo";
 import { INCIDENT_TYPES, ETABLISSEMENTS, GARE_MODES } from "@/lib/cil/types";
 
@@ -48,6 +48,13 @@ const createSchema = z.object({
   cilPrenom: z.string().trim().max(120).nullable().optional(),
   cilEtablissement: z.enum(ETABLISSEMENTS).nullable().optional(),
   designatedAt: z.string().datetime().nullable().optional(),
+  /// Lien direct vers la session décrivant le même événement (Livret ouvert
+  /// depuis une session). On ne relie qu'à une session déjà accessible.
+  sessionId: z.string().cuid().nullable().optional(),
+  /// Livret ouvert depuis un RCI : on rattache le RCI à ce nouveau Livret
+  /// (`Rci.cilIncidentId`) et le Livret hérite de la session du RCI s'il en a
+  /// une, pour garder le triangle 1:1:1 cohérent.
+  rciId: z.string().cuid().nullable().optional(),
 });
 
 function slug(s: string): string {
@@ -102,6 +109,47 @@ export async function POST(req: Request) {
   if (!u.teamIds.includes(teamId) && u.role !== "ADMIN") {
     return NextResponse.json({ error: "Équipe hors scope" }, { status: 403 });
   }
+  // Rattachement à la session : réservé à une session déjà consultable.
+  if (parsed.data.sessionId) {
+    const s = await prisma.ficheSession.findUnique({
+      where: { id: parsed.data.sessionId },
+      select: { id: true, createdByUserId: true },
+    });
+    if (!s || !assertTeamAccess(u, { authorId: s.createdByUserId })) {
+      return NextResponse.json(
+        { error: "Session inconnue ou inaccessible" },
+        { status: 404 },
+      );
+    }
+  }
+
+  // Livret ouvert depuis un RCI : on vérifie l'accès et on récupère sa session
+  // pour la faire hériter au Livret (triangle 1:1:1). Un RCI finalisé est en
+  // lecture seule : on refuse de le rattacher.
+  let rciToLink: { id: string; sessionId: string | null } | null = null;
+  if (parsed.data.rciId) {
+    const rci = await prisma.rci.findUnique({
+      where: { id: parsed.data.rciId },
+      select: { id: true, authorId: true, sessionId: true, status: true },
+    });
+    if (!rci || !assertTeamAccess(u, rci)) {
+      return NextResponse.json(
+        { error: "RCI inconnu ou inaccessible" },
+        { status: 404 },
+      );
+    }
+    if (rci.status === "FINAL") {
+      return NextResponse.json(
+        { error: "RCI finalisé, lecture seule." },
+        { status: 409 },
+      );
+    }
+    rciToLink = { id: rci.id, sessionId: rci.sessionId };
+  }
+
+  // La session du Livret : celle passée explicitement, sinon celle du RCI.
+  const effectiveSessionId =
+    parsed.data.sessionId ?? rciToLink?.sessionId ?? null;
 
   const occurredAt = new Date(parsed.data.occurredAt);
   const created = await prisma.$transaction(async (tx) => {
@@ -132,6 +180,7 @@ export async function POST(req: Request) {
         designatedAt: parsed.data.designatedAt
           ? new Date(parsed.data.designatedAt)
           : null,
+        sessionId: effectiveSessionId,
       },
     });
     await createEvent(tx, {
@@ -142,6 +191,13 @@ export async function POST(req: Request) {
       actorId: u.id,
       actorName: u.name,
     });
+    // Referme le lien RCI → Livret côté RCI.
+    if (rciToLink) {
+      await tx.rci.update({
+        where: { id: rciToLink.id },
+        data: { cilIncidentId: incident.id },
+      });
+    }
     return incident;
   });
 

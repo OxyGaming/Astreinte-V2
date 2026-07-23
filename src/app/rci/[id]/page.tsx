@@ -1,6 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { assertTeamAccess, getSessionUser } from "@/lib/auth";
+import { resolveTriangleLinks } from "@/lib/db";
 import RciEditorClient from "./RciEditorClient";
 
 export const dynamic = "force-dynamic";
@@ -45,8 +46,14 @@ export default async function RciEditPage({
   // Cloisonnement par auteur. `notFound()` — et non un 403 — pour ne pas
   // révéler l'existence d'une ressource appartenant à un autre utilisateur.
   if (!assertTeamAccess(u, rci)) notFound();
+  // Voisins du triangle pour le bandeau « Modules liés » (résolution transitive :
+  // la session atteinte via le CIL compte aussi). Distinct de « Sources terrain »
+  // du wizard, qui reste sur le rattachement direct + reprise.
+  const triangle = await resolveTriangleLinks({ rciId: rci.id });
   return (
     <RciEditorClient
+      linkedCil={triangle.cil}
+      linkedSession={triangle.session}
       rci={{
         id: rci.id,
         status: rci.status,

@@ -8,6 +8,7 @@ import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { Icon } from "@/components/icons";
 import RciWizard from "./wizard/RciWizard";
+import ModuleLinks from "@/components/ModuleLinks";
 import type { SourceCil, SourceSession } from "./RciSourceCard";
 
 type Rci = {
@@ -26,7 +27,16 @@ type Rci = {
 };
 
 
-export default function RciEditorClient({ rci }: { rci: Rci }) {
+export default function RciEditorClient({
+  rci,
+  linkedCil = null,
+  linkedSession = null,
+}: {
+  rci: Rci;
+  /** Voisins du triangle (résolution transitive) pour le bandeau de nav. */
+  linkedCil?: { id: string } | null;
+  linkedSession?: { id: string; ficheSlug: string } | null;
+}) {
   const router = useRouter();
   const [title, setTitle] = useState(rci.title ?? "");
   const [savedAt, setSavedAt] = useState<Date | null>(null);
@@ -128,6 +138,27 @@ export default function RciEditorClient({ rci }: { rci: Rci }) {
           )}
         </div>
       </header>
+
+      {/* Modules liés — bandeau harmonisé du triangle (mêmes repères que la
+          session et le Livret CIL). Le rattachement fin d'une source existante
+          + la reprise de données restent dans « Sources terrain » du wizard. */}
+      <section className="rounded-xl border border-blue-200 bg-blue-50/60 px-4 py-3 mb-6">
+        <div className="flex items-center justify-between gap-2 flex-wrap">
+          <h2 className="text-[10px] font-bold uppercase tracking-wide text-blue-900/70">
+            Modules liés
+          </h2>
+          <div className="flex items-center gap-2 flex-wrap justify-end">
+            <ModuleLinks
+              self="rci"
+              selfId={rci.id}
+              cil={linkedCil}
+              session={
+                linkedSession ? { ficheSlug: linkedSession.ficheSlug } : null
+              }
+            />
+          </div>
+        </div>
+      </section>
 
       <section className="card p-5 lg:p-6 mb-6">
         <label className="block text-xs font-medium text-slate-600 mb-1">

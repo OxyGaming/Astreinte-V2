@@ -492,38 +492,46 @@ export default function RciWizard({
           />
         </div>
 
-        {/* Navigation + génération */}
-        <div className="flex items-center justify-between gap-2 pt-3 border-t border-slate-200 flex-wrap">
-          <button
-            type="button"
-            onClick={() => setStepIdx((i) => Math.max(0, i - 1))}
-            disabled={stepIdx === 0}
-            className="text-xs text-slate-600 px-3 py-2 rounded-lg border border-slate-200 hover:border-slate-300 disabled:opacity-40"
-          >
-            <Icon.ChevronLeft className="w-4 h-4 inline -ml-1" /> Précédent
-          </button>
-          <div className="text-xs text-slate-500 font-medium">
+        {/* Navigation + génération.
+            L'indicateur d'étape passe sur sa propre ligne quand la largeur
+            manque (mobile) : les deux boutons restent alignés sur une seule
+            rangée (justify-between), icônes aux extrémités. */}
+        <div className="pt-3 border-t border-slate-200">
+          <div className="text-xs text-slate-500 font-medium text-center mb-2 sm:hidden">
             Étape {stepIdx + 1} / {STEPS.length} — {STEPS[stepIdx].label}
           </div>
-          {stepIdx < STEPS.length - 1 ? (
+          <div className="flex items-center justify-between gap-2">
             <button
               type="button"
-              onClick={() => setStepIdx((i) => Math.min(STEPS.length - 1, i + 1))}
-              className="btn btn-primary"
+              onClick={() => setStepIdx((i) => Math.max(0, i - 1))}
+              disabled={stepIdx === 0}
+              className="text-xs text-slate-600 px-3 py-2 rounded-lg border border-slate-200 hover:border-slate-300 disabled:opacity-40 flex-shrink-0"
             >
-              Suivant <Icon.ChevronLeft className="w-4 h-4 rotate-180 -mr-1" />
+              <Icon.ChevronLeft className="w-4 h-4 inline -ml-1" /> Précédent
             </button>
-          ) : (
-            <button
-              type="button"
-              onClick={generate}
-              disabled={generating || readOnly}
-              className="btn btn-primary"
-            >
-              <Icon.Plus className="w-4 h-4" />
-              {generating ? "Génération…" : "Générer le .docx"}
-            </button>
-          )}
+            <div className="hidden sm:block text-xs text-slate-500 font-medium text-center min-w-0 truncate">
+              Étape {stepIdx + 1} / {STEPS.length} — {STEPS[stepIdx].label}
+            </div>
+            {stepIdx < STEPS.length - 1 ? (
+              <button
+                type="button"
+                onClick={() => setStepIdx((i) => Math.min(STEPS.length - 1, i + 1))}
+                className="btn btn-primary flex-shrink-0"
+              >
+                Suivant <Icon.ChevronLeft className="w-4 h-4 rotate-180 -mr-1" />
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={generate}
+                disabled={generating || readOnly}
+                className="btn btn-primary flex-shrink-0"
+              >
+                <Icon.Plus className="w-4 h-4" />
+                {generating ? "Génération…" : "Générer le .docx"}
+              </button>
+            )}
+          </div>
         </div>
         {/* initialEventAt non utilisé mais accepté pour API future */}
         {void initialEventAt}

@@ -157,6 +157,7 @@ export const getAllAbreviations = cache(async (): Promise<Abréviation[]> => {
 
 import type { Poste, AnnuaireSection, ContactPoste, CircuitVoie, Dbc, PNSensiblePoste, ProcedureCle } from "./types";
 import { normalizeAnnuaire } from "./annuaire";
+import { INCIDENT_TYPE_LABELS } from "./cil/types";
 
 /**
  * Convertit AnnuaireEntry[] (format pivot) → AnnuaireSection[] (format affichage).
@@ -903,7 +904,15 @@ export async function getPosteProcedureTypes(): Promise<Record<string, string[]>
   return result;
 }
 
-/** RCI rédigé(s) à partir d'une session de fiche réflexe. */
+/**
+ * Triangle de navigation session ↔ Livret CIL ↔ RCI.
+ *
+ * Les trois modules décrivent le même événement et sont reliés par des FK
+ * directes : `Rci.sessionId`, `Rci.cilIncidentId`, `CilIncident.sessionId`.
+ * Chaque page affiche ses deux voisins. Pour ne rien perdre, les voisins
+ * « session ↔ CIL » sont pris **par lien direct OU via un RCI partagé** :
+ * un ancien rattachement posé uniquement depuis un RCI reste navigable.
+ */
 export type RciLie = {
   id: string;
   status: string;
@@ -912,40 +921,198 @@ export type RciLie = {
   updatedAt: string;
 };
 
+export type CilLie = {
+  id: string;
+  status: string;
+  label: string;
+  reference: string | null;
+  lieu: string;
+};
+
+export type SessionLie = {
+  id: string;
+  ficheTitre: string;
+  ficheSlug: string;
+  status: string;
+  startedAt: string;
+};
+
+const libelleIncidentCil = (
+  type: string,
+  typeLibre: string | null,
+): string =>
+  typeLibre?.trim() ||
+  INCIDENT_TYPE_LABELS[type as keyof typeof INCIDENT_TYPE_LABELS] ||
+  "Incident";
+
 /**
- * RCI rattachés à une session — alimente l'encart de navigation de
- * `/sessions/[id]`. Le rattachement est posé depuis le RCI (cf. RciSourceCard) ;
- * on le lit ici dans l'autre sens.
+ * Résout le **triangle complet** (RCI, Livret CIL, Session) à partir de
+ * n'importe lequel de ses sommets, en suivant les FK **de façon transitive**.
+ *
+ * Modèle 1:1:1 : si RCI↔CIL et CIL↔Session sont noués mais pas RCI↔Session, le
+ * RCI reste le voisin de la session (via le CIL). Indispensable pour que le
+ * bandeau « Modules liés » propose « ouvrir › » plutôt qu'un « + créer » qui
+ * ferait un doublon. Trois passes suffisent à propager les liens entre 3 nœuds.
  */
+export type TriangleLinks = {
+  rci: { id: string } | null;
+  cil: { id: string } | null;
+  session: { id: string; ficheSlug: string } | null;
+};
+
+export async function resolveTriangleLinks(start: {
+  rciId?: string;
+  cilId?: string;
+  sessionId?: string;
+}): Promise<TriangleLinks> {
+  let rciId = start.rciId ?? null;
+  let cilId = start.cilId ?? null;
+  let sessionId = start.sessionId ?? null;
+
+  for (let pass = 0; pass < 3; pass++) {
+    if (rciId) {
+      const rci = await prisma.rci.findUnique({
+        where: { id: rciId },
+        select: { cilIncidentId: true, sessionId: true },
+      });
+      cilId = cilId ?? rci?.cilIncidentId ?? null;
+      sessionId = sessionId ?? rci?.sessionId ?? null;
+    }
+    if (cilId) {
+      const cil = await prisma.cilIncident.findUnique({
+        where: { id: cilId },
+        select: { sessionId: true },
+      });
+      sessionId = sessionId ?? cil?.sessionId ?? null;
+      if (!rciId) {
+        const r = await prisma.rci.findFirst({
+          where: { cilIncidentId: cilId },
+          select: { id: true },
+        });
+        rciId = r?.id ?? null;
+      }
+    }
+    if (sessionId) {
+      if (!rciId) {
+        const r = await prisma.rci.findFirst({
+          where: { sessionId },
+          select: { id: true },
+        });
+        rciId = r?.id ?? null;
+      }
+      if (!cilId) {
+        const c = await prisma.cilIncident.findFirst({
+          where: { sessionId },
+          select: { id: true },
+        });
+        cilId = c?.id ?? null;
+      }
+    }
+  }
+
+  let session: TriangleLinks["session"] = null;
+  if (sessionId) {
+    const s = await prisma.ficheSession.findUnique({
+      where: { id: sessionId },
+      select: { id: true, ficheSlug: true },
+    });
+    session = s ?? null;
+  }
+  return {
+    rci: rciId ? { id: rciId } : null,
+    cil: cilId ? { id: cilId } : null,
+    session,
+  };
+}
+
+const rciSelect = {
+  id: true,
+  status: true,
+  title: true,
+  dossierNumber: true,
+  updatedAt: true,
+} as const;
+
+const mapRci = (r: {
+  id: string;
+  status: string;
+  title: string | null;
+  dossierNumber: string | null;
+  updatedAt: Date;
+}): RciLie => ({ ...r, updatedAt: r.updatedAt.toISOString() });
+
+/** RCI rattachés à une session — voisin du triangle sur `/sessions/[id]`. */
 export async function getRcisBySession(sessionId: string): Promise<RciLie[]> {
   const rows = await prisma.rci.findMany({
     where: { sessionId },
     orderBy: { updatedAt: "desc" },
-    select: {
-      id: true,
-      status: true,
-      title: true,
-      dossierNumber: true,
-      updatedAt: true,
-    },
+    select: rciSelect,
   });
-  return rows.map((r) => ({ ...r, updatedAt: r.updatedAt.toISOString() }));
+  return rows.map(mapRci);
 }
 
-/** Idem pour un incident du Livret CIL. */
+/** RCI rattachés à un incident CIL — voisin du triangle sur `/cil/[id]`. */
 export async function getRcisByCilIncident(
   cilIncidentId: string,
 ): Promise<RciLie[]> {
   const rows = await prisma.rci.findMany({
     where: { cilIncidentId },
     orderBy: { updatedAt: "desc" },
+    select: rciSelect,
+  });
+  return rows.map(mapRci);
+}
+
+/**
+ * Incidents CIL liés à une session : directement (`CilIncident.sessionId`) ou
+ * via un RCI partagé. Dédupliqués, plus récents d'abord.
+ */
+export async function getCilsForSession(sessionId: string): Promise<CilLie[]> {
+  const rows = await prisma.cilIncident.findMany({
+    where: {
+      OR: [{ sessionId }, { rcis: { some: { sessionId } } }],
+    },
+    orderBy: { occurredAt: "desc" },
     select: {
       id: true,
       status: true,
-      title: true,
-      dossierNumber: true,
-      updatedAt: true,
+      reference: true,
+      lieu: true,
+      type: true,
+      typeLibre: true,
     },
   });
-  return rows.map((r) => ({ ...r, updatedAt: r.updatedAt.toISOString() }));
+  return rows.map((c) => ({
+    id: c.id,
+    status: c.status,
+    label: libelleIncidentCil(c.type, c.typeLibre),
+    reference: c.reference,
+    lieu: c.lieu,
+  }));
+}
+
+/**
+ * Sessions liées à un incident CIL : directement (`CilIncident.sessionId`) ou
+ * via un RCI partagé. Dédupliquées, plus récentes d'abord.
+ */
+export async function getSessionsForCil(
+  cilIncidentId: string,
+): Promise<SessionLie[]> {
+  const rows = await prisma.ficheSession.findMany({
+    where: {
+      OR: [
+        { cilIncidents: { some: { id: cilIncidentId } } },
+        { rcis: { some: { cilIncidentId } } },
+      ],
+    },
+    orderBy: { startedAt: "desc" },
+    select: {
+      id: true,
+      ficheTitre: true,
+      ficheSlug: true,
+      status: true,
+      startedAt: true,
+    },
+  });
+  return rows.map((s) => ({ ...s, startedAt: s.startedAt.toISOString() }));
 }

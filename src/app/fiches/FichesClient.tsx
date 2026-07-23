@@ -23,9 +23,21 @@ function ficheMatches(f: Fiche, q: string): boolean {
   );
 }
 
-export default function FichesClient({ fiches }: { fiches: Fiche[] }) {
+export default function FichesClient({
+  fiches,
+  linkContext = null,
+}: {
+  fiches: Fiche[];
+  /**
+   * Mode « choix de fiche pour démarrer une session à rattacher » (venu du
+   * bouton « + Session » d'un RCI ou d'un Livret). `query` est propagé au lien
+   * de chaque fiche pour que la session démarrée s'y rattache.
+   */
+  linkContext?: { query: string; label: string } | null;
+}) {
   const [query, setQuery] = useState("");
   const q = query.trim();
+  const suffix = linkContext ? `?${linkContext.query}` : "";
 
   // Filtrage client instantané (titre, résumé, mnémonique, étapes).
   const filtered = q ? fiches.filter((f) => ficheMatches(f, q)) : fiches;
@@ -36,6 +48,12 @@ export default function FichesClient({ fiches }: { fiches: Fiche[] }) {
       {/* Header + recherche */}
       <div className="bg-white border-b border-slate-100 px-4 pt-6 pb-4 lg:px-8">
         <h1 className="text-xl font-bold text-slate-900 mb-4">Fiches réflexes</h1>
+        {linkContext && (
+          <div className="mb-4 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-900">
+            Choisissez la fiche pour démarrer la session à rattacher au{" "}
+            <span className="font-semibold">{linkContext.label}</span>.
+          </div>
+        )}
         <div className="relative flex items-center">
           <Search size={18} className="absolute left-3.5 text-slate-400 pointer-events-none" />
           <input
@@ -77,7 +95,7 @@ export default function FichesClient({ fiches }: { fiches: Fiche[] }) {
                   .map((fiche) => (
                     <Link
                       key={fiche.id}
-                      href={`/fiches/${fiche.slug}`}
+                      href={`/fiches/${fiche.slug}${suffix}`}
                       className="flex items-center gap-3 px-4 py-3.5 hover:bg-slate-50 active:bg-slate-100 transition-colors"
                     >
                       <span className="text-xs font-bold text-slate-400 w-6 flex-shrink-0">

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { requireUser, teamScope } from "@/lib/auth";
+import { requireUser, teamScope, assertTeamAccess } from "@/lib/auth";
 
 /**
  * Liste des RCI visibles par l'utilisateur (scope équipe).
@@ -29,6 +29,10 @@ export async function GET() {
 const createSchema = z.object({
   teamId: z.string().optional(),
   title: z.string().trim().max(200).optional(),
+  /// Rattachement à la source terrain dès la création (RCI ouvert depuis une
+  /// session ou un Livret CIL). On ne relie qu'à une ressource déjà accessible.
+  cilIncidentId: z.string().cuid().optional(),
+  sessionId: z.string().cuid().optional(),
 });
 
 /**
@@ -66,12 +70,40 @@ export async function POST(req: Request) {
   if (!u.teamIds.includes(teamId) && u.role !== "ADMIN") {
     return NextResponse.json({ error: "Équipe hors scope" }, { status: 403 });
   }
+  // On ne rattache qu'à une source que l'utilisateur peut déjà consulter, sinon
+  // le lien deviendrait un canal de lecture détourné (même règle que le PATCH).
+  if (parsed.data.cilIncidentId) {
+    const cil = await prisma.cilIncident.findUnique({
+      where: { id: parsed.data.cilIncidentId },
+      select: { id: true, authorId: true },
+    });
+    if (!cil || !assertTeamAccess(u, cil)) {
+      return NextResponse.json(
+        { error: "Incident CIL inconnu ou inaccessible" },
+        { status: 404 },
+      );
+    }
+  }
+  if (parsed.data.sessionId) {
+    const s = await prisma.ficheSession.findUnique({
+      where: { id: parsed.data.sessionId },
+      select: { id: true, createdByUserId: true },
+    });
+    if (!s || !assertTeamAccess(u, { authorId: s.createdByUserId })) {
+      return NextResponse.json(
+        { error: "Session inconnue ou inaccessible" },
+        { status: 404 },
+      );
+    }
+  }
   const created = await prisma.rci.create({
     data: {
       teamId,
       authorId: u.id,
       status: "DRAFT",
       title: parsed.data.title ?? null,
+      cilIncidentId: parsed.data.cilIncidentId ?? null,
+      sessionId: parsed.data.sessionId ?? null,
     },
   });
   return NextResponse.json(created);

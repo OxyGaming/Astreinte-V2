@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, AlertTriangle, CheckCircle, ChevronRight, BookOpen, FileText, Link2, Download } from "lucide-react";
-import { getFicheBySlug, getAllContacts, getUserActiveSession, getSessionJournal, getCheckedActionsForSession, resolveLiens } from "@/lib/db";
+import { getFicheBySlug, getAllContacts, getUserActiveSession, getSessionJournal, getCheckedActionsForSession, resolveLiens, resolveTriangleLinks } from "@/lib/db";
 import { prisma } from "@/lib/prisma";
 import ContactCard from "@/components/ContactCard";
 import FicheSessionView from "@/components/FicheSessionView";
@@ -13,10 +13,12 @@ export const dynamic = "force-dynamic";
 
 interface Props {
   params: Promise<{ slug: string }>;
+  searchParams: Promise<{ linkRci?: string; linkCil?: string }>;
 }
 
-export default async function FicheDetailPage({ params }: Props) {
+export default async function FicheDetailPage({ params, searchParams }: Props) {
   const { slug } = await params;
+  const { linkRci, linkCil } = await searchParams;
   const [fiche, user, allContacts] = await Promise.all([
     getFicheBySlug(slug),
     getCurrentUser(),
@@ -52,6 +54,37 @@ export default async function FicheDetailPage({ params }: Props) {
   // Load active session for this user (each user has their own independent session)
   const session = user ? await getUserActiveSession(slug, user.id) : null;
 
+  // « + Session » venu d'un RCI / Livret : si une session active existe déjà,
+  // on la rattache immédiatement (idempotent). Sinon le rattachement se fera au
+  // démarrage de session (cf. FicheSessionView, props linkRci/linkCil).
+  if (session && user && (linkRci || linkCil)) {
+    const canOwn = (authorId: string) =>
+      user.role === "ADMIN" || authorId === user.id;
+    if (linkRci) {
+      const rci = await prisma.rci.findUnique({
+        where: { id: linkRci },
+        select: { authorId: true, status: true },
+      });
+      if (rci && canOwn(rci.authorId) && rci.status !== "FINAL") {
+        await prisma.rci.update({
+          where: { id: linkRci },
+          data: { sessionId: session.id },
+        });
+      }
+    } else if (linkCil) {
+      const cil = await prisma.cilIncident.findUnique({
+        where: { id: linkCil },
+        select: { authorId: true },
+      });
+      if (cil && canOwn(cil.authorId)) {
+        await prisma.cilIncident.update({
+          where: { id: linkCil },
+          data: { sessionId: session.id },
+        });
+      }
+    }
+  }
+
   // Load journal + checked state for session
   const [journal, checkedLogs] = session
     ? await Promise.all([
@@ -59,6 +92,15 @@ export default async function FicheDetailPage({ params }: Props) {
         getCheckedActionsForSession(session.id),
       ])
     : [[], []];
+
+  // Modèle 1:1:1 : la session a au plus un RCI et un Livret CIL. Résolution
+  // transitive (un RCI atteint via le CIL compte aussi) pour que la passerelle
+  // bascule « créer » → « ouvrir » et n'invite jamais à créer un doublon.
+  const triangle = session
+    ? await resolveTriangleLinks({ sessionId: session.id })
+    : null;
+  const linkedRci = triangle?.rci ?? null;
+  const linkedCil = triangle?.cil ?? null;
 
   // Build checked map (only "checked" type = true)
   const initialChecked: Record<string, boolean> = {};
@@ -156,6 +198,10 @@ export default async function FicheDetailPage({ params }: Props) {
             initialSession={session}
             initialJournal={journal}
             initialChecked={initialChecked}
+            linkedRci={linkedRci}
+            linkedCil={linkedCil}
+            linkRci={linkRci ?? null}
+            linkCil={linkCil ?? null}
           />
         ) : (
           /* Lecture seule sans session */

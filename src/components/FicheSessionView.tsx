@@ -1,12 +1,15 @@
 "use client";
 
 import { useState, useCallback, useRef, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { Play, Archive, Send, CheckSquare, Square, MessageSquare, Clock, User, ChevronDown, ChevronUp, AlertTriangle, Mic, Square as StopIcon, WifiOff, CheckCircle, CloudUpload } from "lucide-react";
 import type { Fiche, FicheSession, JournalEntry } from "@/lib/types";
 import type { SessionUser } from "@/lib/user-auth";
 import { useSpeechRecognition } from "@/hooks/useSpeechRecognition";
 import MicPermissionModal from "@/components/MicPermissionModal";
 import MicDiagnostic from "@/components/MicDiagnostic";
+import ModuleLinks from "@/components/ModuleLinks";
 import { enqueue, getBySession, remove as removeOp, update as updateOp, remapSessionId, type PendingOp } from "@/lib/idb-offline";
 
 // localStorage : sessions locales par fiche en attente de promotion serveur
@@ -53,6 +56,17 @@ interface Props {
   initialSession: FicheSession | null;
   initialJournal: JournalEntry[];
   initialChecked: Record<string, boolean>; // key: "etape_X_action_Y"
+  /** RCI / Livret CIL rattachés à `initialSession` (modèle 1:1:1), sinon null. */
+  linkedRci?: { id: string } | null;
+  linkedCil?: { id: string } | null;
+  /**
+   * Mode « + Session » : id du RCI / Livret à rattacher à la session démarrée
+   * depuis cette fiche (venu de `/fiches/[slug]?linkRci=…`). Le rattachement se
+   * fait à la création de session ; s'il y en avait déjà une active, la page
+   * l'a déjà rattachée côté serveur.
+   */
+  linkRci?: string | null;
+  linkCil?: string | null;
 }
 
 function formatTime(iso: string): string {
@@ -72,7 +86,12 @@ export default function FicheSessionView({
   initialSession,
   initialJournal,
   initialChecked,
+  linkedRci = null,
+  linkedCil = null,
+  linkRci = null,
+  linkCil = null,
 }: Props) {
+  const router = useRouter();
   const [session, setSession] = useState<FicheSession | null>(initialSession);
   const [journal, setJournal] = useState<JournalEntry[]>(initialJournal);
   const [checked, setChecked] = useState<Record<string, boolean>>(initialChecked);
@@ -302,6 +321,35 @@ export default function FicheSessionView({
   const actionKey = (etapeOrdre: number, actionIndex: number) =>
     `etape_${etapeOrdre}_action_${actionIndex}`;
 
+  /**
+   * Rattache la session fraîchement démarrée au RCI / Livret d'origine (mode
+   * « + Session »). `router.refresh()` recharge les props serveur pour que le
+   * bandeau « Modules liés » bascule sur « ouvrir › ».
+   */
+  async function linkStartedSession(newSessionId: string) {
+    try {
+      if (linkRci) {
+        await fetch(`/api/rci/${linkRci}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ sessionId: newSessionId }),
+        });
+        toast.success("Session rattachée au RCI");
+        router.refresh();
+      } else if (linkCil) {
+        await fetch(`/api/cil/${linkCil}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "link-session", sessionId: newSessionId }),
+        });
+        toast.success("Session rattachée au Livret CIL");
+        router.refresh();
+      }
+    } catch {
+      toast.error("Rattachement impossible");
+    }
+  }
+
   const startSession = async () => {
     setStarting(true);
     try {
@@ -317,7 +365,10 @@ export default function FicheSessionView({
           }),
         });
         const data = await res.json();
-        if (data.session) setSession(data.session);
+        if (data.session) {
+          setSession(data.session);
+          await linkStartedSession(data.session.id);
+        }
         return;
       }
 
@@ -574,7 +625,7 @@ export default function FicheSessionView({
         )
       ) : (
         <div className={`mx-4 lg:mx-8 rounded-xl p-4 border ${isArchived ? "bg-slate-50 border-slate-200" : "bg-green-50 border-green-200"}`}>
-          <div className="flex items-start justify-between gap-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
             <div>
               <div className="flex items-center gap-2 flex-wrap">
                 <span className={`inline-block w-2 h-2 rounded-full flex-shrink-0 ${isArchived ? "bg-slate-400" : "bg-green-500"}`} />
@@ -597,16 +648,39 @@ export default function FicheSessionView({
                 </p>
               )}
             </div>
-            {canArchive && (
-              <button
-                onClick={archiveSession}
-                disabled={archiving}
-                className="flex items-center gap-2 bg-slate-700 hover:bg-slate-600 disabled:bg-slate-400 text-white text-xs font-semibold px-3 py-2 rounded-xl transition-colors flex-shrink-0"
-              >
-                <Archive size={13} />
-                {archiving ? "Archivage…" : "Archiver"}
-              </button>
-            )}
+            {/* Passerelle : démarrer un RCI / Livret CIL lié à cette session.
+                Rendu seulement quand la session existe côté serveur (une
+                session locale non synchronisée n'a pas d'id rattachable). */}
+            <div className="flex items-center gap-2 flex-shrink-0 flex-wrap justify-end">
+              {!isLocalSession && (
+                <ModuleLinks
+                  self="session"
+                  selfId={session.id}
+                  // Les rattachements sont chargés pour `initialSession` : si une
+                  // nouvelle session a été démarrée entre-temps, on repart de zéro.
+                  rci={
+                    session.id === initialSession?.id && linkedRci
+                      ? { id: linkedRci.id }
+                      : null
+                  }
+                  cil={
+                    session.id === initialSession?.id && linkedCil
+                      ? { id: linkedCil.id }
+                      : null
+                  }
+                />
+              )}
+              {canArchive && (
+                <button
+                  onClick={archiveSession}
+                  disabled={archiving}
+                  className="flex items-center gap-2 bg-slate-700 hover:bg-slate-600 disabled:bg-slate-400 text-white text-xs font-semibold px-3 py-2 rounded-xl transition-colors flex-shrink-0"
+                >
+                  <Archive size={13} />
+                  {archiving ? "Archivage…" : "Archiver"}
+                </button>
+              )}
+            </div>
           </div>
         </div>
       )}

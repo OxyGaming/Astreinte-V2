@@ -12,7 +12,7 @@ import {
   type Etablissement,
   type IncidentType,
 } from "@/lib/cil/types";
-import { localInputToIso, nowLocalInput } from "@/lib/cil/format";
+import { isoToLocalInput, localInputToIso, nowLocalInput } from "@/lib/cil/format";
 
 /** Découpe "Prénom Nom" (best-effort) pour préremplir l'en-tête CIL. */
 function splitName(full: string): { prenom: string; nom: string } {
@@ -21,12 +21,27 @@ function splitName(full: string): { prenom: string; nom: string } {
   return { prenom: parts[0], nom: parts.slice(1).join(" ") };
 }
 
-export default function NewCilClient({ defaultCilName }: { defaultCilName: string }) {
+export default function NewCilClient({
+  defaultCilName,
+  sessionId = null,
+  rciId = null,
+  defaultOccurredAt = null,
+}: {
+  defaultCilName: string;
+  /** Session à laquelle rattacher le livret (créé depuis une session). */
+  sessionId?: string | null;
+  /** RCI à rattacher au livret (créé depuis un RCI). */
+  rciId?: string | null;
+  /** Horodatage prérempli (ISO) — repris de la source, sinon « maintenant ». */
+  defaultOccurredAt?: string | null;
+}) {
   const router = useRouter();
   const initName = splitName(defaultCilName);
   const [type, setType] = useState<IncidentType>("INCENDIE");
   const [typeLibre, setTypeLibre] = useState("");
-  const [occurredAt, setOccurredAt] = useState(nowLocalInput());
+  const [occurredAt, setOccurredAt] = useState(
+    defaultOccurredAt ? isoToLocalInput(defaultOccurredAt) : nowLocalInput(),
+  );
   const [lieu, setLieu] = useState("");
   const [poste, setPoste] = useState("");
   const [voie, setVoie] = useState("");
@@ -71,6 +86,8 @@ export default function NewCilClient({ defaultCilName }: { defaultCilName: strin
           cilNom: cilNom || null,
           cilPrenom: cilPrenom || null,
           cilEtablissement: etab,
+          sessionId: sessionId ?? null,
+          rciId: rciId ?? null,
         }),
       });
       if (!res.ok) {
@@ -106,6 +123,15 @@ export default function NewCilClient({ defaultCilName }: { defaultCilName: strin
         Le CRC est initialement responsable des protections jusqu&apos;à votre
         arrivée sur site.
       </p>
+
+      {(sessionId || rciId) && (
+        <div className="mb-4 rounded-lg border border-blue-200 bg-blue-50/60 px-3 py-2 text-xs text-blue-900 inline-flex items-center gap-1.5">
+          <Icon.Link className="w-3.5 h-3.5" />
+          {sessionId
+            ? "Ce livret sera automatiquement lié à la session dont il provient."
+            : "Ce livret sera automatiquement lié au RCI dont il provient."}
+        </div>
+      )}
 
       <div className="card p-4 space-y-4">
         <div>

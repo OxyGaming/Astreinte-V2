@@ -353,6 +353,8 @@ model FicheSession {
   createdBy       User              @relation(fields: [createdByUserId], references: [id])
   /// RCI rédigés à partir de cette session (rattachement facultatif).
   rcis            Rci[]
+  /// Incidents CIL décrivant le même événement (lien direct, facultatif).
+  cilIncidents    CilIncident[]
 
 
   @@index([ficheSlug])
@@ -575,8 +577,14 @@ model CilIncident {
   closedAt         DateTime?
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
+  /// Session de fiche réflexe décrivant le MÊME événement. Lien direct
+  /// (facultatif) : session, Livret CIL et RCI forment un triangle de modules
+  /// mutuellement navigables. Posé notamment quand le Livret est créé depuis
+  /// une session. `SetNull` : détruire la session ne détruit pas le livret.
+  sessionId        String?
 
   author        User              @relation(fields: [authorId], references: [id])
+  session       FicheSession?     @relation(fields: [sessionId], references: [id], onDelete: SetNull)
   events        CilEvent[]
   depeches      CilDepeche[]
   intervenants  CilIntervenant[]
@@ -588,6 +596,7 @@ model CilIncident {
 
   @@index([teamId, status])
   @@index([authorId])
+  @@index([sessionId])
 }
 
 model CilEvent {
