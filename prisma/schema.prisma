@@ -508,6 +508,11 @@ model Rci {
   eventAt       DateTime?
   /// Titre court pour l'affichage en liste (nature + lieu).
   title         String?
+  /// `true` = titre proposé automatiquement (depuis la source / la Nature) et
+  /// encore non personnalisé : il peut évoluer avec la Nature du wizard. Passe à
+  /// `false` dès que l'agent édite le champ « Titre court » — le titre devient
+  /// alors prioritaire et n'est plus jamais remplacé par un autosave.
+  titleAuto     Boolean   @default(false)
   /// Payload JSON des champs du wizard (stringifié, parsé côté app).
   payload       String    @default("{}")
   /// Rattachement facultatif à la source terrain de l'événement — sert à la

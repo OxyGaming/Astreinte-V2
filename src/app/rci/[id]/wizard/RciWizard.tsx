@@ -21,6 +21,7 @@ import {
   propositionsUtiles,
   type PropositionChamp,
 } from "@/lib/rci/reprise";
+import { autoTitleUpdate } from "@/lib/rci/title";
 import { GuidanceProvider } from "./guidance-ui";
 import { todayFr } from "./fields-ui";
 import RciSourceCard, {
@@ -125,6 +126,7 @@ export default function RciWizard({
   initialDossierNumber,
   initialEventAt,
   initialTitle,
+  titleAuto,
   status,
   authorName,
   cilIncident,
@@ -135,6 +137,8 @@ export default function RciWizard({
   initialDossierNumber: string | null;
   initialEventAt: string | null;
   initialTitle: string | null;
+  /** Le titre suit-il encore la Nature (auto) ou est-il personnalisé ? */
+  titleAuto: boolean;
   status: string;
   authorName: string;
   cilIncident: SourceCil | null;
@@ -149,7 +153,10 @@ export default function RciWizard({
     if (!p.dossier_numero && initialDossierNumber) {
       p.dossier_numero = initialDossierNumber;
     }
-    if (!p.nature && initialTitle) p.nature = initialTitle;
+    // On n'hydrate la Nature depuis le titre QUE pour un titre personnalisé
+    // (legacy : titre = nature). Un titre auto (« Type — Lieu — Date ») ne doit
+    // jamais s'écrire dans la donnée métier Nature.
+    if (!p.nature && initialTitle && !titleAuto) p.nature = initialTitle;
     return applyDefaults(p, authorName);
   });
   // Photos : non persistées côté serveur dans la v1 (on les garde en mémoire
@@ -169,6 +176,11 @@ export default function RciWizard({
   const [propositions, setPropositions] = useState<PropositionChamp[]>([]);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastSavedJson = useRef<string>(initialPayload);
+  // Valeur fraîche de titleAuto lue dans l'autosave débouncé : évite qu'une
+  // sauvegarde en attente (déclenchée avant que l'agent personnalise le titre)
+  // ne réécrase le titre personnalisé avec la Nature.
+  const titleAutoRef = useRef(titleAuto);
+  titleAutoRef.current = titleAuto;
 
   const eventType = normalizeEventType(payload.event_type);
   const gaps = useMemo(
@@ -228,13 +240,16 @@ export default function RciWizard({
             Number(mi),
           ).toISOString();
         }
+        // Le titre ne suit la Nature que tant qu'il est automatique ; une Nature
+        // vide ne remet jamais le titre à null (titre absent du body = inchangé).
+        const titleUpdate = autoTitleUpdate(titleAutoRef.current, payload.nature);
         const res = await fetch(`/api/rci/${rciId}`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             payload: json,
             dossierNumber: payload.dossier_numero || null,
-            title: payload.nature || null,
+            ...(titleUpdate ? { title: titleUpdate.title } : {}),
             eventAt,
           }),
         });

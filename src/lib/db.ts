@@ -1041,10 +1041,16 @@ const mapRci = (r: {
   updatedAt: Date;
 }): RciLie => ({ ...r, updatedAt: r.updatedAt.toISOString() });
 
-/** RCI rattachés à une session — voisin du triangle sur `/sessions/[id]`. */
+/**
+ * RCI rattachés à une session — voisin du triangle sur `/sessions/[id]`.
+ * Résolution transitive (symétrique de `getCilsForSession`) : un RCI relié à la
+ * session UNIQUEMENT via le Livret CIL (RCI.cilIncidentId posé, RCI.sessionId
+ * nul) doit tout de même apparaître. Sans ce `OR`, la page session masquait ces
+ * RCI alors que les pages RCI et Livret les affichent.
+ */
 export async function getRcisBySession(sessionId: string): Promise<RciLie[]> {
   const rows = await prisma.rci.findMany({
-    where: { sessionId },
+    where: { OR: [{ sessionId }, { cilIncident: { sessionId } }] },
     orderBy: { updatedAt: "desc" },
     select: rciSelect,
   });

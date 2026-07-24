@@ -3,6 +3,7 @@ import Link from "next/link";
 import { ArrowLeft, AlertTriangle, CheckCircle, ChevronRight, BookOpen, FileText, Link2, Download } from "lucide-react";
 import { getFicheBySlug, getAllContacts, getUserActiveSession, getSessionJournal, getCheckedActionsForSession, resolveLiens, resolveTriangleLinks } from "@/lib/db";
 import { prisma } from "@/lib/prisma";
+import { reconcileTriangle, TriangleConflictError } from "@/lib/triangle";
 import ContactCard from "@/components/ContactCard";
 import FicheSessionView from "@/components/FicheSessionView";
 import LiensList from "@/components/LiensList";
@@ -60,28 +61,48 @@ export default async function FicheDetailPage({ params, searchParams }: Props) {
   if (session && user && (linkRci || linkCil)) {
     const canOwn = (authorId: string) =>
       user.role === "ADMIN" || authorId === user.id;
-    if (linkRci) {
-      const rci = await prisma.rci.findUnique({
-        where: { id: linkRci },
-        select: { authorId: true, status: true },
-      });
-      if (rci && canOwn(rci.authorId) && rci.status !== "FINAL") {
-        await prisma.rci.update({
+    try {
+      if (linkRci) {
+        const rci = await prisma.rci.findUnique({
           where: { id: linkRci },
-          data: { sessionId: session.id },
+          select: { authorId: true, status: true },
         });
-      }
-    } else if (linkCil) {
-      const cil = await prisma.cilIncident.findUnique({
-        where: { id: linkCil },
-        select: { authorId: true },
-      });
-      if (cil && canOwn(cil.authorId)) {
-        await prisma.cilIncident.update({
+        // Un RCI finalisé est en lecture seule : aucun rattachement (cohérent
+        // avec l'UI qui n'offre plus le « + » sur un RCI FINAL).
+        if (rci && canOwn(rci.authorId) && rci.status !== "FINAL") {
+          await prisma.$transaction(async (tx) => {
+            await tx.rci.update({
+              where: { id: linkRci },
+              data: { sessionId: session.id },
+            });
+            await reconcileTriangle(tx, {
+              rciId: linkRci,
+              sessionId: session.id,
+            });
+          });
+        }
+      } else if (linkCil) {
+        const cil = await prisma.cilIncident.findUnique({
           where: { id: linkCil },
-          data: { sessionId: session.id },
+          select: { authorId: true },
         });
+        if (cil && canOwn(cil.authorId)) {
+          await prisma.$transaction(async (tx) => {
+            await tx.cilIncident.update({
+              where: { id: linkCil },
+              data: { sessionId: session.id },
+            });
+            await reconcileTriangle(tx, {
+              cilId: linkCil,
+              sessionId: session.id,
+            });
+          });
+        }
       }
+    } catch (e) {
+      // Conflit de cohérence (triangle déjà rattaché ailleurs) : on n'interrompt
+      // pas le rendu de la fiche ; le bandeau « Modules liés » reflétera l'état réel.
+      if (!(e instanceof TriangleConflictError)) throw e;
     }
   }
 
