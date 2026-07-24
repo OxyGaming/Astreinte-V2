@@ -39,6 +39,13 @@ export type PendingCommentPayload = {
 
 export type PendingSessionCreatePayload = {
   ficheTitre: string;
+  /**
+   * Mode « + Session » hors ligne : RCI / Livret CIL à rattacher à la session
+   * une fois celle-ci promue auprès du serveur (cf. drainQueue). Mutuellement
+   * exclusifs — au plus un des deux est renseigné.
+   */
+  linkRci?: string | null;
+  linkCil?: string | null;
 };
 
 export type PendingProcReponsePayload = {

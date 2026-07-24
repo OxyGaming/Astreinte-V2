@@ -58,6 +58,7 @@ export default async function RciEditPage({
         id: rci.id,
         status: rci.status,
         title: rci.title,
+        titleAuto: rci.titleAuto,
         dossierNumber: rci.dossierNumber,
         eventAt: rci.eventAt?.toISOString() ?? null,
         payload: rci.payload,

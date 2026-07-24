@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { requireUser, teamScope, assertTeamAccess } from "@/lib/auth";
 import { createEvent } from "@/lib/cil/repo";
 import { INCIDENT_TYPES, ETABLISSEMENTS, GARE_MODES } from "@/lib/cil/types";
+import { reconcileTriangle, TriangleConflictError } from "@/lib/triangle";
 
 /** Liste des incidents CIL visibles (scope équipe). Ouverts d'abord. */
 export async function GET() {
@@ -152,7 +153,9 @@ export async function POST(req: Request) {
     parsed.data.sessionId ?? rciToLink?.sessionId ?? null;
 
   const occurredAt = new Date(parsed.data.occurredAt);
-  const created = await prisma.$transaction(async (tx) => {
+  let created;
+  try {
+    created = await prisma.$transaction(async (tx) => {
     const incident = await tx.cilIncident.create({
       data: {
         teamId,
@@ -191,15 +194,21 @@ export async function POST(req: Request) {
       actorId: u.id,
       actorName: u.name,
     });
-    // Referme le lien RCI → Livret côté RCI.
-    if (rciToLink) {
-      await tx.rci.update({
-        where: { id: rciToLink.id },
-        data: { cilIncidentId: incident.id },
-      });
-    }
+    // Ferme le triangle : lien RCI → Livret et propagation de la session
+    // héritée. `reconcileTriangle` refuse un rattachement incohérent (409).
+    await reconcileTriangle(tx, {
+      cilId: incident.id,
+      rciId: rciToLink?.id ?? null,
+      sessionId: effectiveSessionId,
+    });
     return incident;
-  });
+    });
+  } catch (e) {
+    if (e instanceof TriangleConflictError) {
+      return NextResponse.json({ error: e.message }, { status: 409 });
+    }
+    throw e;
+  }
 
   return NextResponse.json(created);
 }

@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { assertTeamAccess, requireUser } from "@/lib/auth";
 import { createEvent, loadIncidentFull, serializeIncident } from "@/lib/cil/repo";
 import { ETABLISSEMENTS, GARE_MODES } from "@/lib/cil/types";
+import { reconcileTriangle, TriangleConflictError } from "@/lib/triangle";
 
 export async function GET(
   _req: Request,
@@ -133,10 +134,24 @@ export async function PATCH(
         );
       }
     }
-    await prisma.cilIncident.update({
-      where: { id },
-      data: { sessionId: data.sessionId },
-    });
+    try {
+      await prisma.$transaction(async (tx) => {
+        await tx.cilIncident.update({
+          where: { id },
+          data: { sessionId: data.sessionId },
+        });
+        // Rattachement à une session : referme le triangle (RCI voisins, etc.).
+        // Un détachement (`sessionId: null`) ne déclenche aucune propagation.
+        if (data.sessionId) {
+          await reconcileTriangle(tx, { cilId: id, sessionId: data.sessionId });
+        }
+      });
+    } catch (e) {
+      if (e instanceof TriangleConflictError) {
+        return NextResponse.json({ error: e.message }, { status: 409 });
+      }
+      throw e;
+    }
     const row = await loadIncidentFull(id);
     return NextResponse.json(serializeIncident(row!));
   }

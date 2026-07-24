@@ -47,6 +47,7 @@ export default function ModuleLinks({
   rci = null,
   cil = null,
   session = null,
+  readOnly = false,
 }: {
   self: Self;
   /** Id du module courant (session/rci/cil) — sert de contexte de rattachement. */
@@ -57,6 +58,12 @@ export default function ModuleLinks({
   cil?: { id: string } | null;
   /** Voisin Session déjà lié — `ficheSlug` pour ouvrir la vue live. */
   session?: { ficheSlug: string } | null;
+  /**
+   * Module courant en lecture seule (ex. RCI finalisé). On garde l'accès aux
+   * voisins déjà liés (« ouvrir »), mais on masque les actions de création /
+   * rattachement qui échoueraient systématiquement côté serveur (409).
+   */
+  readOnly?: boolean;
 }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
@@ -117,6 +124,20 @@ export default function ModuleLinks({
           {label}
           <Icon.ChevronRight className="w-3.5 h-3.5" />
         </Link>
+      );
+    }
+    // Lecture seule + voisin non lié : le rattachement est verrouillé (échouerait
+    // en 409). On affiche un état inerte explicite plutôt qu'un « + » trompeur.
+    if (readOnly) {
+      return (
+        <span
+          className={`${BASE} border-slate-200 text-slate-400 bg-slate-50 cursor-not-allowed`}
+          title={`${label} — rattachement verrouillé (document finalisé)`}
+          aria-disabled="true"
+        >
+          <Icon.Lock className="w-3.5 h-3.5" />
+          {label}
+        </span>
       );
     }
     return (

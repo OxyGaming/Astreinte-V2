@@ -11,6 +11,7 @@ import MicPermissionModal from "@/components/MicPermissionModal";
 import MicDiagnostic from "@/components/MicDiagnostic";
 import ModuleLinks from "@/components/ModuleLinks";
 import { enqueue, getBySession, remove as removeOp, update as updateOp, remapSessionId, type PendingOp } from "@/lib/idb-offline";
+import { patchSessionLink } from "@/lib/session-link";
 
 // localStorage : sessions locales par fiche en attente de promotion serveur
 const localSessionKey = (slug: string) => `astreinte:localSession:${slug}`;
@@ -195,6 +196,18 @@ export default function FicheSessionView({
             await remapSessionId(currentSessionId, realSession.id);
             clearLocalSession(fiche.slug);
             await removeOp(createOp.id);
+            // Rejoue le rattachement « + Session » demandé hors ligne, une fois
+            // la session promue. Un échec (RCI finalisé, ressource disparue,
+            // conflit) est signalé mais ne bloque pas le reste du drain.
+            const link = await patchSessionLink(
+              createOp.payload.linkRci,
+              createOp.payload.linkCil,
+              realSession.id,
+            );
+            if (link) {
+              if (link.ok) toast.success(link.label!);
+              else toast.error(link.error!);
+            }
             // Transférer le verrou sur le nouvel id pour éviter qu'un drain
             // déclenché par le setSession (re-render) ne s'autorise à courir.
             moduleDrainLocks.add(realSession.id);
@@ -327,26 +340,16 @@ export default function FicheSessionView({
    * bandeau « Modules liés » bascule sur « ouvrir › ».
    */
   async function linkStartedSession(newSessionId: string) {
-    try {
-      if (linkRci) {
-        await fetch(`/api/rci/${linkRci}`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ sessionId: newSessionId }),
-        });
-        toast.success("Session rattachée au RCI");
-        router.refresh();
-      } else if (linkCil) {
-        await fetch(`/api/cil/${linkCil}`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ action: "link-session", sessionId: newSessionId }),
-        });
-        toast.success("Session rattachée au Livret CIL");
-        router.refresh();
-      }
-    } catch {
-      toast.error("Rattachement impossible");
+    // On n'annonce le succès (et ne rafraîchit) QUE si le lien est réellement
+    // enregistré — sinon on remonte l'erreur de l'API (RCI finalisé, conflit de
+    // triangle, session inaccessible…) plutôt qu'un faux « rattaché ».
+    const r = await patchSessionLink(linkRci, linkCil, newSessionId);
+    if (!r) return;
+    if (r.ok) {
+      toast.success(r.label!);
+      router.refresh();
+    } else {
+      toast.error(r.error!);
     }
   }
 
@@ -364,10 +367,14 @@ export default function FicheSessionView({
             clientOpId: crypto.randomUUID(),
           }),
         });
-        const data = await res.json();
+        const data = await res.json().catch(() => ({}));
         if (data.session) {
           setSession(data.session);
           await linkStartedSession(data.session.id);
+        } else {
+          // Pas de session en retour (erreur serveur, non autorisé…) : on le dit
+          // au lieu de laisser un « + » sans explication.
+          toast.error(data.error || "Démarrage de session impossible");
         }
         return;
       }
@@ -393,7 +400,8 @@ export default function FicheSessionView({
           kind: "session-create",
           sessionId: localId,
           ficheSlug: fiche.slug,
-          payload: { ficheTitre: fiche.titre },
+          // On mémorise le rattachement demandé pour le rejouer après promotion.
+          payload: { ficheTitre: fiche.titre, linkRci, linkCil },
           userId: user.id,
           userNom: user.nom,
           userPrenom: user.prenom,

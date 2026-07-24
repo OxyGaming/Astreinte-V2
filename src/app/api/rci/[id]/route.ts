@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { assertTeamAccess, requireUser } from "@/lib/auth";
+import { reconcileTriangle, TriangleConflictError } from "@/lib/triangle";
 
 // Portage : cette application n'a ni modèle `Team` ni modèle `Photo`.
 // L'auteur est projeté depuis `prenom` / `nom` (pas de champ `name` ici).
@@ -35,6 +36,9 @@ export async function GET(
 
 const patchSchema = z.object({
   title: z.string().trim().max(200).nullable().optional(),
+  /// `true` = titre encore automatique (suit la Nature) ; `false` = personnalisé
+  /// par l'agent (le titre devient prioritaire, plus d'écrasement par autosave).
+  titleAuto: z.boolean().optional(),
   dossierNumber: z.string().trim().max(80).nullable().optional(),
   eventAt: z.string().datetime().nullable().optional(),
   /// Stringified JSON. Le serveur ne valide pas le contenu (libre côté wizard).
@@ -122,33 +126,53 @@ export async function PATCH(
     }
   }
 
-  const updated = await prisma.rci.update({
-    where: { id },
-    data: {
-      ...(parsed.data.cilIncidentId !== undefined
-        ? { cilIncidentId: parsed.data.cilIncidentId }
-        : {}),
-      ...(parsed.data.sessionId !== undefined
-        ? { sessionId: parsed.data.sessionId }
-        : {}),
-      ...(parsed.data.title !== undefined ? { title: parsed.data.title } : {}),
-      ...(parsed.data.dossierNumber !== undefined
-        ? { dossierNumber: parsed.data.dossierNumber }
-        : {}),
-      ...(parsed.data.eventAt !== undefined
-        ? {
-            eventAt: parsed.data.eventAt
-              ? new Date(parsed.data.eventAt)
-              : null,
-          }
-        : {}),
-      ...(parsed.data.payload !== undefined
-        ? { payload: parsed.data.payload }
-        : {}),
-      ...(parsed.data.status !== undefined ? { status: parsed.data.status } : {}),
-    },
-  });
-  return NextResponse.json(updated);
+  const data = {
+    ...(parsed.data.cilIncidentId !== undefined
+      ? { cilIncidentId: parsed.data.cilIncidentId }
+      : {}),
+    ...(parsed.data.sessionId !== undefined
+      ? { sessionId: parsed.data.sessionId }
+      : {}),
+    ...(parsed.data.title !== undefined ? { title: parsed.data.title } : {}),
+    ...(parsed.data.titleAuto !== undefined
+      ? { titleAuto: parsed.data.titleAuto }
+      : {}),
+    ...(parsed.data.dossierNumber !== undefined
+      ? { dossierNumber: parsed.data.dossierNumber }
+      : {}),
+    ...(parsed.data.eventAt !== undefined
+      ? { eventAt: parsed.data.eventAt ? new Date(parsed.data.eventAt) : null }
+      : {}),
+    ...(parsed.data.payload !== undefined ? { payload: parsed.data.payload } : {}),
+    ...(parsed.data.status !== undefined ? { status: parsed.data.status } : {}),
+  };
+
+  // Un RATTACHEMENT (session/Livret non nul) referme le triangle dans une
+  // transaction ; un conflit de cohérence remonte en 409. L'autosave ordinaire
+  // (titre, payload, détachement…) reste un simple update, sans surcoût.
+  const linksTouched =
+    (parsed.data.cilIncidentId != null) || (parsed.data.sessionId != null);
+  if (!linksTouched) {
+    const updated = await prisma.rci.update({ where: { id }, data });
+    return NextResponse.json(updated);
+  }
+  try {
+    const updated = await prisma.$transaction(async (tx) => {
+      await tx.rci.update({ where: { id }, data });
+      await reconcileTriangle(tx, {
+        rciId: id,
+        cilId: parsed.data.cilIncidentId ?? null,
+        sessionId: parsed.data.sessionId ?? null,
+      });
+      return tx.rci.findUnique({ where: { id } });
+    });
+    return NextResponse.json(updated);
+  } catch (e) {
+    if (e instanceof TriangleConflictError) {
+      return NextResponse.json({ error: e.message }, { status: 409 });
+    }
+    throw e;
+  }
 }
 
 /**

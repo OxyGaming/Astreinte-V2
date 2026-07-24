@@ -15,6 +15,8 @@ type Rci = {
   id: string;
   status: string;
   title: string | null;
+  /** Titre encore automatique (suit la Nature) vs personnalisé par l'agent. */
+  titleAuto: boolean;
   dossierNumber: string | null;
   eventAt: string | null;
   payload: string;
@@ -39,12 +41,16 @@ export default function RciEditorClient({
 }) {
   const router = useRouter();
   const [title, setTitle] = useState(rci.title ?? "");
+  // Titre encore automatique ? Passe à false dès la 1re édition manuelle du champ,
+  // et le wizard (Nature) cesse alors de le remplacer. Partagé avec RciWizard.
+  const [titleAuto, setTitleAuto] = useState(rci.titleAuto);
   const [savedAt, setSavedAt] = useState<Date | null>(null);
   const [saving, setSaving] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isFinal = rci.status === "FINAL";
 
-  // Autosave du titre (debounce 800 ms). Ignoré si FINAL.
+  // Autosave du titre (debounce 800 ms). Ignoré si FINAL. Toute écriture ici vient
+  // d'une saisie manuelle → on marque le titre « personnalisé » (titleAuto=false).
   useEffect(() => {
     if (isFinal) return;
     if (title === (rci.title ?? "")) return;
@@ -55,7 +61,7 @@ export default function RciEditorClient({
         const res = await fetch(`/api/rci/${rci.id}`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ title: title.trim() || null }),
+          body: JSON.stringify({ title: title.trim() || null, titleAuto: false }),
         });
         if (res.ok) {
           setSavedAt(new Date());
@@ -155,6 +161,9 @@ export default function RciEditorClient({
               session={
                 linkedSession ? { ficheSlug: linkedSession.ficheSlug } : null
               }
+              // RCI finalisé = lecture seule : on garde « ouvrir » sur les
+              // voisins liés, mais plus de « + » qui échouerait en 409.
+              readOnly={isFinal}
             />
           </div>
         </div>
@@ -170,7 +179,11 @@ export default function RciEditorClient({
         <input
           type="text"
           value={title}
-          onChange={(e) => setTitle(e.target.value)}
+          onChange={(e) => {
+            setTitle(e.target.value);
+            // Édition manuelle → le titre devient prioritaire et figé côté auto.
+            setTitleAuto(false);
+          }}
           disabled={isFinal}
           placeholder="Sans titre"
           className="input"
@@ -190,6 +203,8 @@ export default function RciEditorClient({
         initialDossierNumber={rci.dossierNumber}
         initialEventAt={rci.eventAt}
         initialTitle={rci.title}
+        // Le wizard ne fait suivre la Nature au titre que tant qu'il est auto.
+        titleAuto={titleAuto}
         status={rci.status}
         authorName={rci.authorName}
         cilIncident={rci.cilIncident}
