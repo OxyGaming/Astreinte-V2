@@ -8,6 +8,7 @@ import {
   getRcisBySession,
   getCilsForSession,
 } from "@/lib/db";
+import SessionDeleteButton from "./SessionDeleteButton";
 
 export const dynamic = "force-dynamic";
 
@@ -48,13 +49,16 @@ export default async function SessionDetailPage({ params }: Props) {
     <div className="max-w-2xl mx-auto lg:max-w-3xl">
       {/* Header */}
       <div className={`px-4 pt-5 pb-5 lg:px-8 ${isArchived ? "bg-slate-700" : "bg-green-800"} text-white`}>
-        <Link
-          href="/sessions"
-          className="flex items-center gap-1 text-sm opacity-80 hover:opacity-100 mb-4 transition-opacity"
-        >
-          <ArrowLeft size={16} />
-          Événements
-        </Link>
+        <div className="flex items-center justify-between mb-4">
+          <Link
+            href="/sessions"
+            className="flex items-center gap-1 text-sm opacity-80 hover:opacity-100 transition-opacity"
+          >
+            <ArrowLeft size={16} />
+            Événements
+          </Link>
+          {user.role === "ADMIN" && <SessionDeleteButton sessionId={session.id} />}
+        </div>
 
         <div className="flex items-center gap-2 mb-2">
           {isArchived ? <Archive size={16} className="opacity-70" /> : <Play size={16} className="opacity-70" />}

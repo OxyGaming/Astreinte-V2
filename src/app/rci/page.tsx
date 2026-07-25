@@ -26,5 +26,5 @@ export default async function RciIndexPage() {
     updatedAt: r.updatedAt.toISOString(),
     authorName: `${r.author.prenom} ${r.author.nom}`.trim(),
   }));
-  return <RciListClient items={items} />;
+  return <RciListClient items={items} isAdmin={u.role === "ADMIN"} />;
 }

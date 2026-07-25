@@ -2,7 +2,13 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { assertTeamAccess, requireUser } from "@/lib/auth";
-import { reconcileTriangle, TriangleConflictError } from "@/lib/triangle";
+import {
+  reconcileTriangle,
+  TriangleConflictError,
+  executeDeletion,
+  deletionErrorResponse,
+  parseDeletionBody,
+} from "@/lib/triangle";
 
 // Portage : cette application n'a ni modèle `Team` ni modèle `Photo`.
 // L'auteur est projeté depuis `prenom` / `nom` (pas de champ `name` ici).
@@ -176,11 +182,14 @@ export async function PATCH(
 }
 
 /**
- * Supprime un brouillon. Refuse si FINAL (intégrité de l'archive).
- * Les photos sont cascadées via la FK ON DELETE CASCADE du schéma.
+ * Suppression physique d'un RCI (admin-only). Un RCI n'a aucune entité fille et
+ * n'est référencé par personne : sa suppression rompt seulement ses propres liens
+ * (Session / Livret voisins, qui survivent). Refus si FINAL (garde `SELF_FINAL`).
+ * Contrôle d'obsolescence via `stateToken` et audit transactionnel — cf.
+ * `executeDeletion`.
  */
 export async function DELETE(
-  _req: Request,
+  req: Request,
   ctx: { params: Promise<{ id: string }> }
 ) {
   let u;
@@ -189,19 +198,28 @@ export async function DELETE(
   } catch (r) {
     return r as Response;
   }
-  const { id } = await ctx.params;
-  const existing = await prisma.rci.findUnique({ where: { id } });
-  if (!existing)
-    return NextResponse.json({ error: "RCI inconnu" }, { status: 404 });
-  if (!assertTeamAccess(u, existing)) {
-    return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
-  }
-  if (existing.status === "FINAL") {
+  if (u.role !== "ADMIN") {
     return NextResponse.json(
-      { error: "RCI finalisé, suppression interdite." },
-      { status: 409 }
+      { error: "Suppression réservée aux administrateurs" },
+      { status: 403 },
     );
   }
-  await prisma.rci.delete({ where: { id } });
-  return NextResponse.json({ ok: true });
+  const { id } = await ctx.params;
+
+  const { stateToken, motif } = await parseDeletionBody(req);
+  if (!stateToken) {
+    return NextResponse.json({ error: "Jeton d'état (stateToken) requis" }, { status: 400 });
+  }
+
+  const actor = { id: u.id, nom: u.name };
+  try {
+    const impact = await prisma.$transaction((tx) =>
+      executeDeletion(tx, "rci", id, actor, stateToken, motif),
+    );
+    return NextResponse.json({ ok: true, impact });
+  } catch (e) {
+    const res = deletionErrorResponse(e);
+    if (res) return res;
+    throw e;
+  }
 }

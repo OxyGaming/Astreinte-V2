@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser, canAccessSession } from "@/lib/user-auth";
 import { getSessionById, archiveFicheSession, getSessionJournal } from "@/lib/db";
+import { prisma } from "@/lib/prisma";
+import { executeDeletion, deletionErrorResponse, parseDeletionBody } from "@/lib/triangle";
 
 interface Params {
   params: Promise<{ id: string }>;
@@ -44,4 +46,36 @@ export async function PUT(_req: NextRequest, { params }: Params) {
 
   const updated = await archiveFicheSession(id);
   return NextResponse.json({ session: updated });
+}
+
+// DELETE /api/sessions/[id]  → suppression PHYSIQUE (admin-only)
+// Gardes : refus si un RCI FINAL ou un Livret CLOSED directement rattaché serait
+// altéré ; contrôle d'obsolescence via `stateToken` ; audit dans la transaction.
+// Cible uniquement `FicheSession` (jamais `SessionProcedure`).
+export async function DELETE(req: NextRequest, { params }: Params) {
+  const user = await getCurrentUser();
+  if (!user) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+  if (user.role !== "ADMIN") {
+    return NextResponse.json({ error: "Suppression réservée aux administrateurs" }, { status: 403 });
+  }
+
+  const { id } = await params;
+
+  const { stateToken, motif } = await parseDeletionBody(req);
+  if (!stateToken) {
+    return NextResponse.json({ error: "Jeton d'état (stateToken) requis" }, { status: 400 });
+  }
+
+  const actor = { id: user.id, nom: `${user.prenom} ${user.nom}`.trim() || user.username };
+
+  try {
+    const impact = await prisma.$transaction((tx) =>
+      executeDeletion(tx, "session", id, actor, stateToken, motif),
+    );
+    return NextResponse.json({ ok: true, impact });
+  } catch (e) {
+    const res = deletionErrorResponse(e);
+    if (res) return res;
+    throw e;
+  }
 }

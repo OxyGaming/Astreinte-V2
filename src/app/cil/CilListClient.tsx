@@ -3,9 +3,8 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { toast } from "sonner";
 import { Icon } from "@/components/icons";
-import { useConfirmDialog } from "@/components/ConfirmDialog";
+import { useDeletionDialog } from "@/components/DeletionImpactDialog";
 import { INCIDENT_TYPE_LABELS, type IncidentType } from "@/lib/cil/types";
 import { fmtDateTimeFr } from "@/lib/cil/format";
 
@@ -23,27 +22,18 @@ type Item = {
   intervenants: number;
 };
 
-export default function CilListClient({ items: initial }: { items: Item[] }) {
+export default function CilListClient({
+  items: initial,
+  isAdmin,
+}: {
+  items: Item[];
+  isAdmin: boolean;
+}) {
   const router = useRouter();
-  const { dialog, ask } = useConfirmDialog();
   const [items, setItems] = useState(initial);
-
-  async function remove(it: Item) {
-    const ok = await ask({
-      title: "Supprimer cet incident ?",
-      description: "Le brouillon et toutes ses données seront supprimés.",
-      confirmLabel: "Supprimer",
-      tone: "danger",
-    });
-    if (!ok) return;
-    const res = await fetch(`/api/cil/${it.id}`, { method: "DELETE" });
-    if (res.ok) {
-      setItems((a) => a.filter((x) => x.id !== it.id));
-      toast.success("Incident supprimé");
-    } else {
-      toast.error("Suppression impossible");
-    }
-  }
+  const { dialog, requestDelete } = useDeletionDialog((t) =>
+    setItems((a) => a.filter((x) => x.id !== t.id)),
+  );
 
   return (
     <div className="px-4 lg:px-8 py-4 lg:py-6 max-w-4xl mx-auto">
@@ -110,9 +100,9 @@ export default function CilListClient({ items: initial }: { items: Item[] }) {
                     {it.depeches} dépêche(s) · {it.intervenants} intervenant(s)
                   </div>
                 </Link>
-                {!closed && (
+                {isAdmin && !closed && (
                   <button
-                    onClick={() => remove(it)}
+                    onClick={() => requestDelete({ type: "cil", id: it.id })}
                     className="px-3 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-r-xl"
                     title="Supprimer"
                     aria-label="Supprimer l'incident"

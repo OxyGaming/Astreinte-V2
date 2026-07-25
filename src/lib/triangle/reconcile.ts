@@ -1,5 +1,5 @@
 /**
- * triangle — cohérence en base du triangle **Session ↔ RCI ↔ Livret CIL**.
+ * triangle/reconcile — cohérence en base du triangle **Session ↔ RCI ↔ Livret CIL**.
  *
  * Les trois côtés sont des FK directes (`Rci.sessionId`, `Rci.cilIncidentId`,
  * `CilIncident.sessionId`). Historiquement, chaque geste de création/rattachement
@@ -19,7 +19,7 @@
  */
 import type { Prisma, PrismaClient } from "@/generated/prisma/client";
 
-type Tx = Prisma.TransactionClient | PrismaClient;
+export type Tx = Prisma.TransactionClient | PrismaClient;
 
 /** Conflit de cohérence : une FK visée est déjà occupée par un AUTRE élément. */
 export class TriangleConflictError extends Error {

@@ -4,7 +4,13 @@ import { prisma } from "@/lib/prisma";
 import { assertTeamAccess, requireUser } from "@/lib/auth";
 import { createEvent, loadIncidentFull, serializeIncident } from "@/lib/cil/repo";
 import { ETABLISSEMENTS, GARE_MODES } from "@/lib/cil/types";
-import { reconcileTriangle, TriangleConflictError } from "@/lib/triangle";
+import {
+  reconcileTriangle,
+  TriangleConflictError,
+  executeDeletion,
+  deletionErrorResponse,
+  parseDeletionBody,
+} from "@/lib/triangle";
 
 export async function GET(
   _req: Request,
@@ -233,8 +239,15 @@ export async function PATCH(
   return NextResponse.json(serializeIncident(row!));
 }
 
+/**
+ * Suppression physique d'un Livret CIL (admin-only). Cascade toutes ses entités
+ * filles (événements, dépêches, intervenants, autorisations, signatures) et
+ * détache les RCI DRAFT rattachés. Refus si CLOSED (garde `SELF_CLOSED`) ou si un
+ * RCI FINAL y est rattaché (garde `RCI_FINAL` — l'élément probant n'est jamais
+ * altéré indirectement). Obsolescence via `stateToken`, audit transactionnel.
+ */
 export async function DELETE(
-  _req: Request,
+  req: Request,
   ctx: { params: Promise<{ id: string }> },
 ) {
   let u;
@@ -243,19 +256,28 @@ export async function DELETE(
   } catch (r) {
     return r as Response;
   }
-  const { id } = await ctx.params;
-  const existing = await prisma.cilIncident.findUnique({ where: { id } });
-  if (!existing)
-    return NextResponse.json({ error: "Incident inconnu" }, { status: 404 });
-  if (!assertTeamAccess(u, existing)) {
-    return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
-  }
-  if (existing.status === "CLOSED") {
+  if (u.role !== "ADMIN") {
     return NextResponse.json(
-      { error: "Incident clôturé, suppression interdite." },
-      { status: 409 },
+      { error: "Suppression réservée aux administrateurs" },
+      { status: 403 },
     );
   }
-  await prisma.cilIncident.delete({ where: { id } });
-  return NextResponse.json({ ok: true });
+  const { id } = await ctx.params;
+
+  const { stateToken, motif } = await parseDeletionBody(req);
+  if (!stateToken) {
+    return NextResponse.json({ error: "Jeton d'état (stateToken) requis" }, { status: 400 });
+  }
+
+  const actor = { id: u.id, nom: u.name };
+  try {
+    const impact = await prisma.$transaction((tx) =>
+      executeDeletion(tx, "cil", id, actor, stateToken, motif),
+    );
+    return NextResponse.json({ ok: true, impact });
+  } catch (e) {
+    const res = deletionErrorResponse(e);
+    if (res) return res;
+    throw e;
+  }
 }
