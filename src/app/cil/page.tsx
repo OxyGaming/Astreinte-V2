@@ -33,5 +33,5 @@ export default async function CilPage() {
     intervenants: r._count.intervenants,
   }));
 
-  return <CilListClient items={items} />;
+  return <CilListClient items={items} isAdmin={u.role === "ADMIN"} />;
 }

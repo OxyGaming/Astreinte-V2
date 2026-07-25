@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { Icon } from "@/components/icons";
+import { useDeletionDialog } from "@/components/DeletionImpactDialog";
 
 type Item = {
   id: string;
@@ -20,10 +21,10 @@ type Item = {
   // modèle `Team` ni modèle `Photo`.
 };
 
-export default function RciListClient({ items }: { items: Item[] }) {
+export default function RciListClient({ items, isAdmin }: { items: Item[]; isAdmin: boolean }) {
   const router = useRouter();
   const [creating, setCreating] = useState(false);
-  const [deleting, setDeleting] = useState<string | null>(null);
+  const { dialog, requestDelete } = useDeletionDialog(() => router.refresh());
 
   const drafts = items.filter((r) => r.status === "DRAFT");
   const finals = items.filter((r) => r.status === "FINAL");
@@ -48,26 +49,9 @@ export default function RciListClient({ items }: { items: Item[] }) {
     }
   }
 
-  async function remove(id: string) {
-    if (!confirm("Supprimer ce brouillon RCI ? Cette action est irréversible."))
-      return;
-    setDeleting(id);
-    try {
-      const res = await fetch(`/api/rci/${id}`, { method: "DELETE" });
-      if (!res.ok) {
-        const j = await res.json().catch(() => ({}));
-        toast.error(j.error || "Suppression impossible");
-        return;
-      }
-      toast.success("Brouillon supprimé");
-      router.refresh();
-    } finally {
-      setDeleting(null);
-    }
-  }
-
   return (
     <div className="px-4 lg:px-8 py-4 lg:py-6 max-w-5xl mx-auto">
+      {dialog}
       <header className="card p-5 lg:p-6 mb-6">
         <div className="flex items-start justify-between gap-3">
           <div>
@@ -100,8 +84,7 @@ export default function RciListClient({ items }: { items: Item[] }) {
           <RciRow
             key={r.id}
             r={r}
-            onDelete={() => remove(r.id)}
-            deleting={deleting === r.id}
+            onDelete={isAdmin ? () => requestDelete({ type: "rci", id: r.id }) : undefined}
           />
         ))}
       </Section>
@@ -152,12 +135,10 @@ function Section({
 function RciRow({
   r,
   onDelete,
-  deleting,
   readOnly = false,
 }: {
   r: Item;
   onDelete?: () => void;
-  deleting?: boolean;
   readOnly?: boolean;
 }) {
   const event = r.eventAt ? new Date(r.eventAt) : null;
@@ -193,7 +174,6 @@ function RciRow({
         <button
           type="button"
           onClick={onDelete}
-          disabled={deleting}
           title="Supprimer le brouillon"
           aria-label="Supprimer"
           className="text-slate-300 hover:text-rose-600 p-1.5 rounded-md hover:bg-rose-50 transition-colors"

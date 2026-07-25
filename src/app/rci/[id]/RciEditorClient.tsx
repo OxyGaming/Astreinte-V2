@@ -9,6 +9,7 @@ import { fr } from "date-fns/locale";
 import { Icon } from "@/components/icons";
 import RciWizard from "./wizard/RciWizard";
 import ModuleLinks from "@/components/ModuleLinks";
+import { useDeletionDialog } from "@/components/DeletionImpactDialog";
 import type { SourceCil, SourceSession } from "./RciSourceCard";
 
 type Rci = {
@@ -31,15 +32,19 @@ type Rci = {
 
 export default function RciEditorClient({
   rci,
+  isAdmin = false,
   linkedCil = null,
   linkedSession = null,
 }: {
   rci: Rci;
+  /** Suppression réservée à l'administrateur (bouton masqué sinon). */
+  isAdmin?: boolean;
   /** Voisins du triangle (résolution transitive) pour le bandeau de nav. */
   linkedCil?: { id: string } | null;
   linkedSession?: { id: string; ficheSlug: string } | null;
 }) {
   const router = useRouter();
+  const { dialog, requestDelete } = useDeletionDialog(() => router.push("/rci"));
   const [title, setTitle] = useState(rci.title ?? "");
   // Titre encore automatique ? Passe à false dès la 1re édition manuelle du champ,
   // et le wizard (Nature) cesse alors de le remplacer. Partagé avec RciWizard.
@@ -79,25 +84,9 @@ export default function RciEditorClient({
     };
   }, [title, rci.id, rci.title, isFinal, router]);
 
-  async function remove() {
-    if (
-      !confirm(
-        "Supprimer ce brouillon RCI ? Toutes les photos seront aussi supprimées."
-      )
-    )
-      return;
-    const res = await fetch(`/api/rci/${rci.id}`, { method: "DELETE" });
-    if (!res.ok) {
-      const j = await res.json().catch(() => ({}));
-      toast.error(j.error || "Suppression impossible");
-      return;
-    }
-    toast.success("Brouillon supprimé");
-    router.push("/rci");
-  }
-
   return (
     <div className="px-4 lg:px-8 py-4 lg:py-6 max-w-3xl mx-auto">
+      {dialog}
       <header className="card p-5 lg:p-6 mb-6">
         <Link
           href="/rci"
@@ -133,10 +122,10 @@ export default function RciEditorClient({
               </span>
             </div>
           </div>
-          {!isFinal && (
+          {isAdmin && !isFinal && (
             <button
               type="button"
-              onClick={remove}
+              onClick={() => requestDelete({ type: "rci", id: rci.id })}
               className="text-xs text-rose-600 hover:bg-rose-50 px-3 py-1.5 rounded-md inline-flex items-center gap-1.5"
             >
               <Icon.X className="w-4 h-4" /> Supprimer

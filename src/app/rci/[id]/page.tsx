@@ -52,6 +52,7 @@ export default async function RciEditPage({
   const triangle = await resolveTriangleLinks({ rciId: rci.id });
   return (
     <RciEditorClient
+      isAdmin={u.role === "ADMIN"}
       linkedCil={triangle.cil}
       linkedSession={triangle.session}
       rci={{
