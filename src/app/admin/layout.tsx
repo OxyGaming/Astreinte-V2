@@ -117,7 +117,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
       </aside>
 
       {/* --- Navigation mobile (< lg) --- */}
-      <AdminMobileNav />
+      <AdminMobileNav editorOnly={currentUser?.role !== "ADMIN"} />
 
       {/* --- Contenu principal --- */}
       {/* pt-14 sur mobile pour compenser la barre de navigation fixe */}

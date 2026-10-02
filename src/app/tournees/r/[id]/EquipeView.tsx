@@ -32,13 +32,15 @@ export default function EquipeView({
   }));
   const synth = syntheseEquipe(lignes.map((l) => l.s), seuils);
 
-  // Prochaine optionnelle : la plus contraignante (marge minimale) parmi les participants actifs.
-  const prochainesOpt = lignes
+  // Prochaine optionnelle (dans l'ordre du parcours) encore ouverte pour au
+  // moins un participant actif, évaluée pour le participant le plus contraint.
+  const faisActives = lignes
     .filter((l) => l.s.progression.demarre && !l.s.progression.termine)
-    .flatMap((l) => [...l.s.faisabilites.values()])
-    .sort((a, b) => a.margeMin - b.margeMin);
-  const optKey = prochainesOpt[0]?.key;
-  const optPire = optKey ? prochainesOpt.find((f) => f.key === optKey) : undefined;
+    .flatMap((l) => [...l.s.faisabilites.values()]);
+  const optKey = etapes.find((e) => faisActives.some((f) => f.key === e.key))?.key;
+  const optPire = optKey
+    ? faisActives.filter((f) => f.key === optKey).sort((a, b) => a.margeMin - b.margeMin)[0]
+    : undefined;
 
   const ordre = (l: (typeof lignes)[number]) => {
     const k = l.s.progression.enCoursKey ?? l.s.progression.prochaineKey;
