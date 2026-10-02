@@ -155,6 +155,9 @@ export default function CilDashboard({
 
   const presentIntervenants = full.intervenants.filter((i) => !i.departedAt);
 
+  // Avis de désherbage du CRC (livret v02) : à recueillir dès l'ouverture du livret.
+  const deshManquant = !closed && !desherbage;
+
   // Avis obligatoires encore à recueillir (dérivés, jamais stockés).
   const reminders = useMemo(
     () =>
@@ -316,13 +319,28 @@ export default function CilDashboard({
       <ProgressBanner phase={phase} closed={closed} />
 
       {/* Avis obligatoires à recueillir */}
-      {reminders.length > 0 && (
+      {(reminders.length > 0 || deshManquant) && (
         <section className="mb-4 rounded-lg border-2 border-amber-300 bg-amber-50 px-4 py-3">
           <h2 className="text-xs font-bold text-amber-900 mb-2 inline-flex items-center gap-1.5">
             <Icon.AlertTriangle className="w-4 h-4" />
-            Avis à recueillir ({reminders.length})
+            Avis à recueillir ({reminders.length + (deshManquant ? 1 : 0)})
           </h2>
           <ul className="space-y-1.5">
+            {deshManquant && (
+              <li className="text-xs text-amber-900">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="flex-1 min-w-[12rem]">
+                    Désherbage — recueillez l&apos;avis du CRC : un désherbage est-il en cours ? Notez la réponse et l&apos;heure de l&apos;avis.
+                  </span>
+                  <button
+                    onClick={() => setModalAction("AVIS_DESHERBAGE")}
+                    className="text-[11px] font-semibold bg-amber-600 hover:bg-amber-700 text-white px-2 py-1 rounded shrink-0"
+                  >
+                    Saisir l&apos;avis
+                  </button>
+                </div>
+              </li>
+            )}
             {reminders.map((r) => (
               <li key={r.id} className="text-xs text-amber-900">
                 <div className="flex items-center gap-2 flex-wrap">
