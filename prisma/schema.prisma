@@ -97,14 +97,29 @@ model Document {
   size             Int
   ficheId          String?
   posteId          String?
+  /// DOCUMENT (PDF de référence) | PHOTO (image JPEG/PNG — tournées terrain).
+  kind             String   @default("DOCUMENT")
+  /// Légende facultative (photos illustratives d'étape de tournée).
+  caption          String?
+  /// Ordre d'affichage parmi les fichiers du même propriétaire.
+  ordre            Int      @default(0)
+  /// Photo illustrative d'une étape de MODÈLE de tournée (permanente,
+  /// visible par tous les participants).
+  tourneeEtapeId   String?
+  /// Photo jointe à une contribution terrain.
+  tourneeContributionId String?
   uploadedByUserId String?
   createdAt        DateTime @default(now())
   fiche            Fiche?   @relation(fields: [ficheId], references: [id], onDelete: Cascade)
   poste            Poste?   @relation(fields: [posteId], references: [id], onDelete: Cascade)
+  tourneeEtape        TourneeEtape?        @relation(fields: [tourneeEtapeId], references: [id], onDelete: Cascade)
+  tourneeContribution TourneeContribution? @relation(fields: [tourneeContributionId], references: [id], onDelete: Cascade)
   uploadedBy       User?    @relation(fields: [uploadedByUserId], references: [id], onDelete: SetNull)
 
   @@index([ficheId])
   @@index([posteId])
+  @@index([tourneeEtapeId])
+  @@index([tourneeContributionId])
 }
 
 model FicheContact {
@@ -331,6 +346,13 @@ model User {
   /// Prisma applique donc Restrict — cohérent avec la règle de soft-delete.
   rcis                Rci[]
   cilIncidents        CilIncident[]
+  /// Tournées terrain. Créateur / auteur NOT NULL : même règle que les
+  /// sessions (soft-delete uniquement).
+  tourneeModelesCrees     TourneeModele[]       @relation("TourneeModeleCreateur")
+  tourneeRealisations     TourneeRealisation[]  @relation("TourneeRealisationCreateur")
+  tourneeParticipations   TourneeParticipant[]
+  tourneeContributions    TourneeContribution[] @relation("TourneeContributionAuteur")
+  tourneeContribAffectees TourneeContribution[] @relation("TourneeContributionAssignee")
 }
 
 model FicheSession {
@@ -735,4 +757,219 @@ model CilSignature {
 
   @@index([incidentId])
   @@index([ownerType, ownerId])
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// TOURNÉES TERRAIN
+//
+// Séparation stricte :
+//   • TourneeModele / TourneeEtape  → parcours préparé (back-office, ADMIN)
+//   • TourneeRealisation            → exécution réelle (solo ou équipe) ; porte
+//     une COPIE FIGÉE du modèle (`planSnapshot`) : modifier le modèle n'altère
+//     jamais une réalisation, et l'ajustement d'une réalisation par son
+//     référent ne remonte jamais dans le modèle.
+//   • TourneeParticipant / TourneeEvenement → progression INDIVIDUELLE
+//     (journal append-only horodaté par le terminal, source des durées réelles)
+//   • TourneeContribution           → remontée terrain indépendante, traitée
+//     administrativement, ne modifie jamais le modèle.
+// ═══════════════════════════════════════════════════════════════════════════
+
+model TourneeModele {
+  id               String   @id @default(cuid())
+  titre            String
+  /// Sous-titre affiché sous le titre (ex. « Secteur RDN »).
+  sousTitre        String?
+  description      String?
+  objectif         String?
+  /// JSON TourneeAProposSection[] — rubrique « À propos de cette tournée ».
+  aPropos          String   @default("[]")
+  /// Heure de départ prévue "HH:mm" (heure locale Europe/Paris). La date
+  /// appartient à la réalisation.
+  heureDepart      String   @default("08:00")
+  /// JSON TourneeSeuils — tolérance / seuils orange-rouge / marge de confort.
+  seuils           String?
+  /// JSON TourneeContactRef[] — fonction propre à la tournée + contact lié ou libre.
+  contacts         String   @default("[]")
+  /// LienRef[] généraux de la tournée.
+  liens            String?
+  /// Mention de diffusion imprimée en pied de page du PDF.
+  mentionDiffusion String?
+  /// BROUILLON | PUBLIE | ARCHIVE — seuls les modèles PUBLIE sont proposés.
+  statut           String   @default("BROUILLON")
+  /// Incrémentée à chaque enregistrement — tracée dans la réalisation.
+  version          Int      @default(1)
+  createdById      String
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  createdBy     User                  @relation("TourneeModeleCreateur", fields: [createdById], references: [id])
+  etapes        TourneeEtape[]
+  realisations  TourneeRealisation[]
+  contributions TourneeContribution[]
+
+  @@index([statut])
+}
+
+model TourneeEtape {
+  id                  String   @id @default(cuid())
+  modeleId            String
+  ordre               Int      @default(0)
+  /// DEPART | POINT | PAUSE | EXERCICE | RESTITUTION
+  type                String   @default("POINT")
+  titre               String
+  description         String?
+  /// Étape optionnelle : hors chaîne horaire, réalisable si la marge le permet.
+  optionnelle         Boolean  @default(false)
+  /// Heure imposée "HH:mm" (échéance : réservation, rendez-vous, restitution).
+  heureImposee        String?
+  /// Temps de présence prévu (minutes).
+  dureeMin            Int      @default(0)
+  /// Trajet vers l'étape obligatoire suivante (minutes) — valeur de
+  /// planification fixée par le créateur, jamais recalculée.
+  trajetSuivanteMin   Int      @default(0)
+  /// Étape optionnelle : surcoût de trajet induit par le détour (minutes).
+  surcoutTrajetMin    Int?
+  adresse             String?
+  latitude            Float?
+  longitude           Float?
+  /// Localisation volontairement non communiquée aux participants (exercice).
+  localisationMasquee Boolean  @default(false)
+  /// LienRef[] — référentiels / documents de l'étape.
+  liens               String?
+  /// JSON TourneeBloc[] — consignes structurées (sections, encadrés, sous-points).
+  contenu             String   @default("[]")
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  modele TourneeModele @relation(fields: [modeleId], references: [id], onDelete: Cascade)
+  photos Document[]
+
+  @@index([modeleId, ordre])
+}
+
+model TourneeRealisation {
+  id            String    @id @default(cuid())
+  /// SetNull : supprimer un modèle ne détruit pas l'historique.
+  modeleId      String?
+  modeleVersion Int       @default(1)
+  /// Copie figée JSON TourneePlan (modèle + étapes) — ajustable par le
+  /// référent tant que la réalisation est en PREPARATION.
+  planSnapshot  String
+  /// SOLO | EQUIPE
+  mode          String
+  titre         String
+  /// Jour de la tournée "YYYY-MM-DD" (jour local Europe/Paris).
+  date          String
+  /// Heure de départ prévue "HH:mm" (copie ajustable de celle du modèle).
+  heureDepart   String
+  /// PREPARATION | EN_COURS | TERMINEE | ANNULEE
+  statut        String    @default("PREPARATION")
+  /// Code court de partage (mode EQUIPE uniquement).
+  codePartage   String?   @unique
+  createdById   String
+  startedAt     DateTime?
+  endedAt       DateTime?
+  clientOpId    String?   @unique
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  modele        TourneeModele?        @relation(fields: [modeleId], references: [id], onDelete: SetNull)
+  createdBy     User                  @relation("TourneeRealisationCreateur", fields: [createdById], references: [id])
+  participants  TourneeParticipant[]
+  evenements    TourneeEvenement[]
+  contributions TourneeContribution[]
+
+  @@index([statut, mode])
+  @@index([createdById])
+}
+
+model TourneeParticipant {
+  id                  String    @id @default(cuid())
+  realisationId       String
+  userId              String
+  /// REFERENT | PARTICIPANT
+  role                String    @default("PARTICIPANT")
+  joinedAt            DateTime  @default(now())
+  startedAt           DateTime?
+  finishedAt          DateTime?
+  /// Projection (dérivée du journal) pour la vue équipe.
+  etapeCouranteKey    String?
+  etapeCouranteDepuis DateTime?
+
+  realisation TourneeRealisation @relation(fields: [realisationId], references: [id], onDelete: Cascade)
+  user        User               @relation(fields: [userId], references: [id])
+  evenements  TourneeEvenement[]
+
+  @@unique([realisationId, userId])
+}
+
+model TourneeEvenement {
+  id            String   @id @default(cuid())
+  realisationId String
+  participantId String
+  /// TOURNEE_DEBUT | ETAPE_DEBUT | ETAPE_FIN | ETAPE_IGNOREE | ETAPE_REPRISE | TOURNEE_FIN
+  type          String
+  /// Id d'étape dans la copie figée (stable même si le modèle évolue).
+  etapeKey      String?
+  /// Horodatage du terminal (source des durées réelles, permet le hors ligne).
+  occurredAt    DateTime
+  recordedAt    DateTime @default(now())
+  clientOpId    String?  @unique
+
+  realisation TourneeRealisation @relation(fields: [realisationId], references: [id], onDelete: Cascade)
+  participant TourneeParticipant @relation(fields: [participantId], references: [id], onDelete: Cascade)
+
+  @@index([participantId, occurredAt])
+  @@index([realisationId])
+}
+
+model TourneeContribution {
+  id            String    @id @default(cuid())
+  realisationId String?
+  modeleId      String?
+  /// Id d'étape (copie figée) + titre figé pour l'affichage.
+  etapeKey      String?
+  etapeTitre    String?
+  auteurId      String
+  /// REMISE_CONFORMITE | ANOMALIE | INFO_A_MODIFIER | AMELIORATION | PHOTO | AUTRE
+  type          String
+  description   String
+  /// NOUVELLE | EN_ANALYSE | A_TRAITER | EN_COURS | TRAITE | REFUSE | ARCHIVE
+  statut        String    @default("NOUVELLE")
+  assigneeId    String?
+  traiteLe      DateTime?
+  clientOpId    String?   @unique
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  realisation TourneeRealisation? @relation(fields: [realisationId], references: [id], onDelete: SetNull)
+  modele      TourneeModele?      @relation(fields: [modeleId], references: [id], onDelete: SetNull)
+  auteur      User                @relation("TourneeContributionAuteur", fields: [auteurId], references: [id])
+  assignee    User?               @relation("TourneeContributionAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
+  historique  TourneeContributionHistorique[]
+  photos      Document[]
+
+  @@index([statut])
+  @@index([auteurId])
+  @@index([modeleId])
+  @@index([createdAt])
+}
+
+/// Historique append-only du traitement d'une contribution.
+model TourneeContributionHistorique {
+  id             String   @id @default(cuid())
+  contributionId String
+  /// CREATION | STATUT | COMMENTAIRE | AFFECTATION | DATE_TRAITEMENT
+  type           String
+  ancienneValeur String?
+  nouvelleValeur String?
+  message        String?
+  /// Auteur figé (survit au renommage / soft-delete).
+  actorId        String?
+  actorNom       String
+  createdAt      DateTime @default(now())
+
+  contribution TourneeContribution @relation(fields: [contributionId], references: [id], onDelete: Cascade)
+
+  @@index([contributionId, createdAt])
 }

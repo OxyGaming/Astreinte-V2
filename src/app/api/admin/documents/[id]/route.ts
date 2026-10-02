@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import fs from "fs/promises";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/user-auth";
 import { logAdminAction } from "@/lib/audit";
-import { getDocumentPath } from "@/lib/documents";
+import { unlinkDocumentFile } from "@/lib/documents";
 
 export const runtime = "nodejs";
 
@@ -21,13 +20,7 @@ export async function DELETE(_req: NextRequest, { params }: Params) {
 
   await prisma.document.delete({ where: { id } });
 
-  try {
-    await fs.unlink(getDocumentPath(id));
-  } catch (err: unknown) {
-    if ((err as NodeJS.ErrnoException).code !== "ENOENT") {
-      console.warn(`[documents] Échec suppression fichier ${id}:`, err);
-    }
-  }
+  await unlinkDocumentFile(id, document.mimeType);
 
   await logAdminAction(
     user.id,

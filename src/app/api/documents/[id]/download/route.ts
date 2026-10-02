@@ -20,7 +20,7 @@ export async function GET(req: NextRequest, { params }: Params) {
 
   let fileBuffer: Buffer;
   try {
-    fileBuffer = await fs.readFile(getDocumentPath(id));
+    fileBuffer = await fs.readFile(getDocumentPath(id, document.mimeType));
   } catch {
     return NextResponse.json({ error: "Fichier physique introuvable" }, { status: 404 });
   }
