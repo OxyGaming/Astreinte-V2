@@ -1,7 +1,7 @@
 export const dynamic = "force-dynamic";
 
 import Link from "next/link";
-import { Shield, Phone, FileText, MapPin, AlignLeft, AlertTriangle, ChevronRight, BookMarked, Link2, FileSignature, Siren } from "lucide-react";
+import { Shield, Phone, FileText, MapPin, AlignLeft, AlertTriangle, ChevronRight, BookMarked, Link2, FileSignature, Siren, Route } from "lucide-react";
 import SearchBar from "@/components/SearchBar";
 import PhoneButton from "@/components/PhoneButton";
 import { getAllContacts, getAllFiches, getAllMnemoniques, getAllSecteurs, getAllLiens, countValidatedMainCourantes } from "@/lib/db";
@@ -120,6 +120,7 @@ export default async function Home() {
               // auteur, un compteur global exposerait l'activité des autres.
               { href: "/rci", icon: FileSignature, label: "RCI", sub: "Constat immédiat", color: "text-indigo-700 bg-indigo-50" },
               { href: "/cil", icon: Siren, label: "Livret CIL", sub: "Chef d'Incident Local", color: "text-red-700 bg-red-50" },
+              { href: "/tournees", icon: Route, label: "Tournées terrain", sub: "Parcours guidés", color: "text-cyan-700 bg-cyan-50" },
             ].map(({ href, icon: Icon, label, sub, color }) => (
               <Link
                 key={href}
