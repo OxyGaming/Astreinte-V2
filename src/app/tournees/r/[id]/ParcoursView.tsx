@@ -79,9 +79,16 @@ function GrosBouton({ onClick, children, variant = "primary", disabled }: { onCl
 
 function RaccourcisEtape({ etape, onOpen, onContribuer }: { etape: TourneePlanEtape; onOpen: () => void; onContribuer?: () => void }) {
   const gps = etape.latitude != null && etape.longitude != null;
-  const item = "flex flex-col items-center gap-1 py-2.5 rounded-xl bg-slate-50 hover:bg-slate-100 text-[11px] font-semibold text-slate-700";
+  const item = "flex items-center justify-center gap-2 py-3 rounded-xl bg-slate-50 hover:bg-slate-100 text-sm font-semibold text-slate-700";
+  // Un seul accès au détail (consignes, référentiels, photos) : le résumé
+  // indique ce qu'il contient.
+  const contenu = [
+    etape.contenu.length && { icon: BookOpen, n: etape.contenu.length, label: "consigne" },
+    etape.liens.length && { icon: Library, n: etape.liens.length, label: "référentiel" },
+    etape.photos.length && { icon: Camera, n: etape.photos.length, label: "photo" },
+  ].filter(Boolean) as { icon: typeof BookOpen; n: number; label: string }[];
   return (
-    <div className="grid grid-cols-4 gap-2">
+    <div className="grid grid-cols-2 gap-2">
       {gps ? (
         <a href={navigationUrl(etape.latitude!, etape.longitude!)} target="_blank" rel="noopener noreferrer" className={`${item} !bg-blue-600 !text-white hover:!bg-blue-700`}>
           <Navigation size={18} /> Naviguer
@@ -89,11 +96,20 @@ function RaccourcisEtape({ etape, onOpen, onContribuer }: { etape: TourneePlanEt
       ) : (
         <span className={`${item} opacity-50`}>{etape.localisationMasquee ? <EyeOff size={18} /> : <Navigation size={18} />}{etape.localisationMasquee ? "Masquée" : "Sans GPS"}</span>
       )}
-      <button onClick={onOpen} className={item}><BookOpen size={18} /> Consignes{etape.contenu.length ? ` (${etape.contenu.length})` : ""}</button>
-      <button onClick={onOpen} className={item}><Library size={18} /> Référentiels{etape.liens.length ? ` (${etape.liens.length})` : ""}</button>
-      <button onClick={onOpen} className={item}><Camera size={18} /> Photos{etape.photos.length ? ` (${etape.photos.length})` : ""}</button>
+      <button onClick={onOpen} className={`${item} flex-col !gap-0.5 !py-2`}>
+        <span className="flex items-center gap-2"><BookOpen size={18} /> Détails</span>
+        {contenu.length > 0 && (
+          <span className="flex items-center gap-2 text-[11px] font-medium text-slate-500">
+            {contenu.map(({ icon: Icon, n, label }) => (
+              <span key={label} className="flex items-center gap-0.5" title={`${n} ${label}${n > 1 ? "s" : ""}`}>
+                <Icon size={11} /> {n}
+              </span>
+            ))}
+          </span>
+        )}
+      </button>
       {onContribuer && (
-        <button onClick={onContribuer} className={`${item} col-span-4 !flex-row !justify-center !py-2`}>
+        <button onClick={onContribuer} className={`${item} col-span-2 !py-2`}>
           <MessageSquarePlus size={16} /> Contribuer
         </button>
       )}
