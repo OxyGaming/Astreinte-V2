@@ -25,15 +25,17 @@ import { adminLogoutAction } from "./login/actions";
 import AdminMobileNav from "@/components/AdminMobileNav";
 import { countPendingRegistrations, countPendingMainCourantes } from "@/lib/db";
 import { prisma } from "@/lib/prisma";
+import { getCurrentUser } from "@/lib/user-auth";
 
 export default async function AdminLayout({ children }: { children: ReactNode }) {
-  const [pendingRegistrations, pendingMainCourantes, nouvellesContributions] = await Promise.all([
+  const [pendingRegistrations, pendingMainCourantes, nouvellesContributions, currentUser] = await Promise.all([
     countPendingRegistrations(),
     countPendingMainCourantes(),
     prisma.tourneeContribution.count({ where: { statut: "NOUVELLE" } }),
+    getCurrentUser(),
   ]);
 
-  const navItems = [
+  const allNavItems = [
     { href: "/admin", label: "Tableau de bord", icon: LayoutDashboard },
     { href: "/admin/fiches", label: "Fiches réflexes", icon: FileText },
     { href: "/admin/contacts", label: "Contacts", icon: Users },
@@ -51,6 +53,10 @@ export default async function AdminLayout({ children }: { children: ReactNode })
     { href: "/admin/registrations", label: "Inscriptions", icon: ClipboardList, badge: pendingRegistrations },
     { href: "/admin/import", label: "Import de données", icon: Upload },
   ];
+  // Les EDITOR n'accèdent qu'au traitement des contributions de tournée.
+  const navItems = currentUser?.role === "ADMIN"
+    ? allNavItems
+    : [{ href: "/admin/tournees/contributions", label: "Contributions tournées", icon: Route, badge: nouvellesContributions }];
   return (
     <div className="min-h-screen bg-gray-100 flex">
       {/* --- Sidebar desktop (lg+) --- */}

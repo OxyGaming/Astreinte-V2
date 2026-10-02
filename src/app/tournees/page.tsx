@@ -1,7 +1,7 @@
 export const dynamic = "force-dynamic";
 
 import Link from "next/link";
-import { ChevronRight, Users, User, Route, History, PlayCircle, MapPin } from "lucide-react";
+import { ChevronRight, Users, User, Route, History, PlayCircle, MapPin, MessageSquarePlus } from "lucide-react";
 import { requireUserSession } from "@/lib/user-auth";
 import { prisma } from "@/lib/prisma";
 import TourneeHeader from "@/components/tournee/TourneeHeader";
@@ -123,6 +123,12 @@ export default async function TourneesPage() {
             </div>
           )}
         </section>
+
+        <Link href="/tournees/contributions" className="card px-4 py-3.5 flex items-center gap-3 hover:bg-slate-50">
+          <MessageSquarePlus size={18} className="text-slate-500" />
+          <span className="flex-1 text-sm font-semibold text-slate-700">Mes contributions</span>
+          <ChevronRight size={18} className="text-slate-300" />
+        </Link>
 
         {historique.length > 0 && (
           <section>

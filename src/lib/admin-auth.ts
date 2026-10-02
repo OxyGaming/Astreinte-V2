@@ -29,6 +29,25 @@ export async function isFrontOfficeAdmin(): Promise<boolean> {
 }
 
 /**
+ * Traitement des contributions de tournée : ADMIN **ou EDITOR**.
+ * Retourne l'utilisateur ; redirige vers /login sinon.
+ */
+export async function requireContributionManagerSession(): Promise<{ id: string; role: string; nom: string; prenom: string }> {
+  const cookieStore = await cookies();
+  const token = cookieStore.get(COOKIE_NAME)?.value;
+  const userId = (await isValidToken(token)) ? getUserIdFromToken(token!) : null;
+  const user = userId
+    ? await prisma.user.findUnique({ where: { id: userId }, select: { id: true, role: true, nom: true, prenom: true, actif: true, status: true } })
+    : null;
+  if (user && user.actif && user.status === "approved" && (user.role === "ADMIN" || user.role === "EDITOR")) {
+    return { id: user.id, role: user.role, nom: user.nom, prenom: user.prenom };
+  }
+  const { redirect } = await import("next/navigation");
+  redirect("/login?from=/admin/tournees/contributions");
+  throw new Error("unreachable");
+}
+
+/**
  * Exige une session admin valide — redirige vers /login sinon.
  * Un seul mécanisme : cookie front-office d'un utilisateur avec role=ADMIN.
  */
