@@ -1,5 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { parseBlocs, parseSeuils, validerEtape } from "../parse";
+import { parseBlocs, parseCoordonnees, parseSeuils, validerEtape } from "../parse";
+import { parseTexte } from "../texte";
+
+describe("parseTexte", () => {
+  it("puces, sous-puces et gras", () => {
+    const l = parseTexte("Intro\n- un **deux**\n-- sous\n\n• trois");
+    expect(l.map((x) => (x.kind === "li" ? `li${x.level}` : "p"))).toEqual(["p", "li1", "li2", "li1"]);
+    expect(l[1].segments).toEqual([{ text: "un ", bold: false }, { text: "deux", bold: true }]);
+  });
+});
 import { itineraireUrls, navigationUrl } from "../navigation";
 
 describe("validerEtape", () => {
@@ -26,6 +35,16 @@ describe("validerEtape", () => {
     expect(validerEtape({ titre: "x", latitude: 45 }).ok).toBe(false);
     expect(validerEtape({ titre: "x", latitude: 95, longitude: 4 }).ok).toBe(false);
     expect(validerEtape({ titre: "x", liens: [{ libelle: "a", url: "javascript:alert(1)" }] }).ok).toBe(false);
+  });
+});
+
+describe("parseCoordonnees", () => {
+  it("accepte texte brut, virgule décimale et URL Google Maps", () => {
+    expect(parseCoordonnees("45.604513, 4.792673")).toEqual({ latitude: 45.604513, longitude: 4.792673 });
+    expect(parseCoordonnees("45,604513 4,792673")).toEqual({ latitude: 45.604513, longitude: 4.792673 });
+    expect(parseCoordonnees("https://www.google.com/maps/@45.5850,4.7663,17z")).toEqual({ latitude: 45.585, longitude: 4.7663 });
+    expect(parseCoordonnees("https://maps.google.com/?q=45.46177,4.76958")).toEqual({ latitude: 45.46177, longitude: 4.76958 });
+    expect(parseCoordonnees("n'importe quoi")).toBeNull();
   });
 });
 

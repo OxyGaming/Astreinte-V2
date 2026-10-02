@@ -142,6 +142,24 @@ export function parsePlan(raw: string): TourneePlan | null {
   return v as TourneePlan;
 }
 
+/**
+ * Extrait des coordonnées d'un texte collé : « 45.604513, 4.792673 »,
+ * « 45,604513 4,792673 » ou une URL Google Maps (…@lat,lng… / …q=lat,lng…).
+ */
+export function parseCoordonnees(raw: string): { latitude: number; longitude: number } | null {
+  const s = raw.trim();
+  if (!s) return null;
+  const url = /[@=](-?\d{1,2}\.\d+),\s*(-?\d{1,3}\.\d+)/.exec(s) ?? /(-?\d{1,2}\.\d+)%2C\s*(-?\d{1,3}\.\d+)/i.exec(s);
+  const plain =
+    /^(-?\d{1,2}[.,]\d+)\s*[,;]\s*(-?\d{1,3}[.,]\d+)$/.exec(s) ?? /^(-?\d{1,2}[.,]\d+)\s+(-?\d{1,3}[.,]\d+)$/.exec(s);
+  const m = url ?? plain;
+  if (!m) return null;
+  const latitude = Number(m[1].replace(",", "."));
+  const longitude = Number(m[2].replace(",", "."));
+  if (!isValidLatitude(latitude) || !isValidLongitude(longitude)) return null;
+  return { latitude, longitude };
+}
+
 // ─── Validation d'une étape (back-office et ajustement référent) ──────────────
 
 export type EtapeValidation = { ok: true; value: TourneeEtapeInput } | { ok: false; error: string };

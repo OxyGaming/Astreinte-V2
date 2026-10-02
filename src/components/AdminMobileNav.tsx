@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
+  Route,
   Menu,
   X,
   FileText,
@@ -30,6 +31,7 @@ const navItems = [
   { href: "/admin/acces", label: "Points d'accès", icon: MapPinned },
   { href: "/admin/postes", label: "Postes", icon: Building2 },
   { href: "/admin/procedures", label: "Procédures guidées", icon: ClipboardList },
+  { href: "/admin/tournees", label: "Tournées terrain", icon: Route },
   { href: "/admin/mnemoniques", label: "Mnémoniques", icon: BookOpen },
   { href: "/admin/abreviations", label: "Abréviations", icon: AlignLeft },
   { href: "/admin/users", label: "Utilisateurs", icon: UserCog },

@@ -19,15 +19,18 @@ import {
   History,
   BookMarked,
   Link2,
+  Route,
 } from "lucide-react";
 import { adminLogoutAction } from "./login/actions";
 import AdminMobileNav from "@/components/AdminMobileNav";
 import { countPendingRegistrations, countPendingMainCourantes } from "@/lib/db";
+import { prisma } from "@/lib/prisma";
 
 export default async function AdminLayout({ children }: { children: ReactNode }) {
-  const [pendingRegistrations, pendingMainCourantes] = await Promise.all([
+  const [pendingRegistrations, pendingMainCourantes, nouvellesContributions] = await Promise.all([
     countPendingRegistrations(),
     countPendingMainCourantes(),
+    prisma.tourneeContribution.count({ where: { statut: "NOUVELLE" } }),
   ]);
 
   const navItems = [
@@ -39,6 +42,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
     { href: "/admin/postes", label: "Postes", icon: Building2 },
     { href: "/admin/procedures", label: "Procédures guidées", icon: ClipboardList },
     { href: "/admin/procedures/sessions", label: "Sessions procédures", icon: History },
+    { href: "/admin/tournees", label: "Tournées terrain", icon: Route, badge: nouvellesContributions },
     { href: "/admin/mnemoniques", label: "Mnémoniques", icon: BookOpen },
     { href: "/admin/abreviations", label: "Abréviations", icon: AlignLeft },
     { href: "/admin/liens", label: "Liens utiles", icon: Link2 },
