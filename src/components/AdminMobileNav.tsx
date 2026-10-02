@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
+  Route,
   Menu,
   X,
   FileText,
@@ -30,6 +31,7 @@ const navItems = [
   { href: "/admin/acces", label: "Points d'accès", icon: MapPinned },
   { href: "/admin/postes", label: "Postes", icon: Building2 },
   { href: "/admin/procedures", label: "Procédures guidées", icon: ClipboardList },
+  { href: "/admin/tournees", label: "Tournées terrain", icon: Route },
   { href: "/admin/mnemoniques", label: "Mnémoniques", icon: BookOpen },
   { href: "/admin/abreviations", label: "Abréviations", icon: AlignLeft },
   { href: "/admin/users", label: "Utilisateurs", icon: UserCog },
@@ -37,8 +39,14 @@ const navItems = [
   { href: "/admin/import", label: "Import de données", icon: Upload },
 ];
 
-export default function AdminMobileNav() {
+const EDITOR_NAV_ITEMS = [
+  { href: "/admin/tournees/contributions", label: "Contributions tournées", icon: Route },
+];
+
+/** `editorOnly` : un EDITOR n'accède qu'au traitement des contributions de tournée. */
+export default function AdminMobileNav({ editorOnly = false }: { editorOnly?: boolean }) {
   const [open, setOpen] = useState(false);
+  const items = editorOnly ? EDITOR_NAV_ITEMS : navItems;
   const pathname = usePathname();
 
   return (
@@ -97,7 +105,7 @@ export default function AdminMobileNav() {
 
         {/* Navigation */}
         <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
-          {navItems.map((item) => {
+          {items.map((item) => {
             const active =
               pathname === item.href ||
               (item.href !== "/admin" && pathname.startsWith(item.href));

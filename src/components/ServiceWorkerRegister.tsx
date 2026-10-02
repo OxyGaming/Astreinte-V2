@@ -13,6 +13,19 @@ export default function ServiceWorkerRegister() {
   useEffect(() => {
     if (!('serviceWorker' in navigator)) return;
 
+    // En développement, les chunks Next ne sont pas versionnés : la stratégie
+    // cache-first du SW resservirait un ancien bundle (modifs invisibles).
+    // On désinscrit le SW et vide son cache, sauf pour tester le hors ligne
+    // (NEXT_PUBLIC_SW_DEV=1 dans .env.local).
+    if (process.env.NODE_ENV === 'development' && process.env.NEXT_PUBLIC_SW_DEV !== '1') {
+      navigator.serviceWorker.getRegistrations()
+        .then((regs) => Promise.all(regs.map((r) => r.unregister())))
+        .then(() => (typeof caches !== 'undefined' ? caches.keys() : []))
+        .then((keys) => Promise.all(keys.map((k) => caches.delete(k))))
+        .catch(() => {});
+      return;
+    }
+
     // Premier chargement : pas de controller existant → ne pas considérer
     // comme "mise à jour" le premier skipWaiting.
     let isFirstController = !navigator.serviceWorker.controller;
