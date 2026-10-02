@@ -155,6 +155,9 @@ export function CilActionModal({
   if (action === "CHANGE_CIL") {
     return <ChangementCilModal incidentId={id} onClose={onClose} onDone={done} />;
   }
+  if (action === "AVIS_DESHERBAGE") {
+    return <DesherbageModal incidentId={id} onClose={onClose} onDone={done} />;
+  }
   if (action === "ADD_NOTE") {
     return <NoteModal incidentId={id} onClose={onClose} onDone={done} />;
   }
@@ -1059,6 +1062,68 @@ function ChangementCilModal({ incidentId, onClose, onDone }: { incidentId: strin
         <input value={remplacant} onChange={(e) => setRemplacant(e.target.value)} placeholder="Nom du nouveau CIL" className={inputCls} />
       </Field>
       <TimeField label="Heure" value={at} onChange={setAt} />
+    </Modal>
+  );
+}
+
+// ─── Avis de désherbage (livret v02) ──────────────────────────────────────────
+
+function DesherbageModal({ incidentId, onClose, onDone }: { incidentId: string; onClose: () => void; onDone: () => void }) {
+  // Par défaut « Non » : le CIL coche « Oui » seulement si le CRC l'annonce.
+  const [enCours, setEnCours] = useState(false);
+  const [at, setAt] = useState(nowLocalInput());
+  const [busy, setBusy] = useState(false);
+  async function submit() {
+    setBusy(true);
+    const r = await postJson(`/api/cil/${incidentId}/events`, {
+      type: "AVIS_DESHERBAGE",
+      occurredAt: localInputToIso(at),
+      enCours,
+    });
+    setBusy(false);
+    if (r.ok) {
+      toast.success("Avis de désherbage enregistré");
+      onDone();
+    } else toast.error(r.error!);
+  }
+  return (
+    <Modal
+      title="Réception d'avis de désherbage du CRC"
+      icon={<Icon.AlertTriangle className="w-4 h-4 text-rose-600" />}
+      onClose={onClose}
+      footer={
+        <>
+          <BtnCancel onClose={onClose} />
+          <BtnPrimary busy={busy} onClick={submit} label="Enregistrer" />
+        </>
+      }
+    >
+      <Field label="Désherbage en cours">
+        <div className="inline-flex rounded-lg border border-slate-300 overflow-hidden" role="radiogroup" aria-label="Désherbage en cours">
+          {([
+            [true, "Oui"],
+            [false, "Non"],
+          ] as const).map(([v, l]) => (
+            <button
+              key={l}
+              type="button"
+              role="radio"
+              aria-checked={enCours === v}
+              onClick={() => setEnCours(v)}
+              className={`px-5 py-2 text-sm font-semibold ${
+                enCours === v
+                  ? v
+                    ? "bg-rose-600 text-white"
+                    : "bg-slate-700 text-white"
+                  : "bg-white text-slate-600 hover:bg-slate-50"
+              }`}
+            >
+              {l}
+            </button>
+          ))}
+        </div>
+      </Field>
+      <TimeField label="Avisé à" value={at} onChange={setAt} />
     </Modal>
   );
 }

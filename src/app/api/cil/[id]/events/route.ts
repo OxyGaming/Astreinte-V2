@@ -6,10 +6,10 @@ import { createEvent } from "@/lib/cil/repo";
 
 /**
  * Événements de frise « simples » (sans entité métier dédiée) :
- * MISSION_CIL, CHANGEMENT_CIL, NOTE. Les dépêches / intervenants passent par
+ * MISSION_CIL, CHANGEMENT_CIL, AVIS_DESHERBAGE, NOTE. Les dépêches / intervenants passent par
  * leurs routes propres (qui créent aussi leur événement).
  */
-const SIMPLE_EVENT_TYPES = ["MISSION_CIL", "CHANGEMENT_CIL", "NOTE"] as const;
+const SIMPLE_EVENT_TYPES = ["MISSION_CIL", "CHANGEMENT_CIL", "AVIS_DESHERBAGE", "NOTE"] as const;
 
 const bodySchema = z.object({
   type: z.enum(SIMPLE_EVENT_TYPES),
@@ -18,11 +18,14 @@ const bodySchema = z.object({
   note: z.string().trim().max(2000).nullable().optional(),
   /** Changement de CIL : nom du remplaçant (repris dans le label). */
   remplacant: z.string().trim().max(160).nullable().optional(),
+  /** Avis de désherbage du CRC : désherbage en cours (case OUI / NON du livret v02). */
+  enCours: z.boolean().optional(),
 });
 
 const DEFAULT_LABEL: Record<(typeof SIMPLE_EVENT_TYPES)[number], string> = {
   MISSION_CIL: "Mission CIL",
   CHANGEMENT_CIL: "Changement de CIL",
+  AVIS_DESHERBAGE: "Avis de désherbage du CRC",
   NOTE: "Note",
 };
 
@@ -64,6 +67,18 @@ export async function POST(
   if (p.type === "CHANGEMENT_CIL" && p.remplacant) {
     label = `Changement de CIL — remplacé par ${p.remplacant}`;
   }
+  if (p.type === "AVIS_DESHERBAGE") {
+    if (p.enCours === undefined) {
+      return NextResponse.json({ error: "Préciser si un désherbage est en cours." }, { status: 400 });
+    }
+    label = `Avis de désherbage du CRC — désherbage en cours : ${p.enCours ? "OUI" : "NON"}`;
+  }
+  const metadata =
+    p.type === "AVIS_DESHERBAGE"
+      ? { enCours: p.enCours }
+      : p.remplacant
+        ? { remplacant: p.remplacant }
+        : null;
 
   const event = await prisma.$transaction((tx) =>
     createEvent(tx, {
@@ -74,7 +89,7 @@ export async function POST(
       note: p.note ?? null,
       actorId: u.id,
       actorName: u.name,
-      metadata: p.remplacant ? { remplacant: p.remplacant } : null,
+      metadata,
     }),
   );
   return NextResponse.json({ id: event.id });

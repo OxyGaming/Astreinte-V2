@@ -190,6 +190,18 @@ export function buildCilDocxData(full: CilIncidentFull): CilDocxData {
   putAvis("txt_retp", rtp);
   putAvis("txt_retn", rtn);
 
+  // ── Désherbage (livret v02) : dernier avis reçu du CRC ─────────────────────
+  // Sans avis enregistré, les deux cases restent vides (information non
+  // recueillie ≠ « pas de désherbage »).
+  const desh = full.events
+    .filter((e) => e.type === "AVIS_DESHERBAGE")
+    .sort((a, b) => new Date(a.occurredAt).getTime() - new Date(b.occurredAt).getTime() || a.seq - b.seq)
+    .at(-1);
+  const deshEnCours = desh ? desh.metadata?.enCours === true : null;
+  out.check_desh_oui = deshEnCours === true ? CHECKED : UNCHECKED;
+  out.check_desh_non = deshEnCours === false ? CHECKED : UNCHECKED;
+  out.txt_desh_avise = desh ? fmtTimeFr(desh.occurredAt) : "";
+
   // ── Changement de CIL (événement + son metadata) ───────────────────────────
   const chg = full.events.find((e) => e.type === "CHANGEMENT_CIL");
   const chgMeta = (chg?.metadata ?? {}) as Record<string, unknown>;

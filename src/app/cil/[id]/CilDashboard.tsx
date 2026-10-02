@@ -63,6 +63,14 @@ export default function CilDashboard({
 
   const inc = full.incident;
   const closed = inc.status === "CLOSED";
+  /** Dernier avis de désherbage reçu du CRC (livret v02). */
+  const desherbage = useMemo(() => {
+    const e = full.events
+      .filter((x) => x.type === "AVIS_DESHERBAGE")
+      .sort((a, b) => new Date(a.occurredAt).getTime() - new Date(b.occurredAt).getTime() || a.seq - b.seq)
+      .at(-1);
+    return e ? { enCours: e.metadata?.enCours === true, at: e.occurredAt } : null;
+  }, [full.events]);
 
   const reload = useCallback(async () => {
     const res = await fetch(`/api/cil/${inc.id}`);
@@ -262,6 +270,16 @@ export default function CilDashboard({
                 <span className="text-slate-600 font-semibold">responsabilité CRC</span>
               )}
             </p>
+            <p className="mt-0.5 text-xs">
+              Désherbage :{" "}
+              {desherbage ? (
+                <span className={desherbage.enCours ? "text-rose-700 font-semibold" : "text-slate-600 font-semibold"}>
+                  {desherbage.enCours ? "en cours" : "non"} (avis CRC à {fmtTimeFr(desherbage.at)})
+                </span>
+              ) : (
+                <span className="text-slate-400">avis non reçu</span>
+              )}
+            </p>
           </div>
           <button
             onClick={generatePdf}
@@ -400,6 +418,7 @@ export default function CilDashboard({
                 ["ADD_INTERVENANT", "Intervenant"],
                 ["ADD_DEPECHE_LIBRE", "Dépêche libre"],
                 ["CHANGE_CIL", "Changement de CIL"],
+                ["AVIS_DESHERBAGE", "Avis désherbage"],
                 ["ADD_NOTE", "Note"],
               ] as const
             ).map(([id, label]) => (

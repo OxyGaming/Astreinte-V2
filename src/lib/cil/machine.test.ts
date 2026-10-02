@@ -138,6 +138,7 @@ describe("computeAvailableActions", () => {
       "ADD_INTERVENANT",
       "ADD_DEPECHE_LIBRE",
       "CHANGE_CIL",
+      "AVIS_DESHERBAGE",
       "ADD_NOTE",
       "CLOSE",
     ] as const) {
