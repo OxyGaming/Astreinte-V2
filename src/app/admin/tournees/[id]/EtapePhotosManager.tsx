@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 import { X, Upload, Trash2, ChevronLeft, ChevronRight, Loader2, ImageIcon } from "lucide-react";
 import { photoUrl, resizeImage } from "@/lib/tournee/image-client";
 import { inputCls, type EditorPhoto } from "./editor-types";
+import { useConfirmDialog } from "@/components/ConfirmDialog";
 
 interface Props {
   etapeId: string;
@@ -23,6 +24,7 @@ export default function EtapePhotosManager({ etapeId, etapeTitre, photos, onChan
   const fileRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { dialog, ask } = useConfirmDialog();
 
   async function upload(files: FileList | null) {
     if (!files?.length) return;
@@ -58,7 +60,7 @@ export default function EtapePhotosManager({ etapeId, etapeTitre, photos, onChan
   }
 
   async function remove(id: string) {
-    if (!confirm("Supprimer définitivement cette photo ?")) return;
+    if (!(await ask({ title: "Supprimer cette photo ?", description: "La photo sera supprimée définitivement.", confirmLabel: "Supprimer", tone: "danger" }))) return;
     const res = await fetch(`/api/admin/documents/${id}`, { method: "DELETE" });
     if (!res.ok) return setError("Échec de la suppression");
     onChange(photos.filter((p) => p.id !== id));
@@ -79,6 +81,7 @@ export default function EtapePhotosManager({ etapeId, etapeTitre, photos, onChan
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4">
+      {dialog}
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
       <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[94vh] flex flex-col">
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">

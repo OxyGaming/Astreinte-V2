@@ -12,6 +12,7 @@ import { ETAPE_ICON } from "@/components/tournee/etape-ui";
 import TourneeEtapeForm from "./TourneeEtapeForm";
 import EtapePhotosManager from "./EtapePhotosManager";
 import { toEditor, type EditorEtape } from "./editor-types";
+import { useConfirmDialog } from "@/components/ConfirmDialog";
 
 interface Props {
   modeleId: string;
@@ -28,6 +29,7 @@ export default function TourneeEtapesEditor({ modeleId, heureDepart, initialEtap
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState<{ type: "success" | "error"; message: string } | null>(null);
   const [modal, setModal] = useState<Modal>(null);
+  const { dialog, ask } = useConfirmDialog();
 
   const mutate = (fn: (prev: EditorEtape[]) => EditorEtape[]) => {
     setEtapes(fn);
@@ -80,18 +82,22 @@ export default function TourneeEtapesEditor({ modeleId, heureDepart, initialEtap
     }
   }
 
-  function remove(i: number) {
+  async function remove(i: number) {
     const e = etapes[i];
-    const msg = e.photos.length
-      ? `Supprimer « ${e.titre} » et ses ${e.photos.length} photo(s) ? (effectif à l'enregistrement)`
-      : `Supprimer « ${e.titre} » ?`;
-    if (confirm(msg)) mutate((prev) => prev.filter((_, k) => k !== i));
+    const ok = await ask({
+      title: `Supprimer « ${e.titre} » ?`,
+      description: e.photos.length ? `Ses ${e.photos.length} photo(s) seront aussi supprimées à l'enregistrement du parcours.` : undefined,
+      confirmLabel: "Supprimer",
+      tone: "danger",
+    });
+    if (ok) mutate((prev) => prev.filter((_, k) => k !== i));
   }
 
   const editing = modal && modal.mode !== "add" ? etapes[modal.index] : null;
 
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-200">
+      {dialog}
       <div className="flex items-center justify-between gap-3 px-4 sm:px-6 py-4 border-b border-gray-100 flex-wrap">
         <div>
           <h2 className="font-semibold text-gray-900">Parcours</h2>

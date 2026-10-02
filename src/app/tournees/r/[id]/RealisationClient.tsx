@@ -16,6 +16,7 @@ import EquipeView from "./EquipeView";
 import PreparationPanel from "./PreparationPanel";
 import PartagePanel from "./PartagePanel";
 import ContributionForm from "./ContributionForm";
+import { useConfirmDialog } from "@/components/ConfirmDialog";
 
 type Tab = "parcours" | "planning" | "equipe" | "infos";
 
@@ -25,6 +26,9 @@ export default function RealisationClient({ initial }: { initial: RealisationVie
   const [tab, setTab] = useState<Tab>(equipe && !view.me.participantId ? "equipe" : "parcours");
   const [busy, setBusy] = useState<string | null>(null);
   const [contribEtape, setContribEtape] = useState<TourneePlanEtape | null | undefined>(undefined);
+  const [actionError, setActionError] = useState<string | null>(null);
+  // Pas de window.confirm/alert : bloqués dans certaines webviews (rien ne se passe).
+  const { dialog, ask } = useConfirmDialog();
 
   const etapes = view.plan.etapes;
   const seuils = view.plan.seuils;
@@ -39,12 +43,13 @@ export default function RealisationClient({ initial }: { initial: RealisationVie
   const canAct = !!me && !cloturee && !attenteLancement;
 
   async function gerer(action: "lancer" | "terminer" | "annuler") {
-    const msg = {
-      lancer: "Lancer la tournée ? Le parcours ne pourra plus être ajusté ; chaque participant pourra démarrer.",
-      terminer: "Clôturer la tournée pour toute l'équipe ?",
-      annuler: "Annuler cette tournée ?",
+    const opts = {
+      lancer: { title: "Lancer la tournée ?", description: "Le parcours ne pourra plus être ajusté ; chaque participant pourra démarrer à son rythme.", confirmLabel: "Lancer" },
+      terminer: { title: "Clôturer la tournée ?", description: "La tournée sera clôturée pour toute l'équipe.", confirmLabel: "Clôturer" },
+      annuler: { title: "Annuler cette tournée ?", description: "La progression enregistrée est conservée dans l'historique.", confirmLabel: "Annuler la tournée", cancelLabel: "Retour", tone: "danger" as const },
     }[action];
-    if (!confirm(msg)) return;
+    if (!(await ask(opts))) return;
+    setActionError(null);
     setBusy(action);
     const res = await fetch(`/api/tournees/realisations/${view.id}`, {
       method: "PATCH",
@@ -54,7 +59,7 @@ export default function RealisationClient({ initial }: { initial: RealisationVie
     const data = await res.json();
     setBusy(null);
     if (res.ok) setView(data);
-    else alert(data.error ?? "Action impossible");
+    else setActionError(data.error ?? "Action impossible");
   }
 
   async function rejoindre() {
@@ -65,7 +70,7 @@ export default function RealisationClient({ initial }: { initial: RealisationVie
     if (res.ok) {
       setView(data);
       setTab("parcours");
-    } else alert(data.error ?? "Impossible de rejoindre");
+    } else setActionError(data.error ?? "Impossible de rejoindre");
   }
 
   const ns = situation ? NIVEAU_STYLE[situation.niveau] : null;
@@ -125,6 +130,9 @@ export default function RealisationClient({ initial }: { initial: RealisationVie
       )}
 
       <div className="px-4 py-4 space-y-4 lg:px-8">
+        {actionError && (
+          <p className="text-sm bg-red-50 border border-red-200 text-red-700 rounded-xl px-3 py-2">{actionError}</p>
+        )}
         {/* Rejoindre (spectateur d'une tournée d'équipe ouverte) */}
         {view.me.canJoin && (
           <button onClick={rejoindre} disabled={busy === "join"}
@@ -192,6 +200,7 @@ export default function RealisationClient({ initial }: { initial: RealisationVie
         <p className="text-[11px] text-slate-300 text-center pt-2">Synchronisé à {formatHHmm(lastSync)} · référent {view.createdByNom}</p>
       </div>
 
+      {dialog}
       {contribEtape !== undefined && (
         <ContributionForm realisationId={view.id} etape={contribEtape} onClose={() => setContribEtape(undefined)} />
       )}
