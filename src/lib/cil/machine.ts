@@ -31,6 +31,7 @@ export type CilActionId =
   | "ADD_RETABLISSEMENT_PARTIEL"
   | "ADD_RETABLISSEMENT_NORMAL"
   | "CHANGE_CIL"
+  | "AVIS_DESHERBAGE"
   | "ADD_NOTE"
   | "CLOSE"
   | "REOPEN";
@@ -102,6 +103,7 @@ const LABELS: Record<CilActionId, string> = {
   ADD_RETABLISSEMENT_PARTIEL: "Rétablissement partiel de la tension",
   ADD_RETABLISSEMENT_NORMAL: "Rétablissement de la tension",
   CHANGE_CIL: "Changement de CIL",
+  AVIS_DESHERBAGE: "Avis de désherbage (CRC)",
   ADD_NOTE: "Ajouter une note",
   CLOSE: "Clôturer l'incident",
   REOPEN: "Rouvrir l'incident",
@@ -164,6 +166,7 @@ export function computeAvailableActions(
   actions.push(make("ADD_INTERVENANT"));
   actions.push(make("ADD_DEPECHE_LIBRE"));
   actions.push(make("CHANGE_CIL"));
+  actions.push(make("AVIS_DESHERBAGE"));
   actions.push(make("ADD_NOTE"));
 
   // 5. Clôture — avertit si une protection est encore active.

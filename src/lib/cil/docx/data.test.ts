@@ -197,6 +197,24 @@ describe("buildCilDocxData — localisation, avis, changement de CIL, carnet", (
     expect(d.txt_chg_cos).toBe("");
   });
 
+  it("désherbage (v02) : dernier avis du CRC, cases vides sans avis", () => {
+    const vide = buildCilDocxData(full({}));
+    expect(vide.check_desh_oui).toBe("☐");
+    expect(vide.check_desh_non).toBe("☐");
+    expect(vide.txt_desh_avise).toBe("");
+
+    const ev = (seq: number, min: number, enCours: boolean) => ({
+      id: `d${seq}`, type: "AVIS_DESHERBAGE" as const, occurredAt: iso(min), seq,
+      label: "Avis de désherbage du CRC", note: null, actorName: null, refType: null, refId: null,
+      metadata: { enCours },
+    });
+    const d = buildCilDocxData(full({ events: [ev(6, 95, false), ev(5, 80, true)] }));
+    // Le plus récent (15h37, NON) l'emporte sur le premier avis (OUI).
+    expect(d.check_desh_oui).toBe("☐");
+    expect(d.check_desh_non).toBe("☒");
+    expect(d.txt_desh_avise).toBe("15h37");
+  });
+
   it("remplit le carnet avec une ligne par destinataire d'une dépêche libre", () => {
     const d = buildCilDocxData(
       full({

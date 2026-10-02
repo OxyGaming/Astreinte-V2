@@ -114,6 +114,8 @@ export const EVENT_TYPES = [
   "RETABLISSEMENT_PARTIEL_TENSION",
   "RETABLISSEMENT_TENSION",
   "CHANGEMENT_CIL",
+  /** Avis de désherbage reçu du CRC (livret v02) — metadata { enCours: boolean }. */
+  "AVIS_DESHERBAGE",
   "CLOSURE",
   "NOTE",
 ] as const;
