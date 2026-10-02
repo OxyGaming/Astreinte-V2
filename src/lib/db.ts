@@ -867,9 +867,11 @@ export async function getLiensHub(): Promise<{
 
 // ─── Précache hors ligne ──────────────────────────────────────────────────────
 
-/** IDs de tous les documents — pour le préchargement hors ligne des PDF. */
+/** IDs des documents de référence (PDF + photos illustratives de tournée) —
+ *  pour le préchargement hors ligne. Les photos de contributions terrain
+ *  (données opérationnelles) sont exclues. */
 export async function getAllDocumentIds(): Promise<string[]> {
-  const rows = await prisma.document.findMany({ select: { id: true } });
+  const rows = await prisma.document.findMany({ where: { tourneeContributionId: null }, select: { id: true } });
   return rows.map((r) => r.id);
 }
 

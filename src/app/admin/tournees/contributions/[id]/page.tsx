@@ -10,7 +10,7 @@ import {
   type ContributionStatut,
   type ContributionType,
 } from "@/lib/tournee/contributions";
-import { photoUrl } from "@/lib/tournee/image-client";
+import { photoOpenUrl, photoUrl } from "@/lib/tournee/image-client";
 import ContributionTraitement from "./ContributionTraitement";
 
 export const dynamic = "force-dynamic";
@@ -93,7 +93,7 @@ export default async function AdminContributionPage({ params }: { params: Promis
                 <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 mb-2">Photos ({c.photos.length})</p>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                   {c.photos.map((p) => (
-                    <a key={p.id} href={photoUrl(p.id)} target="_blank" rel="noopener" className="block rounded-lg overflow-hidden bg-gray-100 aspect-[4/3]">
+                    <a key={p.id} href={photoOpenUrl(p.id)} target="_blank" rel="noopener" className="block rounded-lg overflow-hidden bg-gray-100 aspect-[4/3]">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img src={photoUrl(p.id)} alt="" className="w-full h-full object-cover" />
                     </a>

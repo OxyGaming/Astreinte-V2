@@ -4,8 +4,9 @@
  * OfflineSyncManager — drain global des opérations hors ligne « autonomes ».
  *
  * Composant sans rendu, monté une fois dans le layout. Il rejoue les ops qui
- * ne sont rattachées à aucune page particulière — aujourd'hui les contributions
- * à la main courante (`main-courante-create`).
+ * ne sont rattachées à aucune page particulière — les contributions à la main
+ * courante (`main-courante-create`) et la progression des tournées terrain
+ * (`tournee-event`, idempotente : l'écran terrain peut rejouer les mêmes ops).
  *
  * Les ops de session (fiche / procédure) sont drainées par leur composant
  * respectif (FicheSessionView / ProcedureWizard) car elles dépendent d'un
@@ -17,6 +18,7 @@
 
 import { useEffect } from "react";
 import { getAll, remove, update } from "@/lib/idb-offline";
+import { flushAllTourneeEvents } from "@/lib/tournee/offline-queue";
 
 // Verrou module-scope : empêche deux drains simultanés dans le même onglet.
 let draining = false;
@@ -62,10 +64,24 @@ async function drainMainCourante(): Promise<void> {
   }
 }
 
+/** Progression des tournées terrain enregistrée hors ligne (page fermée depuis). */
+async function drainTournees(): Promise<void> {
+  if (typeof navigator !== "undefined" && !navigator.onLine) return;
+  try {
+    await flushAllTourneeEvents();
+  } catch {
+    /* IndexedDB indisponible — silencieux */
+  }
+}
+
 export default function OfflineSyncManager() {
   useEffect(() => {
     drainMainCourante();
-    const onOnline = () => drainMainCourante();
+    drainTournees();
+    const onOnline = () => {
+      drainMainCourante();
+      drainTournees();
+    };
     window.addEventListener("online", onOnline);
     return () => window.removeEventListener("online", onOnline);
   }, []);

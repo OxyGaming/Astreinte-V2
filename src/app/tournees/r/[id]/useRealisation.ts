@@ -2,28 +2,33 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { RealisationView } from "@/lib/tournee/realisation";
-import type { TourneeEvent, TourneeEventType } from "@/lib/tournee/types";
-
-type PendingEvent = TourneeEvent & { clientOpId: string };
+import type { TourneeEventType } from "@/lib/tournee/types";
+import { enqueueTourneeEvents, flushTourneeEvents, pendingTourneeEvents, type QueuedEvent } from "@/lib/tournee/offline-queue";
 
 const POLL_MS = 15_000;
 
 /**
  * État d'une réalisation côté terrain :
  *   • horloge recalée sur le serveur (les écarts sont comparés à des horaires absolus) ;
- *   • émission optimiste des événements + file de renvoi si le réseau manque ;
+ *   • chaque geste est d'abord enfilé dans IndexedDB (file hors ligne commune),
+ *     affiché immédiatement, puis envoyé : rien n'est perdu sans réseau ni au
+ *     rechargement de la page ;
  *   • synchronisation périodique (polling) quand la page est visible — pas de
- *     technologie temps réel supplémentaire.
+ *     technologie temps réel supplémentaire. Hors ligne, le service worker sert
+ *     la dernière vue reçue.
  */
 export function useRealisation(initial: RealisationView) {
+  const id = initial.id;
   const [view, setView] = useState(initial);
   const offset = useRef(initial.serverNow - Date.now());
   const [now, setNow] = useState(() => Date.now() + offset.current);
-  const [pending, setPending] = useState<PendingEvent[]>([]);
-  const pendingRef = useRef<PendingEvent[]>([]);
+  const [pending, setPending] = useState<QueuedEvent[]>([]);
   const [syncError, setSyncError] = useState<string | null>(null);
   const [lastSync, setLastSync] = useState<number>(initial.serverNow);
   const flushing = useRef(false);
+  // Repli mémoire si IndexedDB est indisponible (navigation privée stricte…).
+  const idbOk = useRef(true);
+  const memQueue = useRef<QueuedEvent[]>([]);
 
   const clock = useCallback(() => Date.now() + offset.current, []);
 
@@ -32,14 +37,9 @@ export function useRealisation(initial: RealisationView) {
     return () => clearInterval(t);
   }, [clock]);
 
-  const setQueue = (q: PendingEvent[]) => {
-    pendingRef.current = q;
-    setPending(q);
-  };
-
   const refresh = useCallback(async () => {
     try {
-      const res = await fetch(`/api/tournees/realisations/${initial.id}`, { cache: "no-store" });
+      const res = await fetch(`/api/tournees/realisations/${id}`, { cache: "no-store" });
       if (!res.ok) return;
       const data = (await res.json()) as RealisationView;
       offset.current = data.serverNow - Date.now();
@@ -48,52 +48,84 @@ export function useRealisation(initial: RealisationView) {
     } catch {
       /* hors ligne : on garde la dernière vue */
     }
-  }, [initial.id]);
+  }, [id]);
+
+  const loadPending = useCallback(async () => {
+    if (!idbOk.current) {
+      setPending([...memQueue.current]);
+      return;
+    }
+    try {
+      setPending(await pendingTourneeEvents(id));
+    } catch {
+      idbOk.current = false;
+      setPending([...memQueue.current]);
+    }
+  }, [id]);
 
   const flush = useCallback(async () => {
-    if (flushing.current || pendingRef.current.length === 0) return;
+    if (flushing.current) return;
     flushing.current = true;
-    const batch = pendingRef.current;
     try {
-      const res = await fetch(`/api/tournees/realisations/${initial.id}/evenements`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ events: batch }),
-      });
-      if (res.ok || (res.status >= 400 && res.status < 500)) {
-        // Succès, ou refus définitif (inutile de rejouer) : on retire le lot.
-        setQueue(pendingRef.current.filter((p) => !batch.includes(p)));
-        if (!res.ok) {
-          const data = await res.json().catch(() => ({}));
-          setSyncError(data.error ?? "Action refusée");
-        } else setSyncError(null);
-        await refresh();
-      } else {
-        setSyncError("Synchronisation en attente…");
+      let sent = 0;
+      if (idbOk.current) {
+        const r = await flushTourneeEvents(id);
+        sent = r.sent;
+        if (r.refused) setSyncError(r.refused);
+        else if (r.offline) setSyncError("Hors ligne — vos actions sont conservées et seront envoyées au retour du réseau");
+        else setSyncError(null);
+        if (r.refused || sent) await refresh();
+      } else if (memQueue.current.length) {
+        const batch = memQueue.current;
+        try {
+          const res = await fetch(`/api/tournees/realisations/${id}/evenements`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ events: batch }),
+          });
+          if (res.ok || (res.status >= 400 && res.status < 500)) {
+            memQueue.current = memQueue.current.filter((e) => !batch.includes(e));
+            setSyncError(res.ok ? null : "Action refusée");
+            await refresh();
+          }
+        } catch {
+          setSyncError(`Hors ligne — ${batch.length} action(s) en attente (garder la page ouverte)`);
+        }
       }
-    } catch {
-      setSyncError(`Hors ligne — ${batch.length} action(s) en attente d'envoi`);
+      await loadPending();
     } finally {
       flushing.current = false;
     }
-  }, [initial.id, refresh]);
+  }, [id, refresh, loadPending]);
 
   const emit = useCallback(
     (events: { type: TourneeEventType; etapeKey?: string | null }[]) => {
       const base = clock();
       // +1 ms par événement : garantit l'ordre (ex. début puis fin d'un passage instantané).
-      const evs: PendingEvent[] = events.map((e, i) => ({
+      const evs: QueuedEvent[] = events.map((e, i) => ({
         type: e.type,
         etapeKey: e.etapeKey ?? null,
         at: base + i,
         clientOpId: crypto.randomUUID(),
       }));
-      setQueue([...pendingRef.current, ...evs]);
+      setPending((p) => [...p, ...evs]);
       setNow(clock());
-      void flush();
+      const persist = idbOk.current
+        ? enqueueTourneeEvents(id, evs).catch(() => {
+            idbOk.current = false;
+            memQueue.current.push(...evs);
+          })
+        : Promise.resolve(void memQueue.current.push(...evs));
+      void persist.then(flush);
     },
-    [clock, flush],
+    [id, clock, flush],
   );
+
+  // Au montage : reprise des actions non envoyées + vue la plus récente
+  // (la page peut avoir été servie depuis le cache du service worker).
+  useEffect(() => {
+    void loadPending().then(flush).then(refresh);
+  }, [loadPending, flush, refresh]);
 
   // Polling + resynchronisation au retour sur la page / du réseau.
   useEffect(() => {
@@ -112,7 +144,13 @@ export function useRealisation(initial: RealisationView) {
   }, [flush, refresh]);
 
   const me = view.participants.find((p) => p.id === view.me.participantId) ?? null;
-  const myEvents = useMemo(() => (me ? [...me.events, ...pending] : []), [me, pending]);
+  // Journal serveur + attentes locales, dédoublonnés par clientOpId (une op
+  // peut avoir été envoyée par le rejeu global alors qu'elle est encore listée).
+  const myEvents = useMemo(() => {
+    if (!me) return [];
+    const recus = new Set(me.events.map((e) => e.clientOpId).filter(Boolean));
+    return [...me.events, ...pending.filter((p) => !recus.has(p.clientOpId))];
+  }, [me, pending]);
 
   return { view, setView, now, emit, refresh, myEvents, me, pendingCount: pending.length, syncError, lastSync };
 }

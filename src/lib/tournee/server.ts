@@ -187,7 +187,7 @@ export async function loadEvenements(realisationId: string): Promise<Map<string,
   const out = new Map<string, TourneeEvent[]>();
   for (const r of rows) {
     const list = out.get(r.participantId) ?? [];
-    list.push({ type: r.type as TourneeEventType, etapeKey: r.etapeKey, at: r.occurredAt.getTime() });
+    list.push({ type: r.type as TourneeEventType, etapeKey: r.etapeKey, at: r.occurredAt.getTime(), clientOpId: r.clientOpId });
     out.set(r.participantId, list);
   }
   return out;

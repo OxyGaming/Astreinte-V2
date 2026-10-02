@@ -12,6 +12,7 @@ import {
   getPosteProcedureTypes,
   getAllDocumentIds,
 } from "@/lib/db";
+import { prisma } from "@/lib/prisma";
 
 /**
  * GET /api/offline/slugs
@@ -35,6 +36,7 @@ export async function GET() {
     procedureSessions,
     posteProcedureTypes,
     documents,
+    tournees,
   ] = await Promise.all([
     getAllFiches(),
     getAllPostes(),
@@ -46,6 +48,11 @@ export async function GET() {
     getActiveProcedureSessionIds(),
     getPosteProcedureTypes(),
     getAllDocumentIds(),
+    // Tournées terrain en préparation / en cours auxquelles l'utilisateur participe.
+    prisma.tourneeRealisation.findMany({
+      where: { statut: { in: ["PREPARATION", "EN_COURS"] }, participants: { some: { userId: user.id } } },
+      select: { id: true },
+    }),
   ]);
 
   // Mains courantes consultables : entrées validées + soumissions de l'utilisateur.
@@ -64,6 +71,7 @@ export async function GET() {
       procedureSessions,
       posteProcedureTypes,
       documents,
+      tournees: tournees.map((t) => t.id),
     },
     {
       headers: {

@@ -208,6 +208,7 @@ async function precacheCriticalPages() {
   const procedureSessions   = data.procedureSessions   || [];
   const posteProcedureTypes = data.posteProcedureTypes || {};
   const documents           = data.documents           || [];
+  const tournees            = data.tournees            || [];
 
   // 2. Pages (navigations HTML).
   // Note : les pages user-spécifiques (/sessions, /main-courante…) reflètent
@@ -225,6 +226,7 @@ async function precacheCriticalPages() {
     '/main-courante/mes-soumissions',
     '/acces',
     '/liens-utiles',
+    '/tournees',
     '/recherche',
     '/mode-operatoire.html',
     PROC_SHELL_URL,
@@ -234,6 +236,7 @@ async function precacheCriticalPages() {
     ...contacts.map(id => `/contacts/${id}`),
     ...sessions.map(id => `/sessions/${id}`),
     ...mainCourantes.map(id => `/main-courante/${id}`),
+    ...tournees.map(id => `/tournees/r/${id}`),
   ];
   for (const slug of postes) {
     pages.push(`/postes/${slug}/procedures`);
@@ -253,6 +256,10 @@ async function precacheCriticalPages() {
   }
   for (const id of procedureSessions) {
     apis.push(`/api/procedures/sessions/${id}`);
+  }
+  // Vue des tournées terrain actives (plan figé, participants, journaux).
+  for (const id of tournees) {
+    apis.push(`/api/tournees/realisations/${id}`);
   }
 
   // 4. Documents PDF de référence.

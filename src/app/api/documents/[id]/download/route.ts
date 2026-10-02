@@ -18,6 +18,15 @@ export async function GET(req: NextRequest, { params }: Params) {
   const document = await prisma.document.findUnique({ where: { id } });
   if (!document) return NextResponse.json({ error: "Document introuvable" }, { status: 404 });
 
+  // Photo de contribution terrain : réservée à son auteur et aux gestionnaires.
+  if (document.tourneeContributionId && user.role !== "ADMIN" && user.role !== "EDITOR") {
+    const c = await prisma.tourneeContribution.findUnique({
+      where: { id: document.tourneeContributionId },
+      select: { auteurId: true },
+    });
+    if (c?.auteurId !== user.id) return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
+  }
+
   let fileBuffer: Buffer;
   try {
     fileBuffer = await fs.readFile(getDocumentPath(id, document.mimeType));

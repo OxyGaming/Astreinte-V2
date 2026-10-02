@@ -4,7 +4,8 @@
  * Deux object stores dans la même base IndexedDB :
  *   - `pending_ops`        : file d'attente des mutations (POST/PATCH) à rejouer
  *                            au retour de connexion (sessions de fiche, sessions
- *                            de procédure, contributions à la main courante).
+ *                            de procédure, contributions à la main courante,
+ *                            progression des tournées terrain).
  *   - `procedure_sessions` : état complet des sessions de procédure, pour que le
  *                            wizard puisse s'afficher et progresser hors ligne
  *                            même après un rechargement de page.
@@ -64,6 +65,13 @@ export type PendingMainCourantePayload = {
   description: string;
   solution?: string;
   ficheSlug?: string;
+};
+
+/** Événement de progression d'une tournée terrain (horodaté par le terminal). */
+export type PendingTourneeEventPayload = {
+  type: string;
+  etapeKey: string | null;
+  at: number;
 };
 
 // ─── File d'attente : opérations en attente ───────────────────────────────────
@@ -162,6 +170,18 @@ export type PendingOp =
       clientOpId: string;
       kind: "proc-abandonner";
       sessionId: string;
+      createdAt: number;
+      attempts: number;
+      lastError?: string;
+    }
+  | {
+      id?: number;
+      // clientOpId = celui de l'événement : le serveur déduplique les rejeux.
+      clientOpId: string;
+      kind: "tournee-event";
+      // sessionId = id de la réalisation de tournée (index by_session).
+      sessionId: string;
+      payload: PendingTourneeEventPayload;
       createdAt: number;
       attempts: number;
       lastError?: string;

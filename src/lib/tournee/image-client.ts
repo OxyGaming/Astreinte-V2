@@ -33,4 +33,7 @@ export async function resizeImage(file: File, maxDim = 1600, quality = 0.82): Pr
   }
 }
 
-export const photoUrl = (id: string) => `/api/documents/${id}/download?inline=1`;
+/** Source d'image (même URL que le précache hors ligne du service worker). */
+export const photoUrl = (id: string) => `/api/documents/${id}/download`;
+/** Ouverture dans un onglet (affichage plutôt que téléchargement). */
+export const photoOpenUrl = (id: string) => `/api/documents/${id}/download?inline=1`;

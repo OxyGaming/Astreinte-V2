@@ -178,4 +178,6 @@ export interface TourneeEvent {
   etapeKey?: string | null;
   /** Epoch ms (horloge du terminal). */
   at: number;
+  /** Clé d'idempotence (journal serveur) — sert à dédoublonner la file locale. */
+  clientOpId?: string | null;
 }
